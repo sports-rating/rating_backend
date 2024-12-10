@@ -32,6 +32,7 @@ PACKAGES = [
 
 BACKEND_APPS = [
     "user",
+    "shared",
 ]
 
 INTERNAL_APPS = [
