@@ -184,7 +184,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"  # URL for serving media files
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Directory for storing media files
 
-# AUTH_USER_MODEL = "user.User"
+AUTH_USER_MODEL = "user.User"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
@@ -213,11 +213,29 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": r"/api/",
 }
 
+# SMS configuration via Playmobile
+
+PLAY_MOBILE_URL = config("PLAY_MOBILE_URL")
+PLAY_MOBILE_LOGIN = config("PLAY_MOBILE_LOGIN")
+PLAY_MOBILE_PASSWORD = config("PLAY_MOBILE_PASSWORD")
+VERIFICATION_CODE_EXPIRE = 2 * 60  # 2 minute
+SMS_ID_PREFIX = config("SMS_ID_PREFIX", default="PulseEv")
+SMS_ORIGINATOR = config("SMS_ORIGINATOR", default=3700)
+VERIFICATION_CODE_MESSAGE_TEMPLATE = (
+    "Gigawat.uz! \n" "Sizning tasdiqlash kodingiz - {verification_code}\ndaORdCftPDL"
+)
+VERIFICATION_CODE_LENGTH: int = 6
+
+
+# IMAGE configuration
+
 IMAGE_DIMENSION = (500, 500)
 IMAGE_TYPES = ["heic", "heif", "jpeg", "jpg", "png"]
 
 MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
 
+
+# Logging
 
 LOGGING = {
     "version": 1,
