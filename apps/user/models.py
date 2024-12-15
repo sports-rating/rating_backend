@@ -1,9 +1,13 @@
 import random
 import string
+import os
+import mimetypes
+import io
 
 import phonenumbers
 from PIL import Image
 from django.core.validators import FileExtensionValidator
+from django.core.files.base import ContentFile
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -13,12 +17,17 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from phonenumbers.phonenumberutil import NumberParseException
 from shared.models import BaseModel
+from shared.addons.enums import SportsType, GenderChoices, MediaChoices, UserRoles
 from core.settings import IMAGE_DIMENSION
+from shared.addons.utils import CorrectPath
 
 
 class User(AbstractUser, BaseModel):
     first_name = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
+    middle_name = models.CharField(max_length=100, null=True, blank=True)
+    
+    user_role = models.CharField(max_length=50, choices=UserRoles.choices(), default=UserRoles.ORDINARY.value)
     phone_number = models.CharField(max_length=13)
     email = models.CharField(null=True, blank=True)
     photo = models.ImageField(
@@ -40,6 +49,7 @@ class User(AbstractUser, BaseModel):
         return self.username.title()
     
     def save(self, *args, **kwargs):
+        self.clean()
         super().save(*args, **kwargs)
         if self.photo:
             try:
@@ -59,7 +69,6 @@ class User(AbstractUser, BaseModel):
         if self.phone_number:
             try:
                 parsed_number = phonenumbers.parse(self.phone_number)
-                print(parsed_number) # for checking
                 if not phonenumbers.is_valid_number(parsed_number):
                     raise ValidationError("Please enter a valid phone number.")
             except NumberParseException:
@@ -87,3 +96,106 @@ class User(AbstractUser, BaseModel):
             access=str(refresh.access_token),
             refresh=str(refresh),
         )
+
+
+class Sportsman(BaseModel):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='sportsman_profile')
+    sport_type = models.CharField(max_length=100, choices=SportsType.choices(), default=SportsType.FOOTBALL.value)
+    sport_direction = models.CharField(max_length=100)
+    motto = models.CharField(max_length=100, blank=True, null=True)
+    height = models.DecimalField(max_digits=5, decimal_places=2)
+    weight = models.DecimalField(max_digits=5, decimal_places=2)
+    gender = models.CharField(max_length=50, choices=GenderChoices.choices(), default=GenderChoices.MALE.value)
+    # Address
+    region = models.CharField(max_length=50)
+    city = models.CharField(max_length=50)
+    street = models.CharField(max_length=200)
+    # Contacts
+    place_of_birth = models.CharField(max_length=100)
+    citizenship = models.CharField(max_length=100)
+    telegram = models.URLField(blank=True, null=True)
+    instagram = models.URLField(blank=True, null=True)
+    media = models.ManyToManyField('Media', related_name='sportsmen', blank=True)
+    
+    class Meta:
+        db_table = "sportsman"
+
+    def __str__(self):
+        return f"Sportsman - {self.user.first_name}"
+
+class Education(BaseModel):
+    name = models.CharField(max_length=250)
+    sport_type = models.CharField(max_length=100, choices=SportsType.choices(), default=SportsType.FOOTBALL.value)
+    start_year = models.DateField()
+    end_year = models.DateField()
+    currently_studying = models.BooleanField(default=False)
+    
+    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="schools")
+
+    class Meta:
+        db_table = "school"
+
+
+class Result(BaseModel):
+    tournament_name = models.CharField(max_length=255)
+    country = models.CharField(max_length=100)
+    start_year = models.DateField()
+    end_year = models.DateField()
+    currently_participating = models.BooleanField(default=False)
+    rating = models.IntegerField(null=True, blank=True)
+    logo = models.ImageField(upload_to='user/tournaments/', null=True, blank=True)
+    
+    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results")
+
+    class Meta:
+        db_table = "result"
+
+    def __str__(self):
+        return self.tournament_name
+
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     if self.logo:
+    #         try:
+    #             image = Image.open(self.logo.path)
+    #             desired_size = IMAGE_DIMENSION
+    #             image.thumbnail(desired_size)
+    #             # Save the resized image back to the same path
+    #             image.save(self.logo.path)
+    #         except Exception as e:
+    #             print(f"Error resizing logo: {e}")
+    def delete(self, *args, **kwargs):
+        if self.logo:
+            if os.path.isfile(self.logo.path):
+                os.remove(self.logo.path)
+        super().delete(*args, **kwargs)
+
+
+class Media(BaseModel):
+    media_type = models.CharField(max_length=100, choices=MediaChoices.choices(), default=MediaChoices.IMAGE.value)
+    file = models.FileField(upload_to=CorrectPath('media'))
+    size = models.PositiveIntegerField(null=True, blank=True)
+    extension = models.CharField(max_length=10, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.file and hasattr(self.file, 'file'):
+            self.size = self.file.size
+           
+            _, ext = os.path.splitext(self.file.name)
+            self.extension = ext.lower().lstrip('.')
+           
+            guessed_type, _ = mimetypes.guess_type(self.file.name)
+            if guessed_type:
+                if guessed_type.startswith("image/"):
+                    self.media_type = MediaChoices.IMAGE.value
+                elif guessed_type.startswith("video/"):
+                    self.media_type = MediaChoices.VIDEO.value
+                else:
+                    self.media_type = MediaChoices.PDF.value        
+        super().save(*args, **kwargs)  # Final save to ensure the object is saved
+
+    def delete(self, *args, **kwargs):
+        if self.file:
+            if os.path.isfile(self.file.path):
+                os.remove(self.file.path)
+        super().delete(*args, **kwargs)

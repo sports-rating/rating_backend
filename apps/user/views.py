@@ -4,12 +4,15 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics, permissions, status, filters
 
 import rest_framework_simplejwt.views as simplejwt_views
 from rest_framework_simplejwt.exceptions import TokenError
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes, OpenApiExample
+# from drf_spectacular.types import OpenApiFile
 
 
 from shared.addons.pagination import CustomPagination
@@ -25,6 +28,8 @@ from shared.addons.utils import (
 
 from .models import (
     User,
+    Sportsman,
+    Media
 )
 
 from .serializers import (
@@ -36,7 +41,9 @@ from .serializers import (
     ChangePasswordSerializer,
     UpdatePhoneNumberSerializer,
     CustomTokenRefreshSerializer,
-    UserUpdateSerializer
+    UserUpdateSerializer,
+    SportsmanRegisterSerializer,
+    MediaSerializer
 )
 
 from shared.addons.redis_utils import get_redis_connection
@@ -240,3 +247,35 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
             )
 
         return error_response(message=_(message))
+    
+
+class SportsmanRegisterView(generics.CreateAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = Sportsman.objects.all()
+    serializer_class = RegistrationSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=request.data,
+            message="Sportsman created successfully",
+            code=200
+        )
+
+
+class MediaUploadView(generics.CreateAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = Media.objects.all()
+    serializer_class = MediaSerializer
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message="Media uploaded successfully",
+            code=200
+        )

@@ -2,6 +2,7 @@ import uuid
 import string
 import random
 import typing as t
+import os
 from uuid import UUID
 from datetime import timedelta, datetime
 
@@ -13,6 +14,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.functional import SimpleLazyObject
 from django.db.models import Case, When, IntegerField
+from django.utils.deconstruct import deconstructible
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -48,3 +50,20 @@ def error_response(
         {"success": False, "code": code, "message": _(message), "data": data},
         status=code,
     )
+
+
+@deconstructible
+class CorrectPath:
+    def __init__(self, base_path, owner=None):
+        self.base_path = base_path
+        self.owner = owner
+    
+    def __call__(self, instance, filename):
+        print(filename)
+        print(self.owner)
+        if self.owner == "sportsman":   
+            return os.path.join("sportsman/profile", filename)
+        elif self.owner == "trainer":
+            return os.path.join("trainer/profile", filename)
+        else:
+            return os.path.join(self.base_path, filename)
