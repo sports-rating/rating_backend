@@ -11,8 +11,9 @@ from user.views import (
     ChangePasswordView,
     UserPhoneUpdateView,
     UserPhoneUpdateConfirmView,
-    SportsmanRegisterView,
-    MediaUploadView
+    SportsmanListCreateView,
+    MediaUploadView,
+    SportsmanRetrieveView
 )
 
 app_name = "user"
@@ -24,7 +25,8 @@ urlpatterns = [
     path("profile/", UserRetrieveUpdateView.as_view(), name='profile-retrieve-update'),
     path("logout/", LogoutView.as_view()),
     path("refresh-token/", LoginRefreshView.as_view()),
-    path("auth/register/sportsman/", SportsmanRegisterView.as_view(), name='sportsman-register'),
+    path("profile/sportsman/", SportsmanListCreateView.as_view(), name='sportsman-register'),
+    path("profile/sportsman/<uuid:pk>/", SportsmanRetrieveView.as_view(), name='sportsman-retrieve'),
     path("media-upload/", MediaUploadView.as_view(), name='media-upload'),
 ]
 

@@ -123,6 +123,7 @@ class Sportsman(BaseModel):
     def __str__(self):
         return f"Sportsman - {self.user.first_name}"
 
+
 class Education(BaseModel):
     name = models.CharField(max_length=250)
     sport_type = models.CharField(max_length=100, choices=SportsType.choices(), default=SportsType.FOOTBALL.value)
@@ -130,7 +131,7 @@ class Education(BaseModel):
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)
     
-    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="schools")
+    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="educations")
 
     class Meta:
         db_table = "school"

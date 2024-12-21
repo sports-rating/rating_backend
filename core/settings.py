@@ -33,6 +33,7 @@ PACKAGES = [
 BACKEND_APPS = [
     "user",
     "shared",
+    "dashboard",
 ]
 
 INTERNAL_APPS = [

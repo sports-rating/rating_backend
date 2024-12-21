@@ -43,9 +43,11 @@ from .serializers import (
     CustomTokenRefreshSerializer,
     UserUpdateSerializer,
     SportsmanRegisterSerializer,
-    MediaSerializer
+    MediaSerializer,
+    SportsmanSerializer
 )
 
+from shared.addons.exceptions import raise_validation_error
 from shared.addons.redis_utils import get_redis_connection
 
 redis_connection = get_redis_connection()
@@ -249,19 +251,54 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
         return error_response(message=_(message))
     
 
-class SportsmanRegisterView(generics.CreateAPIView):
+class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Sportsman.objects.all()
     serializer_class = RegistrationSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return SportsmanSerializer
+        return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
-            data=request.data,
-            message="Sportsman created successfully",
+            data=serializer.data,
+            message=_("Sportsman created successfully"),
             code=200
+        )
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(
+            data=serializer.data,
+            message=_("Sportsman list"),
+            code=200
+        )
+    
+
+class SportsmanRetrieveView(generics.RetrieveAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = Sportsman.objects.all()
+    serializer_class = SportsmanSerializer
+
+    def get_object(self):
+        sportsman_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+        if not sportsman_profile:
+            raise_validation_error(message=_("Sportsman Profile not found"), code=404)
+        return sportsman_profile            
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data, 
+            message=_("Sportsman retrieved successfully"),
+            code=200,
         )
 
 
