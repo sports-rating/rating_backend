@@ -1,7 +1,14 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import User, Media, Sportsman, Education, Result
+from .models import (
+    User, 
+    Sportsman, 
+    Trainer,
+    Media, 
+    Education, 
+    Result
+)
 
 
 @admin.register(User)
@@ -48,6 +55,34 @@ class SportsmanAdmin(admin.ModelAdmin):
                     "motto",
                     "height",
                     "weight",
+                )
+            },
+        ),
+        ("Adress", {"fields": ("region", "city", "street", "place_of_birth", "citizenship")}),
+        ("Contacts", {"fields": ("telegram", "instagram")}),
+        ("Media", {"fields": ("media",)}),
+        
+    )
+    list_filter = ["sport_type", "gender"]
+
+
+@admin.register(Trainer)
+class TrainerAdmin(admin.ModelAdmin):
+    list_display = ["id", "user", "sport_type", "gender"]
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "user",
+                    "sport_type",
+                    "sport_direction",
+                    "motto",
+                    "height",
+                    "weight",
+                    "number_of_games",
+                    "number_of_students",
+                    "number_of_awards",
                 )
             },
         ),

@@ -110,9 +110,9 @@ class Sportsman(BaseModel):
     region = models.CharField(max_length=50)
     city = models.CharField(max_length=50)
     street = models.CharField(max_length=200)
-    # Contacts
     place_of_birth = models.CharField(max_length=100)
     citizenship = models.CharField(max_length=100)
+    # Contacts
     telegram = models.URLField(blank=True, null=True)
     instagram = models.URLField(blank=True, null=True)
     media = models.ManyToManyField('Media', related_name='sportsmen', blank=True)
@@ -124,6 +124,32 @@ class Sportsman(BaseModel):
         return f"Sportsman - {self.user.first_name}"
 
 
+class Trainer(BaseModel):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='trainer_profile')
+    sport_type = models.CharField(max_length=100, choices=SportsType.choices(), default=SportsType.FOOTBALL.value)
+    sport_direction = models.CharField(max_length=100)
+    motto = models.CharField(max_length=100, blank=True, null=True)
+    height = models.DecimalField(max_digits=5, decimal_places=2)
+    weight = models.DecimalField(max_digits=5, decimal_places=2)
+    gender = models.CharField(max_length=50, choices=GenderChoices.choices(), default=GenderChoices.MALE.value)
+    # Address
+    region = models.CharField(max_length=50)
+    city = models.CharField(max_length=50)
+    street = models.CharField(max_length=200)
+    place_of_birth = models.CharField(max_length=100)
+    citizenship = models.CharField(max_length=100)
+    # General Results
+    number_of_games = models.PositiveIntegerField()
+    number_of_students = models.PositiveIntegerField()
+    number_of_awards = models.PositiveIntegerField()
+    # Contacts
+    telegram = models.URLField(blank=True, null=True)
+    instagram = models.URLField(blank=True, null=True)
+    media = models.ManyToManyField('Media', related_name='trainer', blank=True)
+
+    class Meta:
+        db_table = "trainer"
+
 class Education(BaseModel):
     name = models.CharField(max_length=250)
     sport_type = models.CharField(max_length=100, choices=SportsType.choices(), default=SportsType.FOOTBALL.value)
@@ -131,7 +157,8 @@ class Education(BaseModel):
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)
     
-    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="educations")
+    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
+    trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
 
     class Meta:
         db_table = "school"
@@ -146,7 +173,8 @@ class Result(BaseModel):
     rating = models.IntegerField(null=True, blank=True)
     logo = models.ImageField(upload_to='user/tournaments/', null=True, blank=True)
     
-    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results")
+    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
+    trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
 
     class Meta:
         db_table = "result"

@@ -49,6 +49,7 @@ INSTALLED_APPS = PACKAGES + BACKEND_APPS + INTERNAL_APPS
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -80,9 +81,14 @@ SECURE_HSTS_SECONDS = 3600
 
 CORS_ALLOW_HEADERS = ["*"]
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True # extra added
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://529c-94-158-60-210.ngrok-free.app'
+]
 
+CORS_ALLOWED_ORIGINS = [
+    'https://529c-94-158-60-210.ngrok-free.app',
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -220,7 +226,7 @@ SPECTACULAR_SETTINGS = {
 PLAY_MOBILE_URL = config("PLAY_MOBILE_URL")
 PLAY_MOBILE_LOGIN = config("PLAY_MOBILE_LOGIN")
 PLAY_MOBILE_PASSWORD = config("PLAY_MOBILE_PASSWORD")
-VERIFICATION_CODE_EXPIRE = 2 * 60  # 2 minute
+VERIFICATION_CODE_EXPIRE = 1 * 60  # 2 minute
 SMS_ID_PREFIX = config("SMS_ID_PREFIX", default="PulseEv")
 SMS_ORIGINATOR = config("SMS_ORIGINATOR", default=3700)
 VERIFICATION_CODE_MESSAGE_TEMPLATE = (

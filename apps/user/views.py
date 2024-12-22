@@ -29,6 +29,7 @@ from shared.addons.utils import (
 from .models import (
     User,
     Sportsman,
+    Trainer,
     Media
 )
 
@@ -44,7 +45,8 @@ from .serializers import (
     UserUpdateSerializer,
     SportsmanRegisterSerializer,
     MediaSerializer,
-    SportsmanSerializer
+    SportsmanSerializer,
+    TrainerSerializer
 )
 
 from shared.addons.exceptions import raise_validation_error
@@ -281,6 +283,36 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         )
     
 
+class TrainerListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.AllowAny, )
+    queryset = Trainer.objects.all()
+    serializer_class = RegistrationSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return TrainerSerializer
+        return super().get_serializer_class()
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Trainer created successfully"),
+            code=200
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(
+            data=serializer.data,
+            message=_("Trainer list"),
+            code=200
+        )
+    
+
 class SportsmanRetrieveView(generics.RetrieveAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Sportsman.objects.all()
@@ -298,6 +330,27 @@ class SportsmanRetrieveView(generics.RetrieveAPIView):
         return success_response(
             data=serializer.data, 
             message=_("Sportsman retrieved successfully"),
+            code=200,
+        )
+
+
+class TrainerRetrieveView(generics.RetrieveAPIView):
+    permission_classes = (permissions.AllowAny, )
+    queryset = Trainer.objects.all()
+    serializer_class = TrainerSerializer
+
+    def get_object(self):
+        trainer_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+        if not trainer_profile:
+            raise_validation_error(message=_("Trainer Profile not found"), code=404)
+        return trainer_profile            
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data, 
+            message=_("Trainer retrieved successfully"),
             code=200,
         )
 
