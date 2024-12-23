@@ -59,8 +59,6 @@ class CorrectPath:
         self.owner = owner
     
     def __call__(self, instance, filename):
-        print(filename)
-        print(self.owner)
         if self.owner == "sportsman":   
             return os.path.join("sportsman/profile", filename)
         elif self.owner == "trainer":

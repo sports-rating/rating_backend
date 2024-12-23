@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-from django.db import IntegrityError
+from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
 from django.contrib.auth.models import update_last_login
 from django.utils import timezone
@@ -28,6 +28,7 @@ from shared.addons.send_verification import (
     verify_code,
     check_verification_status,
 )
+from datetime import date
 
 SEND_VERIFICATION_ACTION = (
     ("signup", "signup"),
@@ -155,16 +156,26 @@ class UsersMeSerializer(serializers.ModelSerializer):
             "birth_date",
             "is_superuser",
         ]
-
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.user_role == "sportsman":
+            data["sportsman_profile"] = SportsmanSerializer(instance.sportsman_profile).data
+        elif instance.user_role == "trainer":
+            data["trainer_profile"] = TrainerSerializer(instance.trainer_profile).data
+        return data
 
 class SportsmanRegisterSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True, required=True)
     results = ResultSerializer(many=True, required=True)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
+    moving_date_year = serializers.IntegerField(write_only=True)
+    moving_date_month = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Sportsman
         fields = [
+            "id",
             "sport_type",
             "sport_direction",
             "motto",
@@ -176,13 +187,31 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
             "street",
             "place_of_birth",
             "citizenship",
+            "moving_date",
+            "moving_date_year",
+            "moving_date_month",
             "telegram",
             "instagram",
             "educations",
             "media_ids",
+            "media",
             "results",
         ]
+        extra_kwargs = {"id": {"read_only": True},}
     
+    def validate(self, attrs):
+        year = attrs.pop("moving_date_year", None)
+        month = attrs.pop("moving_date_month", None)
+
+        if not (1 <= month <= 12):
+            raise_validation_error("Invalid month. It must be between 1 and 12.")
+        
+        try:
+            attrs["moving_date"] = date(year, month, 1)
+        except ValueError:
+            raise_validation_error(message=_("Invalid year or month."))
+        return attrs
+
     def create(self, validated_data):
         educations_data = validated_data.pop("educations")
         results_data = validated_data.pop("results")
@@ -192,9 +221,12 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
 
         media_objects = Media.objects.filter(id__in=media_ids)
         
-        # Check if medias are not associated with another objects
+        if not media_objects.exists():
+            raise_validation_error(message=_(f"At least one media must be uploaded"))
+        
+        # Checking if medias are not associated with another objects
         for media in media_objects:
-            if media.sportsmen is not None and media.sportsmen != profile:
+            if media.sportsmen.exists() and not media.sportsmen.filter(id=profile.id).exists():
                 raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
         
         # Link existing media to the sportsman profile
@@ -213,12 +245,10 @@ class SportsmanSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True)
     results = ResultSerializer(many=True)
     media = MediaSerializer(many=True)
-    user = UsersMeSerializer()
 
     class Meta:
         model = Sportsman
         fields = [
-            "user",
             "sport_type",
             "sport_direction",
             "motto",
@@ -242,6 +272,8 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True, required=True)
     results = ResultSerializer(many=True, required=True)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
+    moving_date_year = serializers.IntegerField(write_only=True)
+    moving_date_month = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Trainer
@@ -257,6 +289,9 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
             "street",
             "place_of_birth",
             "citizenship",
+            "moving_date",
+            "moving_date_year",
+            "moving_date_month",
             "number_of_games",
             "number_of_students",
             "number_of_awards",
@@ -267,6 +302,19 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
             "results",
         ]
     
+    def validate(self, attrs):
+        year = attrs.pop("moving_date_year", None)
+        month = attrs.pop("moving_date_month", None)
+
+        if not (1 <= month <= 12):
+            raise_validation_error("Invalid month. It must be between 1 and 12.")
+        
+        try:
+            attrs["moving_date"] = date(year, month, 1)
+        except ValueError:
+            raise_validation_error(message=_("Invalid year or month."))
+        return attrs
+    
     def create(self, validated_data):
         educations_data = validated_data.pop("educations")
         results_data = validated_data.pop("results")
@@ -276,6 +324,9 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
 
         # Link existing media to the trainer profile
         media_objects = Media.objects.filter(id__in=media_ids)
+        
+        if not media_objects.exists():
+            raise_validation_error(message=_(f"At least one media must be uploaded"))
 
         # Check if medias are not associated with another objects
         for media in media_objects:
@@ -297,12 +348,10 @@ class TrainerSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True)
     results = ResultSerializer(many=True)
     media = MediaSerializer(many=True)
-    user = UsersMeSerializer()
 
     class Meta:
         model = Trainer
         fields = [
-            "user",
             "sport_type",
             "sport_direction",
             "motto",
@@ -355,6 +404,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "middle_name",
             "last_name",
             "user_role",
+            "email",
             "photo",
             "birth_date",
             "user_role",
@@ -378,15 +428,17 @@ class RegistrationSerializer(serializers.ModelSerializer):
         trainer_profile_data = validated_data.pop("trainer_profile", None)
         # profile_data = validated_data.pop("profile", None)
         # print(profile_data)
-        user = User.objects.create(**validated_data)
-        if user_role == "sportsman" and sportsman_profile_data:
-            sportsman_profile_data["user"] = user
-            SportsmanRegisterSerializer().create(sportsman_profile_data)
-        elif user_role == "trainer" and trainer_profile_data:
-            trainer_profile_data["user"] = user
-            TrainerRegisterSerializer().create(trainer_profile_data)
-           
-        return user
+        
+        with transaction.atomic():
+            user = User.objects.create(**validated_data)
+            if user_role == "sportsman" and sportsman_profile_data:
+                sportsman_profile_data["user"] = user
+                SportsmanRegisterSerializer().create(sportsman_profile_data)
+            elif user_role == "trainer" and trainer_profile_data:
+                trainer_profile_data["user"] = user
+                TrainerRegisterSerializer().create(trainer_profile_data)
+            
+            return user
     
     def get_tokens(self, user):  # noqa
         return user.tokens()

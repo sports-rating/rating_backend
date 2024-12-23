@@ -58,7 +58,7 @@ class SportsmanAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("Adress", {"fields": ("region", "city", "street", "place_of_birth", "citizenship")}),
+        ("Adress", {"fields": ("region", "city", "street", "place_of_birth", "citizenship", "moving_date")}),
         ("Contacts", {"fields": ("telegram", "instagram")}),
         ("Media", {"fields": ("media",)}),
         

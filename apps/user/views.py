@@ -11,8 +11,6 @@ from rest_framework import generics, permissions, status, filters
 
 import rest_framework_simplejwt.views as simplejwt_views
 from rest_framework_simplejwt.exceptions import TokenError
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes, OpenApiExample
-# from drf_spectacular.types import OpenApiFile
 
 
 from shared.addons.pagination import CustomPagination
@@ -315,14 +313,14 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 
 class SportsmanRetrieveView(generics.RetrieveAPIView):
     permission_classes = (permissions.AllowAny,)
-    queryset = Sportsman.objects.all()
-    serializer_class = SportsmanSerializer
+    queryset = User.objects.all()
+    serializer_class = UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
 
     def get_object(self):
-        sportsman_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
-        if not sportsman_profile:
+        user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+        if not user_profile:
             raise_validation_error(message=_("Sportsman Profile not found"), code=404)
-        return sportsman_profile            
+        return user_profile            
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -336,14 +334,14 @@ class SportsmanRetrieveView(generics.RetrieveAPIView):
 
 class TrainerRetrieveView(generics.RetrieveAPIView):
     permission_classes = (permissions.AllowAny, )
-    queryset = Trainer.objects.all()
-    serializer_class = TrainerSerializer
+    queryset = User.objects.all()
+    serializer_class = UsersMeSerializer
 
     def get_object(self):
-        trainer_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
-        if not trainer_profile:
+        user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+        if not user_profile:
             raise_validation_error(message=_("Trainer Profile not found"), code=404)
-        return trainer_profile            
+        return user_profile            
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
