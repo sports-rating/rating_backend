@@ -61,6 +61,13 @@ class User(AbstractUser, BaseModel):
             except Exception as e:
                 print(f"Error resizing image: {e}")
     
+    def delete(self, *args, **kwargs):
+        if hasattr(self, 'sportsman_profile'):
+            self.sportsman_profile.delete() # triggers delete method in Sportsman
+        elif hasattr(self, 'trainer_profile'):
+            self.trainer_profile.delete() # triggers delete method in Trainer
+        super().delete(*args, **kwargs)
+
     @property
     def full_name(self):
         return f"{self.last_name} {self.first_name}"
@@ -112,6 +119,7 @@ class Sportsman(BaseModel):
     street = models.CharField(max_length=200)
     place_of_birth = models.CharField(max_length=100)
     citizenship = models.CharField(max_length=100)
+    moving_date = models.DateField(blank=True, null=True)
     # Contacts
     telegram = models.URLField(blank=True, null=True)
     instagram = models.URLField(blank=True, null=True)
@@ -123,6 +131,15 @@ class Sportsman(BaseModel):
     def __str__(self):
         return f"Sportsman - {self.user.first_name}"
 
+    # Here all media associated to sportsman will be deleted
+    def delete(self, *args, **kwargs):
+        media_objects = self.media.all()
+
+        for media in media_objects:
+            media.delete()
+        
+        super().delete(*args, **kwargs)
+            
 
 class Trainer(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='trainer_profile')
@@ -138,6 +155,7 @@ class Trainer(BaseModel):
     street = models.CharField(max_length=200)
     place_of_birth = models.CharField(max_length=100)
     citizenship = models.CharField(max_length=100)
+    moving_date = models.DateField(blank=True, null=True)
     # General Results
     number_of_games = models.PositiveIntegerField()
     number_of_students = models.PositiveIntegerField()
@@ -149,6 +167,15 @@ class Trainer(BaseModel):
 
     class Meta:
         db_table = "trainer"
+
+    def delete(self, *args, **kwargs):
+        media_objects = self.media.all()
+
+        for media in media_objects:
+            media.delete()
+        
+        super().delete(*args, **kwargs)
+
 
 class Education(BaseModel):
     name = models.CharField(max_length=250)
@@ -224,7 +251,10 @@ class Media(BaseModel):
         super().save(*args, **kwargs)  # Final save to ensure the object is saved
 
     def delete(self, *args, **kwargs):
+        print('here')
+        print(self.file)
         if self.file:
+            print(self.file.path)
             if os.path.isfile(self.file.path):
                 os.remove(self.file.path)
         super().delete(*args, **kwargs)
