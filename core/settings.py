@@ -79,16 +79,31 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_HSTS_SECONDS = 3600
 
-CORS_ALLOW_HEADERS = ["*"]
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "access-control-allow-origin",
+    "access-control-allow-credentials",
+]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True # extra added
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://529c-94-158-60-210.ngrok-free.app'
+    "https://*.7srating.uz",
+    "http://127.0.0.1:8000",
+    "http://localhost:5173",
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    'https://529c-94-158-60-210.ngrok-free.app',
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5500",
+    "https://*.7srating.uz",
+    "https://7srating.uz",
 ]
 
 ROOT_URLCONF = "core.urls"
