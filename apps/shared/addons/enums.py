@@ -11,7 +11,7 @@ class BaseEnum(Enum):
         return [(choice.value, choice.name) for choice in cls]
 
 
-class SportsType(BaseEnum):
+class SportsChoices(BaseEnum):
     FOOTBALL = "football"
     BASKETBALL = "basketball"
     BASEBALL = "baseball"
