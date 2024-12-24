@@ -21,6 +21,9 @@ from user.models import (
 from user.serializers import (
     UsersMeSerializer
 )
+from dashboard.serializers import (
+    UserListSerializer
+)
 
 from .filters import (
     UserFilter,
@@ -30,7 +33,7 @@ from shared.addons.exceptions import raise_validation_error
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
-    serializer_class = UsersMeSerializer
+    serializer_class = UserListSerializer
     permission_classes = (
         permissions.AllowAny,
     )
