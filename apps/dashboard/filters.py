@@ -1,7 +1,7 @@
 import uuid
 from django_filters import rest_framework as filters
 
-from shared.addons.enums import SportsType, GenderChoices, UserRoles
+from shared.addons.enums import GenderChoices, UserRoles
 from user.models import (
     Sportsman,
     Trainer,
