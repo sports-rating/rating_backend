@@ -17,7 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from phonenumbers.phonenumberutil import NumberParseException
 from shared.models import BaseModel
-from shared.addons.enums import SportsType, GenderChoices, MediaChoices, UserRoles
+from shared.addons.enums import GenderChoices, MediaChoices, UserRoles
 from core.settings import IMAGE_DIMENSION
 from shared.addons.utils import CorrectPath
 
@@ -143,7 +143,7 @@ class Sportsman(BaseModel):
 
 class Trainer(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='trainer_profile')
-    sport_type = models.CharField(max_length=100, choices=SportsType.choices(), default=SportsType.FOOTBALL.value)
+    sport_type = models.CharField(max_length=100)
     sport_direction = models.CharField(max_length=100)
     motto = models.CharField(max_length=100, blank=True, null=True)
     height = models.DecimalField(max_digits=5, decimal_places=2)
@@ -179,7 +179,7 @@ class Trainer(BaseModel):
 
 class Education(BaseModel):
     name = models.CharField(max_length=250)
-    sport_type = models.CharField(max_length=100, choices=SportsType.choices(), default=SportsType.FOOTBALL.value)
+    sport_type = models.CharField(max_length=100)
     start_year = models.DateField()
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)
