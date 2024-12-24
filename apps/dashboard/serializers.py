@@ -17,3 +17,16 @@ from shared.addons.exceptions import raise_validation_error
 from shared.addons.utils import CorrectPath
 
 
+class UserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "phone_number",
+            "email",
+            "user_role",
+            "created_time",
+        ]
