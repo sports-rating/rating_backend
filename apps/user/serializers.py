@@ -93,8 +93,11 @@ class EducationSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         start_year = attrs.get("start_year")
         end_year = attrs.get("end_year")
+
         if start_year and end_year and start_year >= end_year:
             raise_validation_error(message=_("Start year must be less than end year"))
+        attrs["start_year"] = date(start_year, 1, 1)
+        attrs["end_year"] = date(end_year, 1, 1)
         return attrs
 
 
