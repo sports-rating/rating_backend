@@ -49,6 +49,7 @@ from .serializers import (
 
 from shared.addons.exceptions import raise_validation_error
 from shared.addons.redis_utils import get_redis_connection
+from shared.addons.custom_logging import logger
 
 redis_connection = get_redis_connection()
 
@@ -262,6 +263,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
+        logger.info(f"Data -> {request.data}")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
