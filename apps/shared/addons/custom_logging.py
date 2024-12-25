@@ -1,8 +1,8 @@
 import logging
 
 # define global logger object
-# can be used as log.info, log.error etc.
-log = logging.getLogger("api")
+# can be used as logger.info, logger.error etc.
+logger = logging.getLogger("api")
 
 
-all = ("log",)
+all = ("logger",)

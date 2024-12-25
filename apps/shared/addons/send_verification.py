@@ -9,7 +9,7 @@ import requests
 from django.conf import settings
 
 # custom
-from shared.addons.custom_logging import log
+from shared.addons.custom_logging import logger
 from shared.addons.redis_utils import get_redis_connection
 
 redis_connection = get_redis_connection()
@@ -80,7 +80,7 @@ def send_sms_message(phone_number: str, text: str) -> int:
     )
 
     if response.status_code != 200:
-        log.error(f"Error on send_sms: {response.status_code=} {response.text=}")
+        logger.error(f"Error on send_sms: {response.status_code=} {response.text=}")
 
     return response.status_code
 

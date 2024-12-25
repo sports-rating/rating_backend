@@ -21,6 +21,7 @@ from .models import (
     Media,
 )
 
+from shared.addons.custom_logging import logger
 from shared.addons.exceptions import raise_validation_error
 from shared.addons.utils import CorrectPath
 from shared.addons.send_verification import (
@@ -219,10 +220,11 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         media_ids = validated_data.pop("media_ids")
 
         profile = Sportsman.objects.create(**validated_data)
-
+        logger.info(f"Sportsman Profile created -> {profile}")
         media_objects = Media.objects.filter(id__in=media_ids)
         
         if not media_objects.exists():
+            logger.info(f"No media objects")
             raise_validation_error(message=_(f"At least one media must be uploaded"))
         
         # Checking if medias are not associated with another objects
@@ -239,6 +241,7 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         for result_data in results_data:
             Result.objects.create(sportsman_profile=profile, **result_data)
         
+        logger.info(f"Profile is ready")
         return profile
 
 
@@ -429,9 +432,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
         trainer_profile_data = validated_data.pop("trainer_profile", None)
         # profile_data = validated_data.pop("profile", None)
         # print(profile_data)
-        
+        logger.info(f"User role -> {user_role}")
         with transaction.atomic():
             user = User.objects.create(**validated_data)
+            logger.info(f"User created -> {user}")
             if user_role == "sportsman" and sportsman_profile_data:
                 sportsman_profile_data["user"] = user
                 SportsmanRegisterSerializer().create(sportsman_profile_data)
