@@ -256,6 +256,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Sportsman.objects.all()
     serializer_class = RegistrationSerializer
+    parser_classes = [FormParser, MultiPartParser]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
