@@ -1,5 +1,6 @@
 from django.utils.translation import gettext as _, get_language
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import QueryDict
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -22,6 +23,7 @@ from shared.addons.send_verification import (
 from shared.addons.utils import (
     success_response,
     error_response,
+    parse_nested_querydict
 )
 
 from .models import (
@@ -256,7 +258,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Sportsman.objects.all()
     serializer_class = RegistrationSerializer
-    parser_classes = [FormParser, MultiPartParser]
+    # parser_classes = [FormParser, MultiPartParser]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -265,7 +267,13 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         logger.info(f"Data -> {request.data}")
-        serializer = self.get_serializer(data=request.data)
+        # Parse nested QueryDict
+        if isinstance(request.data, QueryDict):
+            parsed_data = parse_nested_querydict(request.data)
+        else:
+            parsed_data = request.data
+
+        serializer = self.get_serializer(data=parsed_data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(

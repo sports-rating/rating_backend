@@ -65,3 +65,20 @@ class CorrectPath:
             return os.path.join("trainer/profile", filename)
         else:
             return os.path.join(self.base_path, filename)
+
+
+def parse_nested_querydict(querydict):
+    """
+    Recursively parse a QueryDict to handle nested keys like 'sportsman_profile[sport_type]'.
+    """
+    data = {}
+    for key, value in querydict.lists():
+        if "[" in key and "]" in key:
+            keys = key.replace("]", "").split("[")
+            d = data
+            for k in keys[:-1]:
+                d = d.setdefault(k, {})
+            d[keys[-1]] = value[0] if len(value) == 1 else value
+        else:
+            data[key] = value[0] if len(value) == 1 else value
+    return data
