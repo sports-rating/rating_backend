@@ -21,7 +21,7 @@ from rest_framework.response import Response
 
 from firebase_admin import messaging
 
-from shared.addons.custom_logging import log
+from shared.addons.custom_logging import logger
 
 
 DATETIME_FORMAT: str = "%Y-%m-%d %H:%M:%S"

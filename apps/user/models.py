@@ -129,7 +129,7 @@ class Sportsman(BaseModel):
         db_table = "sportsman"
 
     def __str__(self):
-        return f"Sportsman - {self.user.first_name}"
+        return f"Sportsman {self.user.first_name} - {self.user.last_name}"
 
     # Here all media associated to sportsman will be deleted
     def delete(self, *args, **kwargs):
