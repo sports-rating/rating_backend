@@ -429,7 +429,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user_role = validated_data.get("user_role")
         
-        logger.info(f"Sportsman profile data -> {validated_data.get("sportsman_profile")}")
+        logger.info(f"Full validated data -> {validated_data}")
+        # logger.info(f"Sportsman profile data -> {validated_data.get("sportsman_profile")}")
         sportsman_profile_data = validated_data.pop("sportsman_profile", None)
         trainer_profile_data = validated_data.pop("trainer_profile", None)
         # profile_data = validated_data.pop("profile", None)
