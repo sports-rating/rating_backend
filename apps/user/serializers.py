@@ -112,6 +112,7 @@ class ResultSerializer(serializers.ModelSerializer):
             "rating",
             "logo",
         ]
+        extra_kwargs = {"logo": {"required": False}}
 
     def validate(self, attrs):
         start_year = attrs.get("start_year")
