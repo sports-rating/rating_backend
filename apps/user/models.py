@@ -30,14 +30,15 @@ class User(AbstractUser, BaseModel):
     user_role = models.CharField(max_length=50, choices=UserRoles.choices(), default=UserRoles.ORDINARY.value)
     phone_number = models.CharField(max_length=13)
     email = models.CharField(null=True, blank=True)
-    photo = models.ImageField(
-        upload_to="user/images",
-        validators=[
-            FileExtensionValidator(allowed_extensions=["heic", "png", "jpg", "jpeg"])
-        ],
-        null=True,
-        blank=True,
-    )
+    # photo = models.ImageField(
+    #     upload_to="user/images",
+    #     validators=[
+    #         FileExtensionValidator(allowed_extensions=["heic", "png", "jpg", "jpeg"])
+    #     ],
+    #     null=True,
+    #     blank=True,
+    # )
+    photo = models.ManyToManyField('Media', related_name='user_profile', blank=True)
     birth_date = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
 
@@ -51,17 +52,25 @@ class User(AbstractUser, BaseModel):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
-        if self.photo:
-            try:
-                image = Image.open(self.photo.path)
-                desired_size = IMAGE_DIMENSION
-                image.thumbnail(desired_size)
-                # Save the resized image back to the same path
-                image.save(self.photo.path)
-            except Exception as e:
-                print(f"Error resizing image: {e}")
+        # if self.photo:
+        #     try:
+        #         image = Image.open(self.photo.path)
+        #         desired_size = IMAGE_DIMENSION
+        #         image.thumbnail(desired_size)
+        #         # Save the resized image back to the same path
+        #         image.save(self.photo.path)
+        #     except Exception as e:
+        #         print(f"Error resizing image: {e}")
     
     def delete(self, *args, **kwargs):
+        # if self.photo:
+        #     if os.path.isfile(self.photo.path):
+        #         os.remove(self.photo.path)
+        media_objects = self.photo.all()
+
+        for media in media_objects:
+            media.delete()
+
         if hasattr(self, 'sportsman_profile'):
             self.sportsman_profile.delete() # triggers delete method in Sportsman
         elif hasattr(self, 'trainer_profile'):

@@ -123,7 +123,7 @@ class ResultSerializer(serializers.ModelSerializer):
 
 class MediaSerializer(serializers.ModelSerializer):
     owner = serializers.ChoiceField(
-        choices=(("sportsman", "sportsman"), ("trainer", "trainer"), ("media", "media")), write_only=True
+        choices=(("sportsman", "sportsman"), ("trainer", "trainer"), ("media", "media"), ("user", "user")), write_only=True
     )
 
     class Meta:
@@ -145,6 +145,8 @@ class MediaSerializer(serializers.ModelSerializer):
 
 
 class UsersMeSerializer(serializers.ModelSerializer):
+    photo = MediaSerializer(many=True)
+
     class Meta:
         model = User
         fields = [
@@ -170,9 +172,10 @@ class UsersMeSerializer(serializers.ModelSerializer):
 class SportsmanRegisterSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True, required=True)
     results = ResultSerializer(many=True, required=True)
-    media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
+    media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     moving_date_year = serializers.IntegerField(write_only=True)
     moving_date_month = serializers.IntegerField(write_only=True)
+    media = MediaSerializer(many=True, required=False)
 
     class Meta:
         model = Sportsman
@@ -215,25 +218,26 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        educations_data = validated_data.pop("educations")
-        results_data = validated_data.pop("results")
-        media_ids = validated_data.pop("media_ids")
+        educations_data = validated_data.pop("educations", None)
+        results_data = validated_data.pop("results", None)
+        media_ids = validated_data.pop("media_ids", None)
 
         profile = Sportsman.objects.create(**validated_data)
         logger.info(f"Sportsman Profile created -> {profile}")
-        media_objects = Media.objects.filter(id__in=media_ids)
         
-        if not media_objects.exists():
-            logger.info(f"No media objects")
-            raise_validation_error(message=_(f"At least one media must be uploaded"))
-        
-        # Checking if medias are not associated with another objects
-        for media in media_objects:
-            if media.sportsmen.exists() and not media.sportsmen.filter(id=profile.id).exists():
-                raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
-        
-        # Link existing media to the sportsman profile
-        profile.media.set(media_objects)
+        if media_ids:
+            media_objects = Media.objects.filter(id__in=media_ids)
+            
+            if not media_objects.exists():
+                raise_validation_error(message=_(f"At least one media must be uploaded"))
+            
+            # Checking if medias are not associated with another objects
+            for media in media_objects:
+                if media.sportsmen.exists() and not media.sportsmen.filter(id=profile.id).exists():
+                    raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
+            
+            # Link existing media to the sportsman profile
+            profile.media.set(media_objects)
 
         for education_data in educations_data:
             Education.objects.create(sportsman_profile=profile, **education_data)
@@ -241,7 +245,6 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         for result_data in results_data:
             Result.objects.create(sportsman_profile=profile, **result_data)
         
-        logger.info(f"Profile is ready")
         return profile
 
 
@@ -275,13 +278,15 @@ class SportsmanSerializer(serializers.ModelSerializer):
 class TrainerRegisterSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True, required=True)
     results = ResultSerializer(many=True, required=True)
-    media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
+    media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     moving_date_year = serializers.IntegerField(write_only=True)
     moving_date_month = serializers.IntegerField(write_only=True)
+    media = MediaSerializer(many=True, required=False)
 
     class Meta:
         model = Trainer
         fields = [
+            "id",
             "sport_type",
             "sport_direction",
             "motto",
@@ -326,18 +331,19 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
 
         profile = Trainer.objects.create(**validated_data)
 
-        # Link existing media to the trainer profile
-        media_objects = Media.objects.filter(id__in=media_ids)
-        
-        if not media_objects.exists():
-            raise_validation_error(message=_(f"At least one media must be uploaded"))
+        if media_ids:
+            # Link existing media to the trainer profile
+            media_objects = Media.objects.filter(id__in=media_ids)
+            
+            if not media_objects.exists():
+                raise_validation_error(message=_(f"At least one media must be uploaded"))
 
-        # Check if medias are not associated with another objects
-        for media in media_objects:
-            if media.trainer is not None and media.trainer != profile:
-                raise_validation_error(message=_(f"Media {media.id} is already associated with another trainer."))
+            # Check if medias are not associated with another objects
+            for media in media_objects:
+                if media.trainer is not None and media.trainer != profile:
+                    raise_validation_error(message=_(f"Media {media.id} is already associated with another trainer."))
 
-        profile.media.set(media_objects)
+            profile.media.set(media_objects)
 
         for education_data in educations_data:
             Education.objects.create(trainer_profile=profile, **education_data)
@@ -393,9 +399,10 @@ class ProfileField(serializers.Field):
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
-    phone_number = serializers.CharField()
     sportsman_profile = SportsmanRegisterSerializer(required=False)
     trainer_profile = TrainerRegisterSerializer(required=False)
+    photo_id = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
+    photo = MediaSerializer(many=True, required=False)
     # profile = ProfileField(source='*', required=False)
     # profile = serializers.SerializerMethodField()
 
@@ -409,6 +416,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "last_name",
             "user_role",
             "email",
+            "photo_id",
             "photo",
             "birth_date",
             "user_role",
@@ -424,22 +432,22 @@ class RegistrationSerializer(serializers.ModelSerializer):
         user = User.objects.filter(phone_number=attrs["phone_number"]).first()
         if user:
             raise_validation_error(message=_("Phone number is already registered"))
-        return super().validate(attrs)
+        logger.info(attrs)
+        return attrs
 
     def create(self, validated_data):
         user_role = validated_data.get("user_role")
-        
-        logger.info(f"Full validated data -> {validated_data}")
-        # logger.info(f"Sportsman profile data -> {validated_data.get("sportsman_profile")}")
         sportsman_profile_data = validated_data.pop("sportsman_profile", None)
         trainer_profile_data = validated_data.pop("trainer_profile", None)
+        photo_id = validated_data.pop("photo_id", None)
         # profile_data = validated_data.pop("profile", None)
         # print(profile_data)
 
-        logger.info(f"Sportsman profile popped -> {sportsman_profile_data}")
-        logger.info(f"User role -> {user_role}")
         with transaction.atomic():
             user = User.objects.create(**validated_data)
+            if photo_id:
+                media_object = Media.objects.filter(id__in=photo_id)
+                user.photo.set(media_object)
             logger.info(f"User created -> {user}")
             if user_role == "sportsman" and sportsman_profile_data:
                 sportsman_profile_data["user"] = user
@@ -455,6 +463,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        # data["photo"] = [photo.file.url for photo in instance.photo.all()]
         if data["user_role"] == "ordinary":
             data["tokens"] = self.get_tokens(instance)
         return data

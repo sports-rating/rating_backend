@@ -5,7 +5,6 @@ from django.http import QueryDict
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics, permissions, status, filters
@@ -23,7 +22,6 @@ from shared.addons.send_verification import (
 from shared.addons.utils import (
     success_response,
     error_response,
-    parse_nested_querydict
 )
 
 from .models import (
@@ -258,7 +256,6 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Sportsman.objects.all()
     serializer_class = RegistrationSerializer
-    # parser_classes = [FormParser, MultiPartParser]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -266,14 +263,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
-        logger.info(f"Data -> {request.data}")
-        # Parse nested QueryDict
-        if isinstance(request.data, QueryDict):
-            parsed_data = parse_nested_querydict(request.data)
-        else:
-            parsed_data = request.data
-
-        serializer = self.get_serializer(data=parsed_data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(

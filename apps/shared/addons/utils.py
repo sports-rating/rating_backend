@@ -63,6 +63,8 @@ class CorrectPath:
             return os.path.join("sportsman/profile", filename)
         elif self.owner == "trainer":
             return os.path.join("trainer/profile", filename)
+        elif self.owner == "user":
+            return os.path.join("user/images", filename)
         else:
             return os.path.join(self.base_path, filename)
 
