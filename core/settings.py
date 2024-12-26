@@ -246,7 +246,7 @@ VERIFICATION_CODE_LENGTH: int = 6
 IMAGE_DIMENSION = (500, 500)
 IMAGE_TYPES = ["heic", "heif", "jpeg", "jpg", "png"]
 
-MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
+MAX_IMAGE_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
 
 
 # Logging
