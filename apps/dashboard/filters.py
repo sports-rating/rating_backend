@@ -11,6 +11,10 @@ from user.models import (
     User
 )
 
+from dashboard.models import (
+    Tournament
+)
+
 class UserFilter(filters.FilterSet):
     user_role = filters.CharFilter(method="filter_user_role")
     start_time = filters.CharFilter(method="filter_start_time")
@@ -44,4 +48,27 @@ class UserFilter(filters.FilterSet):
                 end_date = make_aware(datetime.combine(value, datetime.min.time()))
                 return queryset.filter(created_time__lte=end_date)
        
+
+class TournamentFilter(filters.FilterSet):
+    start_time = filters.DateFilter(field_name="start_time", lookup_expr='gte')
+    end_time = filters.DateFilter(field_name="end_time", lookup_expr="lte")
+
+    class Meta:
+        model = Tournament
+        fields = ["start_time", "end_time"]
+    
+    def filter_queryset(self, queryset):
+        start_time_incoming = self.request.query_params.get("start_time", None)
+        end_time_incoming = self.request.query_params.get("end_time", None)
         
+        if start_time_incoming and end_time_incoming:
+            parsed_start_time = parse_date(start_time_incoming)
+            parsed_end_time = parse_date(end_time_incoming)
+            
+            start_time_aware = make_aware(datetime.combine(parsed_start_time, datetime.min.time()))
+            end_time_aware = make_aware(datetime.combine(parsed_end_time, datetime.max.time()))
+            
+            queryset = queryset.filter(start_time__gte=start_time_aware, end_time__lte=end_time_aware)
+        
+        return queryset
+    

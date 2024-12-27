@@ -219,17 +219,6 @@ class Result(BaseModel):
     def __str__(self):
         return self.tournament_name
 
-    # def save(self, *args, **kwargs):
-    #     super().save(*args, **kwargs)
-    #     if self.logo:
-    #         try:
-    #             image = Image.open(self.logo.path)
-    #             desired_size = IMAGE_DIMENSION
-    #             image.thumbnail(desired_size)
-    #             # Save the resized image back to the same path
-    #             image.save(self.logo.path)
-    #         except Exception as e:
-    #             print(f"Error resizing logo: {e}")
     def delete(self, *args, **kwargs):
         if self.logo:
             if os.path.isfile(self.logo.path):

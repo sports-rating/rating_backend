@@ -9,7 +9,11 @@ from user.models import (
     Trainer,
     Media,
     Education,
-    Result
+    Result,
+)
+
+from dashboard.models import (
+    Tournament
 )
 
 
@@ -30,3 +34,38 @@ class UserListSerializer(serializers.ModelSerializer):
             "user_role",
             "created_time",
         ]
+
+
+class TournamentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tournament
+        fields = (
+            "name",
+            "start_time",
+            "end_time",
+            "place",
+            "division",
+            "sport_type"
+        )
+    
+    def validate(self, attrs):
+        start_time = attrs.get("start_time")
+        end_time = attrs.get("end_time")
+        if start_time and end_time and start_time > end_time:
+            raise_validation_error(message=_("Start time must be less than end time"))  
+        
+        return attrs
+
+
+class TournamentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tournament
+        fields = (
+            "name",
+            "start_time",
+            "end_time",
+            "place",
+            "division",
+            "sport_type"
+        )
+        
