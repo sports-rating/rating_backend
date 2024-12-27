@@ -133,6 +133,12 @@ class ResultCreateSerializer(serializers.ModelSerializer):
         tournament = validated_data.pop('tournament')
         result = Result.objects.create(tournament=tournament, **validated_data)
         return result
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["tournament_id"] = instance.tournament.id
+        data["tournament_name"] = instance.tournament.name
+        return data
 
 
 class ResultSerializer(serializers.ModelSerializer):
