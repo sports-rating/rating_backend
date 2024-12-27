@@ -21,6 +21,14 @@ from .models import (
     Media,
 )
 
+from dashboard.models import (
+    Tournament
+)
+
+from dashboard.serializers import (
+    TournamentSerializer
+)
+
 from shared.addons.custom_logging import logger
 from shared.addons.exceptions import raise_validation_error
 from shared.addons.utils import CorrectPath
@@ -84,12 +92,14 @@ class EducationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Education
         fields = [
+            "id",
             "name",
             "sport_type",
             "start_year",
             "end_year",
             "currently_studying",
         ]
+        extra_kwargs = {"id": {"read_only": True},}
 
     def validate(self, attrs):
         start_year = attrs.get("start_year")
@@ -100,27 +110,45 @@ class EducationSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ResultSerializer(serializers.ModelSerializer):
+class ResultCreateSerializer(serializers.ModelSerializer):
+    # This field will accept the tournament ID in the request data and convert it to a Tournament object.
+    # source='tournament' to map the tournament_id field to the tournament field on the Result model.
+    tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source='tournament', write_only=True)
+
     class Meta:
         model = Result
         fields = [
-            "tournament_name",
+            "id",
             "country",
-            # "start_year",
-            # "end_year",
+            "tournament_id",
             "year",
             "currently_participating",
             "rating",
             "logo",
-        ]
-        extra_kwargs = {"logo": {"required": False}}
 
-    # def validate(self, attrs):
-    #     start_year = attrs.get("start_year")
-    #     end_year = attrs.get("end_year")
-    #     if start_year and end_year and start_year >= end_year:
-    #         raise_validation_error(message=_("Start year must be less than end year"))
-    #     return attrs
+        ]
+        extra_kwargs = {"logo": {"required": False}, "id": {"read_only": True}}
+
+    def create(self, validated_data):
+        tournament = validated_data.pop('tournament')
+        result = Result.objects.create(tournament=tournament, **validated_data)
+        return result
+
+
+class ResultSerializer(serializers.ModelSerializer):
+    tournament = TournamentSerializer(many=False)
+    
+    class Meta:
+        model = Result
+        fields = (
+            "id",
+            "country",
+            "year",
+            "currently_participating",
+            "rating",
+            "logo",
+            "tournament",
+        )
 
 
 class MediaSerializer(serializers.ModelSerializer):
@@ -173,7 +201,7 @@ class UsersMeSerializer(serializers.ModelSerializer):
 
 class SportsmanRegisterSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True, required=True)
-    results = ResultSerializer(many=True, required=True)
+    results = ResultCreateSerializer(many=True, required=True)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     moving_date_year = serializers.IntegerField(write_only=True)
     moving_date_month = serializers.IntegerField(write_only=True)
@@ -279,7 +307,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
 
 class TrainerRegisterSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True, required=True)
-    results = ResultSerializer(many=True, required=True)
+    results = ResultCreateSerializer(many=True, required=True)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     moving_date_year = serializers.IntegerField(write_only=True)
     moving_date_month = serializers.IntegerField(write_only=True)
@@ -554,7 +582,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 class SportsmanProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Education
+        model = Sportsman
         fields = "__all__"
 
 

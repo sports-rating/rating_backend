@@ -6,6 +6,7 @@ from django.utils.timezone import make_aware
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 
 from datetime import datetime
@@ -67,14 +68,22 @@ class TournamentListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Tournament.objects.all()
     serializer_class = TournamentCreateSerializer
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = TournamentFilter
+    search_fields = ["name",]
     pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
             return TournamentSerializer
         return super().get_serializer_class()
+
+    def get_queryset(self):
+        name = self.request.query_params.get("name")
+        if name:
+            return self.queryset.filter(name__icontains=name)
+        return self.queryset.all()
+
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
