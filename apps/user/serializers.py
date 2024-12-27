@@ -308,6 +308,7 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
             "telegram",
             "instagram",
             "educations",
+            "media",
             "media_ids",
             "results",
         ]
