@@ -102,7 +102,7 @@ class EducationAdmin(admin.ModelAdmin):
 
 @admin.register(Result)
 class ResultAdmin(admin.ModelAdmin):
-    list_display = ["id", "tournament_name", "country", "start_year", "end_year"]
+    list_display = ["id", "tournament_name", "country", "year", "currently_participating"]
     list_filter = ["currently_participating",]
 
 

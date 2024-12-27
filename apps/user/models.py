@@ -203,8 +203,9 @@ class Education(BaseModel):
 class Result(BaseModel):
     tournament_name = models.CharField(max_length=255)
     country = models.CharField(max_length=100)
-    start_year = models.DateField()
-    end_year = models.DateField()
+    # start_year = models.DateField()
+    # end_year = models.DateField()
+    year = models.DateField(blank=True, null=True)
     currently_participating = models.BooleanField(default=False)
     rating = models.IntegerField(null=True, blank=True)
     logo = models.ImageField(upload_to='user/tournaments/', null=True, blank=True)
@@ -260,7 +261,6 @@ class Media(BaseModel):
         super().save(*args, **kwargs)  # Final save to ensure the object is saved
 
     def delete(self, *args, **kwargs):
-        print('here')
         print(self.file)
         if self.file:
             print(self.file.path)

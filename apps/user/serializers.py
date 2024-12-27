@@ -106,20 +106,21 @@ class ResultSerializer(serializers.ModelSerializer):
         fields = [
             "tournament_name",
             "country",
-            "start_year",
-            "end_year",
+            # "start_year",
+            # "end_year",
+            "year",
             "currently_participating",
             "rating",
             "logo",
         ]
         extra_kwargs = {"logo": {"required": False}}
 
-    def validate(self, attrs):
-        start_year = attrs.get("start_year")
-        end_year = attrs.get("end_year")
-        if start_year and end_year and start_year >= end_year:
-            raise_validation_error(message=_("Start year must be less than end year"))
-        return attrs
+    # def validate(self, attrs):
+    #     start_year = attrs.get("start_year")
+    #     end_year = attrs.get("end_year")
+    #     if start_year and end_year and start_year >= end_year:
+    #         raise_validation_error(message=_("Start year must be less than end year"))
+    #     return attrs
 
 
 class MediaSerializer(serializers.ModelSerializer):
