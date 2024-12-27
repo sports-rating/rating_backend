@@ -40,6 +40,7 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tournament
         fields = (
+            "id",
             "name",
             "start_time",
             "end_time",
@@ -47,6 +48,7 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
             "division",
             "sport_type"
         )
+        extra_kwargs = {"id": {"read_only": True}}
     
     def validate(self, attrs):
         start_time = attrs.get("start_time")
@@ -61,6 +63,7 @@ class TournamentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tournament
         fields = (
+            "id",
             "name",
             "start_time",
             "end_time",
