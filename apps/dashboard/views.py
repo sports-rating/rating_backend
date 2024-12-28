@@ -24,7 +24,8 @@ from user.models import (
 )
 
 from dashboard.models import (
-    Tournament
+    Tournament,
+    Sport
 )
 
 from user.serializers import (
@@ -34,7 +35,9 @@ from user.serializers import (
 from dashboard.serializers import (
     UserListSerializer,
     TournamentCreateSerializer,
-    TournamentSerializer
+    TournamentSerializer,
+    SportCreateSerializer,
+    SportSerializer
 )
 
 from .filters import (
@@ -142,3 +145,72 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             message=_("Tournament is deleted successfully"),
             code=204
         )
+    
+
+class SportListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = Sport.objects.all()
+    serializer_class = SportCreateSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return SportSerializer
+        return super().get_serializer_class()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Sport created successfully"),
+            code=200
+        )
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(
+            data=serializer.data,
+            message=_("Sport list retrieved successfully"),
+            code=200
+        )
+    
+class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = Sport.objects.all()
+    serializer_class = SportCreateSerializer
+
+    def get_serializer_class(self, *args, **kwargs):
+        if self.request.method == "GET":
+            return SportSerializer
+        return super().get_serializer_class()   
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Sport retrieved successfully"),
+            code=200,
+        )
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Sport is updated successfully"),
+            code=200,
+        )
+    
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Sport is deleted successfully"),
+            code=204
+        )
+    

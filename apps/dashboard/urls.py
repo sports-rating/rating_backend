@@ -4,7 +4,9 @@ from django.conf import settings
 from dashboard.views import (
     UserListView,
     TournamentListCreateView,
-    TournamentRetrieveUpdateDeleteView
+    TournamentRetrieveUpdateDeleteView,
+    SportListCreateView,
+    SportRetrieveUpdateDeleteView,
 )
 
 app_name = "dashboard"
@@ -14,4 +16,7 @@ urlpatterns = [
 
     path("tournament/", TournamentListCreateView.as_view(), name='tournament-create-list'),
     path("tournament/<uuid:pk>/", TournamentRetrieveUpdateDeleteView.as_view(), name='tournament-retrieve-update-delete'),
+
+    path("sport/", SportListCreateView.as_view(), name='sport-create-list'),
+    path("sport/<uuid:pk>/", SportRetrieveUpdateDeleteView.as_view(), name='sport-retrieve-update-delete'),
 ]

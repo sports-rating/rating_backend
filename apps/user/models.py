@@ -21,9 +21,6 @@ from shared.addons.enums import GenderChoices, MediaChoices, UserRoles
 from core.settings import IMAGE_DIMENSION
 from shared.addons.utils import CorrectPath
 
-from dashboard.models import (
-    Tournament
-)
 
 class User(AbstractUser, BaseModel):
     first_name = models.CharField(max_length=100, null=True, blank=True)
@@ -215,7 +212,7 @@ class Result(BaseModel):
     
     sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
-    tournament = models.ForeignKey(Tournament, models.CASCADE, related_name="results", blank=True, null=True)
+    tournament = models.ForeignKey("dashboard.Tournament", models.CASCADE, related_name="results", blank=True, null=True)
 
     class Meta:
         db_table = "result"

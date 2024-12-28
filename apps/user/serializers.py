@@ -159,14 +159,27 @@ class ResultSerializer(serializers.ModelSerializer):
 
 class MediaSerializer(serializers.ModelSerializer):
     owner = serializers.ChoiceField(
-        choices=(("sportsman", "sportsman"), ("trainer", "trainer"), ("media", "media"), ("user", "user")), write_only=True
+        choices=(
+            ("sportsman", "sportsman"), 
+            ("trainer", "trainer"), 
+            ("media", "media"), 
+            ("user", "user"), 
+            ("sport", "sport"), 
+            ("tournament", "tournament")), 
+            write_only=True
     )
 
     class Meta:
         model = Media
-        fields = [
-            "id", "media_type", "size", "extension", "created_time", "file", "owner"
-        ]
+        fields = (
+            "id", 
+            "media_type", 
+            "size", 
+            "extension", 
+            "created_time", 
+            "file", 
+            "owner"
+        )
         read_only_fields = ["created_time", "size", "extension", "media_type"]
 
     def create(self, validated_data):
