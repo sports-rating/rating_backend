@@ -64,6 +64,12 @@ class SportCreateSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {"id": {"read_only": True}, "logo": {"required": False}}
 
+    def validate(self, attrs):
+        sport = Sport.objects.filter(name=attrs["name"]).first()
+        if sport:
+            raise_validation_error(message=_(f"{attrs["name"]} - sport is already created"))
+        return attrs
+
     def create(self, validated_data):
         logo_id = validated_data.pop("logo_id", None)
         sport = Sport.objects.create(**validated_data)

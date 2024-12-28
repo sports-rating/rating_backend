@@ -628,13 +628,3 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "birth_date",
         ]
 
-
-class SportsmanProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Sportsman
-        fields = "__all__"
-
-
-
-
-
