@@ -96,8 +96,7 @@ class TrainerAdmin(admin.ModelAdmin):
 
 @admin.register(Education)
 class EducationAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "sport_type", "start_year", "end_year"]
-    list_filter = ["sport_type",]
+    list_display = ["id", "name", "sport", "start_year", "end_year"]
 
 
 @admin.register(Result)

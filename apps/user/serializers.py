@@ -90,7 +90,9 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
         return data
 
 
-class EducationSerializer(serializers.ModelSerializer):
+class EducationCreateSerializer(serializers.ModelSerializer):
+    sport_type = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True)
+    
     class Meta:
         model = Education
         fields = [
@@ -111,6 +113,34 @@ class EducationSerializer(serializers.ModelSerializer):
         
         return attrs
 
+    def create(self, validated_data):
+        sport = validated_data.pop("sport")
+        education = Education.objects.create(sport=sport, **validated_data)
+        return education
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sport_id"] = instance.sport.id
+        data["sport_type"] = instance.sport.name
+        return data
+
+
+class EducationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Education
+        fields = (
+            "id",
+            "name",
+            "start_year",
+            "end_year",
+            "currently_studying",
+        )
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sport_id"] = instance.sport.id
+        data["sport_type"] = instance.sport.name
+        return data
 
 class ResultCreateSerializer(serializers.ModelSerializer):
     # This field will accept the tournament ID in the request data and convert it to a Tournament object.
@@ -236,7 +266,7 @@ class SportsmanListSerializer(serializers.ModelSerializer):
         return data
 
 class SportsmanRegisterSerializer(serializers.ModelSerializer):
-    educations = EducationSerializer(many=True, required=True)
+    educations = EducationCreateSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
@@ -352,7 +382,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
     
 
 class TrainerRegisterSerializer(serializers.ModelSerializer):
-    educations = EducationSerializer(many=True, required=True)
+    educations = EducationCreateSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     moving_date_year = serializers.IntegerField(write_only=True)

@@ -189,7 +189,7 @@ class Trainer(BaseModel):
 
 class Education(BaseModel):
     name = models.CharField(max_length=250)
-    sport_type = models.CharField(max_length=100)
+    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
     start_year = models.DateField()
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)

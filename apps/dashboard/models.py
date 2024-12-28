@@ -27,7 +27,7 @@ class Tournament(BaseModel):
     end_time = models.DateField()
     place = models.CharField(max_length=450)
     division = models.CharField(max_length=100)
-    sport = models.ForeignKey(Sport, models.CASCADE, related_name="tournaments", blank=True, null=True)
+    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="tournaments", blank=True, null=True)
     logo = models.ManyToManyField("user.Media", related_name='tournament_logo', blank=True)
 
     class Meta:
