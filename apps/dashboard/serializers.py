@@ -23,7 +23,7 @@ from shared.addons.exceptions import raise_validation_error
 from shared.addons.utils import CorrectPath
 
 
-class MediaSerializer(serializers.ModelSerializer):
+class InlineMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Media
         fields = [
@@ -51,7 +51,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
 
 class SportCreateSerializer(serializers.ModelSerializer):
-    logo = MediaSerializer(many=True, read_only=True)
+    logo = InlineMediaSerializer(many=True, read_only=True)
     logo_id = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
 
     class Meta:
@@ -81,7 +81,7 @@ class SportCreateSerializer(serializers.ModelSerializer):
 
 
 class SportSerializer(serializers.ModelSerializer):
-    logo = MediaSerializer(many=True, read_only=True)
+    logo = InlineMediaSerializer(many=True, read_only=True)
     
     class Meta:
         model = Sport
@@ -95,7 +95,7 @@ class SportSerializer(serializers.ModelSerializer):
 class TournamentCreateSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True)
     logo_id = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    logo = MediaSerializer(many=True, read_only=True)
+    logo = InlineMediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Tournament
@@ -139,7 +139,7 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 
 class TournamentSerializer(serializers.ModelSerializer):
     sport = SportSerializer(many=False)
-    logo = MediaSerializer(many=True, read_only=True)
+    logo = InlineMediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Tournament
