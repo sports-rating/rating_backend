@@ -64,6 +64,17 @@ class SportCreateSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {"id": {"read_only": True}, "logo": {"required": False}}
 
+    def update(self, instance, validated_data):
+        logo_id = validated_data.pop("logo_id", None)
+        if logo_id:
+            current_logos = instance.logo.all() # Get the current logos
+            instance.logo.clear() # Clear the current logo associations
+            current_logos.delete() # Delete the old Media objects
+            media_object = Media.objects.filter(id__in=logo_id)
+            instance.logo.set(media_object)
+
+        return super().update(instance, validated_data)
+
     def create(self, validated_data):
         sport = Sport.objects.filter(name=validated_data["name"]).first()
         sport_name = validated_data["name"]
@@ -119,6 +130,17 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
             raise_validation_error(message=_("Start time must be less than end time"))  
         
         return attrs
+
+    def update(self, instance, validated_data):
+        logo_id = validated_data.pop("logo_id", None)
+        if logo_id:
+            current_logos = instance.logo.all() # Get the current logos
+            instance.logo.clear() # Clear the current logo associations
+            current_logos.delete() # Delete the old Media objects
+            media_object = Media.objects.filter(id__in=logo_id)
+            instance.logo.set(media_object)
+
+        return super().update(instance, validated_data)
     
     def create(self, validated_data):
         sport = validated_data.pop("sport")
