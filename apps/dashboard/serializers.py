@@ -66,8 +66,9 @@ class SportCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         sport = Sport.objects.filter(name=attrs["name"]).first()
+        sport_name = attrs["name"]
         if sport:
-            raise_validation_error(message=_(f"{attrs["name"]} - sport is already created"))
+            raise_validation_error(message=_(f"{sport_name} - sport is already created"))
         return attrs
 
     def create(self, validated_data):
