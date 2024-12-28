@@ -12,7 +12,7 @@ from rest_framework import generics, permissions, status, filters
 import rest_framework_simplejwt.views as simplejwt_views
 from rest_framework_simplejwt.exceptions import TokenError
 
-
+from user.filters import SportsmanFilter
 from shared.addons.pagination import CustomPagination
 from shared.addons.send_verification import (
     send_verification_code,
@@ -44,7 +44,12 @@ from .serializers import (
     SportsmanRegisterSerializer,
     MediaSerializer,
     SportsmanSerializer,
-    TrainerSerializer
+    TrainerSerializer,
+    SportsmanListSerializer
+)
+
+from dashboard.serializers import (
+    UserListSerializer
 )
 
 from shared.addons.exceptions import raise_validation_error
@@ -254,12 +259,15 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
 
 class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
-    queryset = Sportsman.objects.all()
+    queryset = User.objects.all()
     serializer_class = RegistrationSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = SportsmanFilter
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return SportsmanSerializer
+            return SportsmanListSerializer
         return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
@@ -272,8 +280,11 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
             code=200
         )
     
+    def get_queryset(self):
+        return self.queryset.filter(user_role='sportsman')
+
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,

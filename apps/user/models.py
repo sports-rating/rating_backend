@@ -116,8 +116,9 @@ class User(AbstractUser, BaseModel):
 
 class Sportsman(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='sportsman_profile')
+    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
     sport_type = models.CharField(max_length=100)
-    sport_direction = models.CharField(max_length=100)
+    # sport_direction = models.CharField(max_length=100)
     motto = models.CharField(max_length=100, blank=True, null=True)
     height = models.DecimalField(max_digits=5, decimal_places=2)
     weight = models.DecimalField(max_digits=5, decimal_places=2)
