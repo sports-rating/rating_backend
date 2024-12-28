@@ -126,10 +126,8 @@ class ResultCreateSerializer(serializers.ModelSerializer):
             "year",
             "currently_participating",
             "rating",
-            "logo",
-
         ]
-        extra_kwargs = {"logo": {"required": False}, "id": {"read_only": True}}
+        extra_kwargs = {"id": {"read_only": True}}
 
     def create(self, validated_data):
         tournament = validated_data.pop('tournament')
@@ -154,7 +152,6 @@ class ResultSerializer(serializers.ModelSerializer):
             "year",
             "currently_participating",
             "rating",
-            "logo",
             "tournament",
         )
 
@@ -619,12 +616,23 @@ class CustomTokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    sportsman_profile = SportsmanRegisterSerializer(required=False)
+    photo_id = serializers.UUIDField(format='hex_verbose', write_only=True, required=False)
+    photo = MediaSerializer(many=True, required=False)
+
     class Meta:
         model = User
         fields = [
             "id",
-            "last_name",
             "first_name",
+            "middle_name",
+            "last_name",
+            "email",
+            "photo_id",
             "birth_date",
+            "photo_id",
+            "photo",
+            "sportsman_profile",
         ]
+        extra_kwargs = {"id": {"read_only": True}}
 

@@ -323,10 +323,15 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         )
     
 
-class SportsmanRetrieveView(generics.RetrieveAPIView):
+class SportsmanRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = User.objects.all()
-    serializer_class = UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
+    serializer_class = SportsmanRegisterSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
+        return super().get_serializer_class()
 
     def get_object(self):
         user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
@@ -340,6 +345,17 @@ class SportsmanRetrieveView(generics.RetrieveAPIView):
         return success_response(
             data=serializer.data, 
             message=_("Sportsman retrieved successfully"),
+            code=200,
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data, 
+            message=_("Sportsman profile updated successfully"),
             code=200,
         )
 

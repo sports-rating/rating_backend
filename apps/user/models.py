@@ -131,8 +131,8 @@ class Sportsman(BaseModel):
     citizenship = models.CharField(max_length=100)
     moving_date = models.DateField(blank=True, null=True)
     # Contacts
-    telegram = models.URLField(blank=True, null=True)
-    instagram = models.URLField(blank=True, null=True)
+    telegram = models.CharField(max_length=150, blank=True, null=True)
+    instagram = models.CharField(max_length=150, blank=True, null=True)
     media = models.ManyToManyField('Media', related_name='sportsmen', blank=True)
     
     class Meta:
@@ -209,7 +209,7 @@ class Result(BaseModel):
     year = models.DateField(blank=True, null=True)
     currently_participating = models.BooleanField(default=False)
     rating = models.IntegerField(null=True, blank=True)
-    logo = models.ImageField(upload_to='user/tournaments/', null=True, blank=True)
+    # logo = models.ImageField(upload_to='user/tournaments/', null=True, blank=True)
     
     sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
