@@ -492,6 +492,7 @@ class MediaUploadView(generics.CreateAPIView):
 class MediaDeleteView(generics.DestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Media.objects.all()
+    serializer_class = MediaSerializer
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
