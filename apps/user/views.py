@@ -28,7 +28,9 @@ from .models import (
     User,
     Sportsman,
     Trainer,
-    Media
+    Media,
+    Result,
+    Education
 )
 
 from .serializers import (
@@ -45,7 +47,11 @@ from .serializers import (
     MediaSerializer,
     SportsmanSerializer,
     TrainerSerializer,
-    SportsmanListSerializer
+    SportsmanListSerializer,
+    ResultCreateSerializer,
+    ResultSerializer,
+    EducationCreateSerializer,
+    EducationSerializer
 )
 
 from dashboard.serializers import (
@@ -323,10 +329,10 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         )
     
 
-class SportsmanRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = User.objects.all()
-    serializer_class = SportsmanRegisterSerializer
+    serializer_class = UserUpdateSerializer
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -358,7 +364,93 @@ class SportsmanRetrieveUpdateView(generics.RetrieveUpdateAPIView):
             message=_("Sportsman profile updated successfully"),
             code=200,
         )
+    
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Sportsman deleted successfully"),
+            code=204
+        )
 
+
+class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.AllowAny, )
+    queryset = Result.objects.all()
+    serializer_class = ResultCreateSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return ResultSerializer
+        return super().get_serializer_class()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Result retrieved successfully"),
+            code=200,
+        )
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Result updated successfully"),
+            code=200,
+        )
+    
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Result deleted successfully"),
+            code=204
+        )
+
+
+class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.AllowAny, )
+    queryset = Education.objects.all()
+    serializer_class = EducationCreateSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return EducationSerializer
+        return super().get_serializer_class()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Education retrieved successfully"),
+            code=200,
+        )
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Education updated successfully"),
+            code=200,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Education deleted successfully"),
+            code=204
+        )
+    
 
 class TrainerRetrieveView(generics.RetrieveAPIView):
     permission_classes = (permissions.AllowAny, )
@@ -395,3 +487,17 @@ class MediaUploadView(generics.CreateAPIView):
             message="Media uploaded successfully",
             code=200
         )
+
+
+class MediaDeleteView(generics.DestroyAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = Media.objects.all()
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Media deleted successfully"),
+            code=204
+        )
+    

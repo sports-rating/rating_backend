@@ -12,10 +12,13 @@ from user.views import (
     UserPhoneUpdateView,
     UserPhoneUpdateConfirmView,
     SportsmanListCreateView,
-    SportsmanRetrieveUpdateView,
+    SportsmanRetrieveUpdateDeleteView,
     TrainerListCreateView,
     TrainerRetrieveView,
     MediaUploadView,
+    MediaDeleteView,
+    ResultRetrieveUpdateDestroyView,
+    EducationRetrieveUpdateDestroyView,
 )
 
 app_name = "user"
@@ -28,10 +31,13 @@ urlpatterns = [
     path("logout/", LogoutView.as_view()),
     path("refresh-token/", LoginRefreshView.as_view()),
     path("profile/sportsman/", SportsmanListCreateView.as_view(), name='sportsman-register-list'),
-    path("profile/sportsman/<uuid:pk>/", SportsmanRetrieveUpdateView.as_view(), name='sportsman-retrieve-update'),
+    path("profile/sportsman/<uuid:pk>/", SportsmanRetrieveUpdateDeleteView.as_view(), name='sportsman-retrieve-update-delete'),
     path("profile/trainer/", TrainerListCreateView.as_view(), name='trainer-register-list'),
     path("profile/trainer/<uuid:pk>/", TrainerRetrieveView.as_view(), name="trainer-retrieve"),
     path("media-upload/", MediaUploadView.as_view(), name='media-upload'),
+    path("media/<uuid:pk>/", MediaDeleteView.as_view(), name='media-delete'),
+    path("profile/sportsman/results/<uuid:pk>/", ResultRetrieveUpdateDestroyView.as_view(), name='result-retrieve-update-delete'),
+    path("profile/sportsman/educations/<uuid:pk>/", EducationRetrieveUpdateDestroyView.as_view(), name='education-retrieve-update-delete'),
 ]
 
 if settings.DEBUG:

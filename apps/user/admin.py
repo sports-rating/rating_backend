@@ -43,7 +43,7 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Sportsman)
 class SportsmanAdmin(admin.ModelAdmin):
-    list_display = ["id", "user", "sport_type", "gender"]
+    list_display = ["id", "user", "sport_type", "sport", "gender"]
     fieldsets = (
         (
             None,
@@ -51,7 +51,7 @@ class SportsmanAdmin(admin.ModelAdmin):
                 "fields": (
                     "user",
                     "sport_type",
-                    "sport_direction",
+                    "sport",
                     "motto",
                     "height",
                     "weight",
@@ -101,7 +101,7 @@ class EducationAdmin(admin.ModelAdmin):
 
 @admin.register(Result)
 class ResultAdmin(admin.ModelAdmin):
-    list_display = ["id", "country", "year", "currently_participating"]
+    list_display = ["id", "country", "tournament", "year", "currently_participating"]
     list_filter = ["currently_participating",]
 
 

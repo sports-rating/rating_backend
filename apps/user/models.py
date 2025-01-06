@@ -218,14 +218,14 @@ class Result(BaseModel):
     class Meta:
         db_table = "result"
 
-    def __str__(self):
-        return f'{self.tournament.name} result'
+    # def __str__(self):
+    #     return f'{self.tournament.name} result'
 
-    def delete(self, *args, **kwargs):
-        if self.logo:
-            if os.path.isfile(self.logo.path):
-                os.remove(self.logo.path)
-        super().delete(*args, **kwargs)
+    # def delete(self, *args, **kwargs):
+    #     if self.logo:
+    #         if os.path.isfile(self.logo.path):
+    #             os.remove(self.logo.path)
+    #     super().delete(*args, **kwargs)
 
 
 class Media(BaseModel):

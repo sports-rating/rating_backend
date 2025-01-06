@@ -304,14 +304,15 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         year = attrs.pop("moving_date_year", None)
         month = attrs.pop("moving_date_month", None)
-
-        if not (1 <= month <= 12):
-            raise_validation_error("Invalid month. It must be between 1 and 12.")
         
-        try:
-            attrs["moving_date"] = date(year, month, 1)
-        except ValueError:
-            raise_validation_error(message=_("Invalid year or month."))
+        if year and month:
+            if not (1 <= month <= 12):
+                raise_validation_error("Invalid month. It must be between 1 and 12.")
+            
+            try:
+                attrs["moving_date"] = date(year, month, 1)
+            except ValueError:
+                raise_validation_error(message=_("Invalid year or month."))
         return attrs
 
     def create(self, validated_data):
@@ -564,7 +565,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 TrainerRegisterSerializer().create(trainer_profile_data)
             
             return user
-    
+
     def get_tokens(self, user):  # noqa
         return user.tokens()
 
@@ -658,11 +659,70 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "middle_name",
             "last_name",
             "email",
-            "photo_id",
             "birth_date",
             "photo_id",
             "photo",
+            "user_role",
             "sportsman_profile",
         ]
         extra_kwargs = {"id": {"read_only": True}}
 
+    def update(self, instance, validated_data):
+        user_role = validated_data.get("user_role")
+        sportsman_profile_data = validated_data.pop("sportsman_profile", None)
+        trainer_profile_data = validated_data.pop("trainer_profile", None)
+        photo_id = validated_data.pop("photo_id", None)
+
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            if photo_id:
+                current_photos = instance.photo.all()
+                instance.photo.clear()
+                current_photos.delete()
+                media_objects = Media.objects.filter(id__in=photo_id)
+                instance.photo.set(media_objects)
+            
+            user_role = instance.user_role
+            if user_role == "sportsman" and sportsman_profile_data:
+                sportsman_profile = getattr(instance, "sportsman_profile", None)
+                media_ids = sportsman_profile_data.pop("media_ids", None)
+                logger.info(f"media_ids: {media_ids}")
+                if sportsman_profile:
+                    for attr, value in sportsman_profile_data.items():
+                        setattr(sportsman_profile, attr, value)
+                    
+                    if media_ids:
+                        media_objects = Media.objects.filter(id__in=media_ids)
+                        
+                        if not media_objects.exists():
+                            raise_validation_error(message=_(f"At least one media must be uploaded"))
+                        
+                        # Checking if medias are not associated with another objects
+                        for media in media_objects:
+                            if media.sportsmen.exists() and not media.sportsmen.filter(id=sportsman_profile.id).exists():
+                                raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
+                        
+                        # Link existing media to the sportsman profile
+                        sportsman_profile.media.set(media_objects)
+
+                    sportsman_profile.save()
+
+                    # if results_data:
+                    #     for result in results_data:
+                    #         if isinstance(result.get("tournament"), Tournament):
+                    #             result["tournament_id"] = result["tournament"].id
+                    #             result.pop("tournament", None)
+
+                    #     result_serializer = ResultCreateSerializer(
+                    #         instance=sportsman_profile.results.all(),
+                    #         data=results_data,
+                    #         many=True,
+                    #         context=self.context
+                    #     )
+                    #     result_serializer.is_valid(raise_exception=True)
+                    #     result_serializer.save()
+            
+        return instance
