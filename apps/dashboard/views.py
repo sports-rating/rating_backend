@@ -40,7 +40,8 @@ from dashboard.serializers import (
     SportCreateSerializer,
     SportSerializer,
     TeamCreateSerializer,
-    TeamSerializer
+    TeamUpdateSerializer,
+    TeamSerializer,
 )
 
 from .filters import (
@@ -251,3 +252,43 @@ class TeamListCreateView(generics.ListCreateAPIView):
             message=_("Team list retrieved successfully"),
             code=200
         )  
+
+
+class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = Team.objects.all()
+    serializer_class = TeamUpdateSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return TeamSerializer
+        return super().get_serializer_class()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Team retrieved successfully"),
+            code=200,
+        )
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            message=_("Team updated successfully"),
+            data=serializer.data,
+            code=200,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Team deleted successfully"),
+            code=204
+        )
+    

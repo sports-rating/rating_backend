@@ -242,6 +242,37 @@ class TeamCreateSerializer(serializers.ModelSerializer):
             many=True,
         ).data
         return data
+    
+
+class TeamUpdateSerializer(TeamCreateSerializer):
+    logo = InlineMediaSerializer(many=True, read_only=True)
+    logo_id = serializers.UUIDField(format='hex_verbose', write_only=True, required=False)
+    sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True, required=False)
+    member_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
+
+    class Meta(TeamCreateSerializer.Meta):
+        extra_kwargs = {
+            **TeamCreateSerializer.Meta.extra_kwargs, 
+        }
+    
+    def update(self, instance, validated_data):
+        logo_id = validated_data.pop("logo_id", None) # m-t-m
+        member_ids = validated_data.pop("member_ids", None) # m-t-m
+
+        # Update basic team fields
+        for attrs, value in validated_data.items():
+            setattr(instance, attrs, value)
+        instance.save()
+
+        if member_ids:
+            member_objects = User.objects.filter(id__in=member_ids)
+            instance.members.set(member_objects)
+        
+        if logo_id:
+            logo_object = Media.objects.get(id=logo_id)
+            instance.logo.set(logo_object)
+
+        return instance
 
 
 class TeamSerializer(serializers.ModelSerializer):

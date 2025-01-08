@@ -7,7 +7,8 @@ from dashboard.views import (
     TournamentRetrieveUpdateDeleteView,
     SportListCreateView,
     SportRetrieveUpdateDeleteView,
-    TeamListCreateView
+    TeamListCreateView,
+    TeamRetrieveUpdateDeleteView
 )
 
 app_name = "dashboard"
@@ -21,5 +22,6 @@ urlpatterns = [
     path("sport/", SportListCreateView.as_view(), name='sport-create-list'),
     path("sport/<uuid:pk>/", SportRetrieveUpdateDeleteView.as_view(), name='sport-retrieve-update-delete'),
 
-    path("team/", TeamListCreateView.as_view(), name='team-create-list')
+    path("team/", TeamListCreateView.as_view(), name='team-create-list'),
+    path("team/<uuid:pk>/", TeamRetrieveUpdateDeleteView.as_view(), name='team-retrieve-update-delete'),
 ]
