@@ -25,7 +25,8 @@ from user.models import (
 
 from dashboard.models import (
     Tournament,
-    Sport
+    Sport,
+    Team
 )
 
 from user.serializers import (
@@ -37,12 +38,15 @@ from dashboard.serializers import (
     TournamentCreateSerializer,
     TournamentSerializer,
     SportCreateSerializer,
-    SportSerializer
+    SportSerializer,
+    TeamCreateSerializer,
+    TeamSerializer
 )
 
 from .filters import (
     UserFilter,
-    TournamentFilter
+    TournamentFilter,
+    TeamFilter
 )
 
 from shared.addons.exceptions import raise_validation_error
@@ -214,3 +218,36 @@ class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             code=204
         )
     
+
+
+class TeamListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = Team.objects.all()
+    serializer_class = TeamCreateSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = TeamFilter
+    pagination_class = CustomPagination
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return TeamSerializer
+        return super().get_serializer_class()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Team created successfully"),
+            code=200
+        )
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(
+            data=serializer.data,
+            message=_("Team list retrieved successfully"),
+            code=200
+        )  

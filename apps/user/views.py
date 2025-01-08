@@ -30,7 +30,7 @@ from .models import (
     Trainer,
     Media,
     Result,
-    Education
+    Education,
 )
 
 from .serializers import (
@@ -51,7 +51,7 @@ from .serializers import (
     ResultCreateSerializer,
     ResultSerializer,
     EducationCreateSerializer,
-    EducationSerializer
+    EducationSerializer,
 )
 
 from dashboard.serializers import (

@@ -12,7 +12,8 @@ from user.models import (
 )
 
 from dashboard.models import (
-    Tournament
+    Tournament,
+    Team
 )
 
 class UserFilter(filters.FilterSet):
@@ -72,3 +73,13 @@ class TournamentFilter(filters.FilterSet):
         
         return queryset
     
+
+class TeamFilter(filters.FilterSet):
+    sport = filters.CharFilter(method="filter_sport")
+
+    class Meta:
+        model = Team
+        fields = ["sport"]
+    
+    def filter_sport(self, queryset, name, value): # noqa
+        return queryset.filter(sport__name=value)

@@ -3,6 +3,7 @@ from django.contrib import admin
 from dashboard.models import (
     Tournament,
     Sport,
+    Team
 )
 
 @admin.register(Tournament)
@@ -15,4 +16,10 @@ class TournamentAdmin(admin.ModelAdmin):
 @admin.register(Sport)
 class SportAdmin(admin.ModelAdmin):
     list_display = ["id", "name",]
+    search_fields = ["name",]
+
+
+@admin.register(Team)
+class TeamAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "founded_year", "sport"]
     search_fields = ["name",]

@@ -37,5 +37,31 @@ class Tournament(BaseModel):
         return self.name
 
 
+class Team(BaseModel):
+    name = models.CharField(max_length=250, unique=True)
+    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='teams')
+
+    founded_year = models.IntegerField(blank=True, null=True)
+    logo = models.ManyToManyField('user.Media', related_name='team_logos', blank=True)
+
+    members = models.ManyToManyField(
+        "user.User",
+        related_name='teams',
+        blank=True
+    )
+
+    social_media = models.JSONField(blank=True)
+
+    # Statistics
+    wins = models.PositiveIntegerField(default=0, blank=True, null=True)
+    losses = models.PositiveIntegerField(default=0, blank=True, null=True)
+    draws = models.PositiveIntegerField(default=0, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = "team"
+
 
 

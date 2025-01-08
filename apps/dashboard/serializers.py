@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.utils.translation import gettext as _
 
 from rest_framework import serializers
@@ -14,11 +16,12 @@ from user.models import (
 
 from dashboard.models import (
     Tournament, 
-    Sport
+    Sport,
+    Team
 )
 
 
-
+from shared.addons.custom_logging import logger
 from shared.addons.exceptions import raise_validation_error
 from shared.addons.utils import CorrectPath
 
@@ -174,3 +177,90 @@ class TournamentSerializer(serializers.ModelSerializer):
             "sport",
             "logo",
         )
+
+
+class TeamCreateSerializer(serializers.ModelSerializer):
+    logo = InlineMediaSerializer(many=True, read_only=True)
+    logo_id = serializers.UUIDField(format='hex_verbose', write_only=True, required=False)
+    sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True)
+    member_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
+
+    class Meta:
+        model = Team
+        fields = (
+            "id",
+            "name",
+            "logo",
+            "logo_id",
+            "sport_id",
+            "founded_year",
+            "member_ids",
+            "social_media",
+            "wins",
+            "losses",
+            "draws",
+        )
+        extra_kwargs = {"id": {"read_only": True}, "wins": {"required": False}, "losses": {"required": False}, "draws": {"required": False}}
+    
+    def validate(self, attrs):
+        founded_year = attrs.get("founded_year", None)
+        name = attrs.get("name", None)
+        team = Team.objects.filter(name=name).first()
+        if team:
+            raise_validation_error(message=_("Team with name already created"))
+
+        current_year = datetime.now().year
+        if founded_year and founded_year > current_year:
+            raise_validation_error(message=_("Founded year must be less than current year"))
+        
+        return attrs
+
+    def create(self, validated_data):
+        sport = validated_data.pop("sport")
+        logo_id = validated_data.pop("logo_id", None)
+        member_ids = validated_data.pop("member_ids")
+
+        team = Team.objects.create(sport=sport, **validated_data)
+
+        if logo_id:
+            media_object = Media.objects.get(id=logo_id)
+            team.logo.add(media_object)
+        
+        if member_ids:
+            member_objects = User.objects.filter(id__in=member_ids)
+            team.members.set(member_objects)
+        
+        return team
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sport_id"] = instance.sport.id
+        data["sport_name"] = instance.sport.name 
+        logger.info(f"Members: {instance.members}")
+        data["members"] = UserListSerializer(
+            [member for member in instance.members.all()],
+            many=True,
+        ).data
+        return data
+
+
+class TeamSerializer(serializers.ModelSerializer):
+    logo = InlineMediaSerializer(many=True)
+    sport = SportSerializer()
+    members = UserListSerializer(many=True)
+
+    class Meta:
+        model = Team
+        fields = [
+            "id",
+            "name",
+            "sport",
+            "founded_year",
+            "logo",
+            "members",
+            "social_media",
+            "wins",
+            "losses",
+            "draws",
+        ]
+

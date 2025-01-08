@@ -28,7 +28,7 @@ from dashboard.models import (
 
 from dashboard.serializers import (
     TournamentSerializer,
-    SportSerializer
+    SportSerializer,
 )
 
 from shared.addons.custom_logging import logger
