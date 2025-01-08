@@ -353,6 +353,55 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         return data
 
 
+class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
+    educations = EducationCreateSerializer(many=True, required=False)
+    results = ResultCreateSerializer(many=True, required=False)
+    media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
+
+    class Meta(SportsmanRegisterSerializer.Meta):
+        extra_kwargs = {
+            **SportsmanRegisterSerializer.Meta.extra_kwargs,
+            "educations": {"required": False},
+            "results": {"required": False},
+        }
+
+    def update(self, instance, validated_data):
+        educations_data = validated_data.pop("educations", None)
+        results_data = validated_data.pop("results", None)
+        media_ids = validated_data.pop("media_ids", None)
+
+        # Update basic sportsman profile fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update media associations
+        if media_ids:
+            media_objects = Media.objects.filter(id__in=media_ids)
+            if not media_objects.exists():
+                raise_validation_error(message=_("At least one media must be uploaded"))
+
+            for media in media_objects:
+                if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
+                    raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
+
+            instance.media.set(media_objects)
+
+        # Update educations
+        if educations_data:
+            instance.educations.all().delete()
+            for education_data in educations_data:
+                Education.objects.create(sportsman_profile=instance, **education_data)
+
+        # Update results
+        if results_data:
+            instance.results.all().delete()
+            for result_data in results_data:
+                Result.objects.create(sportsman_profile=instance, **result_data)
+
+        return instance
+    
+
 class SportsmanSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True)
     results = ResultSerializer(many=True)
@@ -647,7 +696,7 @@ class CustomTokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    sportsman_profile = SportsmanRegisterSerializer(required=False)
+    sportsman_profile = SportsmanUpdateSerializer(required=False)
     photo_id = serializers.UUIDField(format='hex_verbose', write_only=True, required=False)
     photo = MediaSerializer(many=True, required=False)
 
@@ -668,12 +717,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         extra_kwargs = {"id": {"read_only": True}}
 
     def update(self, instance, validated_data):
-        user_role = validated_data.get("user_role")
-        sportsman_profile_data = validated_data.pop("sportsman_profile", None)
-        trainer_profile_data = validated_data.pop("trainer_profile", None)
         photo_id = validated_data.pop("photo_id", None)
+        sportsman_profile_data = validated_data.pop("sportsman_profile", None)
 
         with transaction.atomic():
+            # Updating user fields
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.save()
@@ -682,47 +730,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 current_photos = instance.photo.all()
                 instance.photo.clear()
                 current_photos.delete()
-                media_objects = Media.objects.filter(id__in=photo_id)
-                instance.photo.set(media_objects)
-            
-            user_role = instance.user_role
-            if user_role == "sportsman" and sportsman_profile_data:
-                sportsman_profile = getattr(instance, "sportsman_profile", None)
-                media_ids = sportsman_profile_data.pop("media_ids", None)
-                logger.info(f"media_ids: {media_ids}")
-                if sportsman_profile:
-                    for attr, value in sportsman_profile_data.items():
-                        setattr(sportsman_profile, attr, value)
-                    
-                    if media_ids:
-                        media_objects = Media.objects.filter(id__in=media_ids)
-                        
-                        if not media_objects.exists():
-                            raise_validation_error(message=_(f"At least one media must be uploaded"))
-                        
-                        # Checking if medias are not associated with another objects
-                        for media in media_objects:
-                            if media.sportsmen.exists() and not media.sportsmen.filter(id=sportsman_profile.id).exists():
-                                raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
-                        
-                        # Link existing media to the sportsman profile
-                        sportsman_profile.media.set(media_objects)
+                media_objects = Media.objects.get(id=photo_id)
+                instance.photo.add(media_objects)
 
-                    sportsman_profile.save()
-
-                    # if results_data:
-                    #     for result in results_data:
-                    #         if isinstance(result.get("tournament"), Tournament):
-                    #             result["tournament_id"] = result["tournament"].id
-                    #             result.pop("tournament", None)
-
-                    #     result_serializer = ResultCreateSerializer(
-                    #         instance=sportsman_profile.results.all(),
-                    #         data=results_data,
-                    #         many=True,
-                    #         context=self.context
-                    #     )
-                    #     result_serializer.is_valid(raise_exception=True)
-                    #     result_serializer.save()
-            
+            if sportsman_profile_data:
+                spotrsman_profile = getattr(instance, "sportsman_profile", None)
+                if spotrsman_profile:
+                    SportsmanUpdateSerializer().update(spotrsman_profile, sportsman_profile_data)
         return instance
+    
