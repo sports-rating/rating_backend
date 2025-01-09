@@ -28,3 +28,4 @@ jobs:
             docker compose down
             docker compose up --build -d
             yes | docker image prune
+            docker system prune -af # more aggressive cleanup command
