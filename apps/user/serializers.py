@@ -727,6 +727,17 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {"id": {"read_only": True}}
 
+    def validate(self, attrs):
+        phone_number = attrs.get("phone_number")
+        
+        # Checking if phone_number is being updated
+        if phone_number and self.instance.phone_number != phone_number:
+            # Looking for other users with the same phone number
+            if User.objects.filter(phone_number=phone_number).exists():
+                raise_validation_error(message=_("Phone number is already registered"))
+        
+        return attrs
+
     def update(self, instance, validated_data):
         photo_id = validated_data.pop("photo_id", None)
         sportsman_profile_data = validated_data.pop("sportsman_profile", None)
