@@ -434,8 +434,8 @@ class SportsmanSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["moving_date_month"] = instance.moving_date.month
-        data["moving_date_year"] = instance.moving_date.year
+        data["moving_date_month"] = str(instance.moving_date.month)
+        data["moving_date_year"] = str(instance.moving_date.year)
         data.pop("moving_date", None)
         return data
     
