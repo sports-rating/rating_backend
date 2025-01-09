@@ -717,6 +717,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "first_name",
             "middle_name",
             "last_name",
+            "phone_number",
             "email",
             "birth_date",
             "photo_id",
