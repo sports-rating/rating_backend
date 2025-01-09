@@ -142,6 +142,7 @@ class EducationSerializer(serializers.ModelSerializer):
         data["sport_type"] = instance.sport.name
         return data
 
+
 class ResultCreateSerializer(serializers.ModelSerializer):
     # This field will accept the tournament ID in the request data and convert it to a Tournament object.
     # source='tournament' to map the tournament_id field to the tournament field on the Result model.
