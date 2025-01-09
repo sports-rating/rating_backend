@@ -424,13 +424,20 @@ class SportsmanSerializer(serializers.ModelSerializer):
             "street",
             "place_of_birth",
             "citizenship",
+            "moving_date",
             "telegram",
             "instagram",
             "educations",
             "media",
             "results",
         ]
-
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["moving_date_month"] = instance.moving_date.month
+        data["moving_date_year"] = instance.moving_date.year
+        data.pop("moving_date", None)
+        return data
     
 
 class TrainerRegisterSerializer(serializers.ModelSerializer):
