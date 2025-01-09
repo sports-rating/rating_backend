@@ -283,6 +283,7 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
             "id",
             "sport_id",
             "sport_type",
+            "about_me",
             "motto",
             "height",
             "weight",
@@ -416,6 +417,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
         fields = [
             "sport_type",
             "sport",
+            "about_me",
             "motto",
             "height",
             "weight",
@@ -435,7 +437,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["moving_date_month"] = str(instance.moving_date.month)
+        data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
         data["moving_date_year"] = str(instance.moving_date.year)
         data.pop("moving_date", None)
         return data

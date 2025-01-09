@@ -30,14 +30,7 @@ class User(AbstractUser, BaseModel):
     user_role = models.CharField(max_length=50, choices=UserRoles.choices(), default=UserRoles.ORDINARY.value)
     phone_number = models.CharField(max_length=13)
     email = models.CharField(null=True, blank=True)
-    # photo = models.ImageField(
-    #     upload_to="user/images",
-    #     validators=[
-    #         FileExtensionValidator(allowed_extensions=["heic", "png", "jpg", "jpeg"])
-    #     ],
-    #     null=True,
-    #     blank=True,
-    # )
+    
     photo = models.ManyToManyField('Media', related_name='user_profile', blank=True)
     birth_date = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
@@ -118,7 +111,8 @@ class Sportsman(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='sportsman_profile')
     sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
     sport_type = models.CharField(max_length=100)
-    # sport_direction = models.CharField(max_length=100)
+
+    about_me = models.TextField(blank=True, null=True)
     motto = models.CharField(max_length=100, blank=True, null=True)
     height = models.DecimalField(max_digits=5, decimal_places=2)
     weight = models.DecimalField(max_digits=5, decimal_places=2)
@@ -134,7 +128,7 @@ class Sportsman(BaseModel):
     telegram = models.CharField(max_length=150, blank=True, null=True)
     instagram = models.CharField(max_length=150, blank=True, null=True)
     media = models.ManyToManyField('Media', related_name='sportsmen', blank=True)
-    
+
     class Meta:
         db_table = "sportsman"
 
