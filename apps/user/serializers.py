@@ -328,7 +328,7 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         results_data = validated_data.pop("results", None)
         media_ids = validated_data.pop("media_ids", None)
         sport = validated_data.pop("sport", None)
-        trainer = validated_data.pop("trainer")
+        trainer = validated_data.pop("trainer", None)
 
         
         profile = Sportsman.objects.create(sport=sport, **validated_data)
