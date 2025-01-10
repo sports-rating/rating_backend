@@ -404,6 +404,9 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
             for media in media_objects:
                 if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
                     raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
+            
+            old_media = instance.media.all()
+            old_media.delete()
 
             instance.media.set(media_objects)
 
@@ -561,7 +564,7 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
 
             # Check if medias are not associated with another objects
             for media in media_objects:
-                if media.trainer is not None and media.trainer != profile:
+                if media.trainer.exists() and not media.trainer.filter(id=profile.id).exists():
                     raise_validation_error(message=_(f"Media {media.id} is already associated with another trainer."))
 
             profile.media.set(media_objects)
@@ -616,19 +619,22 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
                 if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
                     raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
 
-            instance.media.set(media_objects)
+            old_media = instance.media.all()
+            old_media.delete()
+
+            instance.media.set(media_objects) # 1c045b78-9723-4c64-abb1-885c9b009702
         
         # Update educations
         if educations_data:
             instance.educations.all().delete()
             for education_data in educations_data:
-                Education.objects.create(sportsman_profile=instance, **education_data)
+                Education.objects.create(trainer_profile=instance, **education_data)
 
         # Update results
         if results_data:
             instance.results.all().delete()
             for result_data in results_data:
-                Result.objects.create(sportsman_profile=instance, **result_data)
+                Result.objects.create(trainer_profile=instance, **result_data)
 
         return instance
     
@@ -838,6 +844,7 @@ class CustomTokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     sportsman_profile = SportsmanUpdateSerializer(required=False)
+    trainer_profile = TrainerUpdateSerializer(required=False)
     photo_id = serializers.UUIDField(format='hex_verbose', write_only=True, required=False)
     photo = MediaSerializer(many=True, required=False)
 
@@ -855,6 +862,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "photo",
             "user_role",
             "sportsman_profile",
+            "trainer_profile",
         ]
         extra_kwargs = {"id": {"read_only": True}}
 
@@ -872,6 +880,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         photo_id = validated_data.pop("photo_id", None)
         sportsman_profile_data = validated_data.pop("sportsman_profile", None)
+        trainer_profile_data = validated_data.pop("trainer_profile", None)
 
         with transaction.atomic():
             # Updating user fields
@@ -890,5 +899,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 spotrsman_profile = getattr(instance, "sportsman_profile", None)
                 if spotrsman_profile:
                     SportsmanUpdateSerializer().update(spotrsman_profile, sportsman_profile_data)
+
+            if trainer_profile_data:
+                trainer_profile = getattr(instance, "trainer_profile", None)
+                if trainer_profile:
+                    TrainerUpdateSerializer().update(trainer_profile, trainer_profile_data)
+
         return instance
     
