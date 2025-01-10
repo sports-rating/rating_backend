@@ -33,6 +33,7 @@ class UserAdmin(admin.ModelAdmin):
                     "last_name",
                     "phone_number",
                     "is_verified",
+                    "user_role",
                 )
             },
         ),
