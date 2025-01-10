@@ -301,39 +301,6 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         )
     
 
-class TrainerListCreateView(generics.ListCreateAPIView):
-    permission_classes = (permissions.AllowAny, )
-    queryset = User.objects.all()
-    serializer_class = RegistrationSerializer
-
-    def get_serializer_class(self):
-        if self.request.method == "GET":
-            return TrainerListSerializer
-        return super().get_serializer_class()
-    
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return success_response(
-            data=serializer.data,
-            message=_("Trainer created successfully"),
-            code=200
-        )
-
-    def get_queryset(self):
-        return self.queryset.filter(user_role='trainer')
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(
-            data=serializer.data,
-            message=_("Trainer list"),
-            code=200
-        )
-    
-
 class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = User.objects.all()
@@ -375,6 +342,84 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
         return success_response(
             message=_("Sportsman deleted successfully"),
+            code=204
+        )
+
+
+class TrainerListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.AllowAny, )
+    queryset = User.objects.all()
+    serializer_class = RegistrationSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return TrainerListSerializer
+        return super().get_serializer_class()
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Trainer created successfully"),
+            code=200
+        )
+
+    def get_queryset(self):
+        return self.queryset.filter(user_role='trainer')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(
+            data=serializer.data,
+            message=_("Trainer list"),
+            code=200
+        )
+
+
+class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = User.objects.all()
+    serializer_class = UserUpdateSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
+        return super().get_serializer_class()
+
+    def get_object(self):
+        user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+        if not user_profile:
+            raise_validation_error(message=_("Trainer Profile not found"), code=404)
+        return user_profile  
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data, 
+            message=_("Trainer retrieved successfully"),
+            code=200,
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data, 
+            message=_("Trainer profile updated successfully"),
+            code=200,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Trainer deleted successfully"),
             code=204
         )
 
@@ -454,27 +499,6 @@ class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             message=_("Education deleted successfully"),
             code=204
-        )
-    
-
-class TrainerRetrieveView(generics.RetrieveAPIView):
-    permission_classes = (permissions.AllowAny, )
-    queryset = User.objects.all()
-    serializer_class = UsersMeSerializer
-
-    def get_object(self):
-        user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
-        if not user_profile:
-            raise_validation_error(message=_("Trainer Profile not found"), code=404)
-        return user_profile            
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return success_response(
-            data=serializer.data, 
-            message=_("Trainer retrieved successfully"),
-            code=200,
         )
 
 

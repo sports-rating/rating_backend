@@ -583,6 +583,63 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
         data["moving_date_year"] = str(instance.moving_date.year)
         data.pop("moving_date", None)
         return data
+
+
+class TrainerUpdateSerializer(TrainerRegisterSerializer):
+    educations = EducationCreateSerializer(many=True, required=False)
+    results = ResultCreateSerializer(many=True, required=False)
+    media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
+
+    class Meta(TrainerRegisterSerializer.Meta):
+        extra_kwargs = {
+            **TrainerRegisterSerializer.Meta.extra_kwargs,
+            'educations': {"required": False},
+            "results": {"required": False},
+        }
+    
+    def update(self, instance, validated_data):
+        educations_data = validated_data.pop("educations", None)
+        results_data = validated_data.pop("results", None)
+        media_ids = validated_data.pop("media_ids", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update media associations
+        if media_ids:
+            media_objects = Media.objects.filter(id__in=media_ids)
+            if not media_objects.exists():
+                raise_validation_error(message=_("At least one media must be uploaded"))
+
+            for media in media_objects:
+                if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
+                    raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
+
+            instance.media.set(media_objects)
+        
+        # Update educations
+        if educations_data:
+            instance.educations.all().delete()
+            for education_data in educations_data:
+                Education.objects.create(sportsman_profile=instance, **education_data)
+
+        # Update results
+        if results_data:
+            instance.results.all().delete()
+            for result_data in results_data:
+                Result.objects.create(sportsman_profile=instance, **result_data)
+
+        return instance
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sport_id"] = instance.sport.id
+        data["sport_name"] = instance.sport.name
+        data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
+        data["moving_date_year"] = str(instance.moving_date.year)
+        data.pop("moving_date", None)
+        return data
     
 
 class TrainerSerializer(serializers.ModelSerializer):

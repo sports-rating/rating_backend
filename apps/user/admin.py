@@ -78,7 +78,7 @@ class TrainerAdmin(admin.ModelAdmin):
                 "fields": (
                     "user",
                     "sport_type",
-                    "sport_direction",
+                    "sport",
                     "motto",
                     "height",
                     "weight",
