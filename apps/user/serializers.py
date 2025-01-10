@@ -274,7 +274,7 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
-    trainer_id = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), source="trainer", write_only=True, required=True)
+    trainer_id = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), source="trainer", write_only=True, required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     moving_date_year = serializers.IntegerField(write_only=True)
     moving_date_month = serializers.IntegerField(write_only=True)
@@ -330,10 +330,12 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer")
 
-        if trainer.sport.id == sport.id:
-            profile = Sportsman.objects.create(sport=sport, trainer=trainer, **validated_data)
-        else:
-            raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
+        
+        profile = Sportsman.objects.create(sport=sport, **validated_data)
+        # if trainer.sport.id == sport.id:
+            # profile = Sportsman.objects.create(sport=sport, trainer=trainer, **validated_data)
+        # else:
+        #     raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
         logger.info(f"Sportsman Profile created -> {profile}")
         
         if media_ids:
