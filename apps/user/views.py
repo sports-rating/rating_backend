@@ -48,10 +48,12 @@ from .serializers import (
     SportsmanSerializer,
     TrainerSerializer,
     SportsmanListSerializer,
+    TrainerListSerializer,
     ResultCreateSerializer,
     ResultSerializer,
     EducationCreateSerializer,
     EducationSerializer,
+    
 )
 
 from dashboard.serializers import (
@@ -301,12 +303,12 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
 class TrainerListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny, )
-    queryset = Trainer.objects.all()
+    queryset = User.objects.all()
     serializer_class = RegistrationSerializer
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return TrainerSerializer
+            return TrainerListSerializer
         return super().get_serializer_class()
     
     def create(self, request, *args, **kwargs):
@@ -318,6 +320,9 @@ class TrainerListCreateView(generics.ListCreateAPIView):
             message=_("Trainer created successfully"),
             code=200
         )
+
+    def get_queryset(self):
+        return self.queryset.filter(user_role='trainer')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

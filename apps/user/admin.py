@@ -30,6 +30,7 @@ class UserAdmin(admin.ModelAdmin):
                 "fields": (
                     "username",
                     "first_name",
+                    "middle_name",
                     "last_name",
                     "phone_number",
                     "is_verified",
@@ -69,7 +70,7 @@ class SportsmanAdmin(admin.ModelAdmin):
 
 @admin.register(Trainer)
 class TrainerAdmin(admin.ModelAdmin):
-    list_display = ["id", "user", "sport_type", "gender"]
+    list_display = ["id", "user", "sport_type", "sport","gender"]
     fieldsets = (
         (
             None,

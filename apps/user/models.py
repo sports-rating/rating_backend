@@ -40,7 +40,7 @@ class User(AbstractUser, BaseModel):
         ordering = ["-created_time"]
 
     def __str__(self):
-        return self.username.title()
+        return f"{self.first_name} {self.middle_name} {self.last_name}"
     
     def save(self, *args, **kwargs):
         self.clean()
@@ -110,6 +110,7 @@ class User(AbstractUser, BaseModel):
 class Sportsman(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='sportsman_profile')
     sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
+    trainer = models.ForeignKey("user.Trainer", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
     sport_type = models.CharField(max_length=100)
 
     about_me = models.TextField(blank=True, null=True)
@@ -147,8 +148,10 @@ class Sportsman(BaseModel):
 
 class Trainer(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='trainer_profile')
+    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
     sport_type = models.CharField(max_length=100)
-    sport_direction = models.CharField(max_length=100)
+    
+    about_me = models.TextField(blank=True, null=True)
     motto = models.CharField(max_length=100, blank=True, null=True)
     height = models.DecimalField(max_digits=5, decimal_places=2)
     weight = models.DecimalField(max_digits=5, decimal_places=2)
@@ -165,12 +168,15 @@ class Trainer(BaseModel):
     number_of_students = models.PositiveIntegerField()
     number_of_awards = models.PositiveIntegerField()
     # Contacts
-    telegram = models.URLField(blank=True, null=True)
-    instagram = models.URLField(blank=True, null=True)
+    telegram = models.CharField(max_length=150, blank=True, null=True)
+    instagram = models.URLField(max_length=150, blank=True, null=True)
     media = models.ManyToManyField('Media', related_name='trainer', blank=True)
 
     class Meta:
         db_table = "trainer"
+
+    def __str__(self):
+        return f"Trainer {self.user.first_name} - {self.user.last_name}"
 
     def delete(self, *args, **kwargs):
         media_objects = self.media.all()
@@ -208,6 +214,7 @@ class Result(BaseModel):
     sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     tournament = models.ForeignKey("dashboard.Tournament", models.CASCADE, related_name="results", blank=True, null=True)
+    additional_attributes = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = "result"
