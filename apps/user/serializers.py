@@ -364,8 +364,9 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["sport_id"] = instance.sport.id
         data["sport_name"] = instance.sport.name
-        data["trainer_id"] = instance.trainer.id
-        data["trainer_name"] = f'{instance.trainer.user}'
+        if instance.trainer:
+            data["trainer_id"] = instance.trainer.id
+            data["trainer_name"] = f'{instance.trainer.user}'
         data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
         data["moving_date_year"] = str(instance.moving_date.year)
         data.pop("moving_date", None)
@@ -463,8 +464,9 @@ class SportsmanSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
         data["moving_date_year"] = str(instance.moving_date.year)
-        data["trainer_id"] = instance.trainer.id
-        data["trainer_name"] = f'{instance.trainer.user}'
+        if instance.trainer:
+            data["trainer_id"] = instance.trainer.id
+            data["trainer_name"] = f'{instance.trainer.user}'
         data.pop("moving_date", None)
         return data
     
