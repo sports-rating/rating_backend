@@ -169,7 +169,7 @@ class Trainer(BaseModel):
     number_of_awards = models.PositiveIntegerField()
     # Contacts
     telegram = models.CharField(max_length=150, blank=True, null=True)
-    instagram = models.URLField(max_length=150, blank=True, null=True)
+    instagram = models.CharField(max_length=150, blank=True, null=True)
     media = models.ManyToManyField('Media', related_name='trainer', blank=True)
 
     class Meta:
