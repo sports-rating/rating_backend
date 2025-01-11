@@ -51,7 +51,14 @@ class UserListSerializer(serializers.ModelSerializer):
             "user_role",
             "created_time",
         ]
-
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.sportsman_profile and instance.sportsman_profile.trainer:
+            data["trainer_id"] = instance.sportsman_profile.trainer.user.id
+            data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
+        return data
+    
 
 class SportCreateSerializer(serializers.ModelSerializer):
     logo = InlineMediaSerializer(many=True, read_only=True)

@@ -12,7 +12,10 @@ from rest_framework import generics, permissions, status, filters
 import rest_framework_simplejwt.views as simplejwt_views
 from rest_framework_simplejwt.exceptions import TokenError
 
-from user.filters import SportsmanFilter
+from user.filters import (
+    SportsmanFilter,
+    TrainerFilter
+    )
 from shared.addons.pagination import CustomPagination
 from shared.addons.send_verification import (
     send_verification_code,
@@ -350,6 +353,9 @@ class TrainerListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny, )
     queryset = User.objects.all()
     serializer_class = RegistrationSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = TrainerFilter
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -370,7 +376,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         return self.queryset.filter(user_role='trainer')
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
