@@ -392,6 +392,9 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
 
         # Update basic sportsman profile fields
         for attr, value in validated_data.items():
+            if attr == "trainer":
+                logger.info(f"Changed to: {value.trainer_profile}")
+                value = value.trainer_profile
             setattr(instance, attr, value)
         instance.save()
 
@@ -429,12 +432,7 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
         return instance
 
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["sport_id"] = instance.sport.id
-        data["sport_name"] = instance.sport.name
-        data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
-        data["moving_date_year"] = str(instance.moving_date.year)
-        data.pop("moving_date", None)
+        data = super().to_representation(instance) # Parent's method is invoked here
         return data
     
 
@@ -472,7 +470,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
         data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
         data["moving_date_year"] = str(instance.moving_date.year)
         if instance.trainer:
-            data["trainer_id"] = instance.trainer.id
+            data["trainer_id"] = instance.trainer.user.id
             data["trainer_name"] = f'{instance.trainer.user}'
         data.pop("moving_date", None)
         return data
@@ -641,12 +639,7 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
         return instance
     
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["sport_id"] = instance.sport.id
-        data["sport_name"] = instance.sport.name
-        data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
-        data["moving_date_year"] = str(instance.moving_date.year)
-        data.pop("moving_date", None)
+        data = super().to_representation(instance) # Parent's method is invoked here
         return data
     
 
