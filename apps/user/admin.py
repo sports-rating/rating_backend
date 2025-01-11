@@ -17,6 +17,7 @@ class UserAdmin(admin.ModelAdmin):
         "id",
         "username",
         "phone_number",
+        "user_role",
         "is_verified",
         "created_time",
     ]

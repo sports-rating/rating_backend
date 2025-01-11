@@ -274,7 +274,7 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
-    trainer_id = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), source="trainer", write_only=True, required=False)
+    trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     moving_date_year = serializers.IntegerField(write_only=True)
     moving_date_month = serializers.IntegerField(write_only=True)
@@ -329,13 +329,13 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         media_ids = validated_data.pop("media_ids", None)
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
-
-        
-        profile = Sportsman.objects.create(sport=sport, **validated_data)
-        # if trainer.sport.id == sport.id:
-            # profile = Sportsman.objects.create(sport=sport, trainer=trainer, **validated_data)
-        # else:
-        #     raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
+        trainer_profile = trainer.trainer_profile
+        logger.info(f"Trainer profile: {trainer_profile}")
+        # profile = Sportsman.objects.create(sport=sport, **validated_data)
+        if trainer_profile.sport.id == sport.id:
+            profile = Sportsman.objects.create(sport=sport, trainer=trainer_profile, **validated_data)
+        else:
+            raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
         logger.info(f"Sportsman Profile created -> {profile}")
         
         if media_ids:
@@ -365,7 +365,7 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         data["sport_id"] = instance.sport.id
         data["sport_name"] = instance.sport.name
         if instance.trainer:
-            data["trainer_id"] = instance.trainer.id
+            data["trainer_id"] = User.objects.get(trainer_profile__id=instance.trainer.id).id
             data["trainer_name"] = f'{instance.trainer.user}'
         data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
         data["moving_date_year"] = str(instance.moving_date.year)
@@ -405,8 +405,12 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
                 if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
                     raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
             
-            old_media = instance.media.all()
-            old_media.delete()
+            # old_media = instance.media.all()
+            # instance.media.clear()
+
+            # # Deleting the old media 
+            # for media in old_media:
+            #     media.delete()
 
             instance.media.set(media_objects)
 
@@ -611,6 +615,7 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
 
         # Update media associations
         if media_ids:
+            
             media_objects = Media.objects.filter(id__in=media_ids)
             if not media_objects.exists():
                 raise_validation_error(message=_("At least one media must be uploaded"))
@@ -618,9 +623,6 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
             for media in media_objects:
                 if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
                     raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
-
-            old_media = instance.media.all()
-            old_media.delete()
 
             instance.media.set(media_objects) # 1c045b78-9723-4c64-abb1-885c9b009702
         
