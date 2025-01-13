@@ -32,7 +32,6 @@ services:
     image: redis:latest
     volumes:
       - redis-data:/data
-    restart: unless-stopped
 
 volumes:
   postgres_data:
