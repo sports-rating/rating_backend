@@ -905,7 +905,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 if len(pinfl) != 14:
                     raise_validation_error(message=_("PINFL must be exactly 14 digits."))
             
-
         return attrs
 
     def update(self, instance, validated_data):
