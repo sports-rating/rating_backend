@@ -27,6 +27,12 @@ class User(AbstractUser, BaseModel):
     last_name = models.CharField(max_length=100, null=True, blank=True)
     middle_name = models.CharField(max_length=100, null=True, blank=True)
     
+    pinfl = models.CharField(
+        max_length=14,
+        unique=True,
+        blank=True, 
+        null=True
+    )
     user_role = models.CharField(max_length=50, choices=UserRoles.choices(), default=UserRoles.ORDINARY.value)
     phone_number = models.CharField(max_length=13)
     email = models.CharField(null=True, blank=True)
@@ -82,10 +88,15 @@ class User(AbstractUser, BaseModel):
                     raise ValidationError("Please enter a valid phone number.")
             except NumberParseException:
                 raise ValidationError("Please enter a valid phone number.")
-            
+    
+    def check_pinfl(self):
+        if self.pinfl and not self.pinfl.isdigit():
+            raise ValidationError("PINFL must contain only numbers.")
+
     def clean(self):
         self.check_username()
         self.check_phone_valid()
+        self.check_pinfl()
     
     def check_username(self):
         print(f"checking username for {self.username}")
@@ -164,9 +175,9 @@ class Trainer(BaseModel):
     citizenship = models.CharField(max_length=100)
     moving_date = models.DateField(blank=True, null=True)
     # General Results
-    number_of_games = models.PositiveIntegerField()
-    number_of_students = models.PositiveIntegerField()
-    number_of_awards = models.PositiveIntegerField()
+    number_of_games = models.PositiveIntegerField(blank=True, null=True)
+    number_of_students = models.PositiveIntegerField(blank=True, null=True)
+    number_of_awards = models.PositiveIntegerField(blank=True, null=True)
     # Contacts
     telegram = models.CharField(max_length=150, blank=True, null=True)
     instagram = models.CharField(max_length=150, blank=True, null=True)
@@ -215,6 +226,10 @@ class Result(BaseModel):
     trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     tournament = models.ForeignKey("dashboard.Tournament", models.CASCADE, related_name="results", blank=True, null=True)
     additional_attributes = models.JSONField(null=True, blank=True)
+
+    number_of_gold = models.PositiveIntegerField(blank=True, null=True)
+    number_of_silver = models.PositiveIntegerField(blank=True, null=True)
+    number_of_bronze = models.PositiveIntegerField(blank=True, null=True)
 
     class Meta:
         db_table = "result"

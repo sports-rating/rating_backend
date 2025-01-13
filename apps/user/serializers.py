@@ -158,6 +158,9 @@ class ResultCreateSerializer(serializers.ModelSerializer):
             "currently_participating",
             "rating",
             "additional_attributes",
+            "number_of_gold",
+            "number_of_silver",
+            "number_of_bronze",
         ]
         extra_kwargs = {"id": {"read_only": True}}
 
@@ -186,6 +189,9 @@ class ResultSerializer(serializers.ModelSerializer):
             "rating",
             "tournament",
             "additional_attributes",
+            "number_of_gold",
+            "number_of_silver",
+            "number_of_bronze",
         )
 
 
@@ -237,6 +243,7 @@ class UsersMeSerializer(serializers.ModelSerializer):
             "first_name",
             "middle_name",
             "last_name",
+            "pinfl",
             "phone_number",
             "email",
             "photo",
@@ -396,7 +403,6 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
         # Update basic sportsman profile fields
         for attr, value in validated_data.items():
             if attr == "trainer":
-                logger.info(f"Changed to: {value.trainer_profile}")
                 value = value.trainer_profile
             setattr(instance, attr, value)
         instance.save()
@@ -525,9 +531,6 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
             "moving_date",
             "moving_date_year",
             "moving_date_month",
-            "number_of_games",
-            "number_of_students",
-            "number_of_awards",
             "telegram",
             "instagram",
             "educations",
@@ -667,9 +670,6 @@ class TrainerSerializer(serializers.ModelSerializer):
             "street",
             "place_of_birth",
             "citizenship",
-            "number_of_games",
-            "number_of_students",
-            "number_of_awards",
             "telegram",
             "instagram",
             "educations",
@@ -716,6 +716,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "first_name",
             "middle_name",
             "last_name",
+            "pinfl",
             "user_role",
             "email",
             "photo_id",
@@ -728,13 +729,31 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "is_verified",
             "created_time",
         )
-        extra_kwargs = {"id": {"read_only": True}, "is_verified": {"read_only": True}, "photo": {"required": False}}
+        extra_kwargs = {
+            "id": {"read_only": True}, 
+            "is_verified": {"read_only": True}, 
+            "photo": {"required": False},
+            }
 
     def validate(self, attrs):
+        pinfl = attrs.get("pinfl", None)
+        user_role = attrs.get("user_role")
+        
         user = User.objects.filter(phone_number=attrs["phone_number"]).first()
         if user:
             raise_validation_error(message=_("Phone number is already registered"))
-        logger.info(attrs)
+        
+        if user_role is not "ordinary":
+            if pinfl:
+                if User.objects.filter(pinfl=pinfl).exists():
+                    raise_validation_error(message=_("PINFL is already registered"))
+                if not pinfl.isdigit():
+                    raise_validation_error(message=_("PINFL must contain only numbers."))
+                if len(pinfl) != 14:
+                    raise_validation_error(message=_("PINFL must be exactly 14 digits."))
+            else:
+                raise_validation_error(message=_("PINFL is required"))
+        
         return attrs
 
     def create(self, validated_data):
@@ -853,6 +872,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "first_name",
             "middle_name",
             "last_name",
+            "pinfl",
             "phone_number",
             "email",
             "birth_date",
@@ -866,13 +886,26 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         phone_number = attrs.get("phone_number")
-        
+        pinfl = attrs.get("pinfl", None)
+        user_role = attrs.get("user_role")
+
         # Checking if phone_number is being updated
         if phone_number and self.instance.phone_number != phone_number:
             # Looking for other users with the same phone number
             if User.objects.filter(phone_number=phone_number).exists():
                 raise_validation_error(message=_("Phone number is already registered"))
-        
+
+        if user_role is not "ordinary":
+            if pinfl:
+                if self.instance.pinfl != pinfl:
+                    if User.objects.filter(pinfl=pinfl).exists():
+                        raise_validation_error(message=_("PINFL is already registered"))
+                if not pinfl.isdigit():
+                    raise_validation_error(message=_("PINFL must contain only numbers."))
+                if len(pinfl) != 14:
+                    raise_validation_error(message=_("PINFL must be exactly 14 digits."))
+            
+
         return attrs
 
     def update(self, instance, validated_data):
