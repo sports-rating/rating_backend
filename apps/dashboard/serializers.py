@@ -59,7 +59,75 @@ class UserListSerializer(serializers.ModelSerializer):
                 data["trainer_id"] = instance.sportsman_profile.trainer.user.id
                 data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         return data
+
+
+class SportsmanExportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sportsman
+        fields = [
+            "height",
+            "weight",
+            "region",
+            "city",
+            "street",
+            "citizenship",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.trainer:
+            data["trainer_name"] = f'{instance.trainer.user}'
+        if instance.sport:
+            data["sport"] = instance.sport.name
+        return data
+
+
+class TrainerExportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Trainer
+        fields = [
+            "height",
+            "weight",
+            "region",
+            "city",
+            "street",
+            "citizenship",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.sport:
+            data["sport"] = instance.sport.name
+        return data
+
+
+class UserExportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "middle_name",
+            "last_name",
+            "phone_number",
+            "email",
+            "user_role",
+            "birth_date",
+            "created_time",
+        ]
     
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        
+        if instance.user_role == "sportsman":
+            sportsman_data = SportsmanExportSerializer(instance.sportsman_profile).data
+            data.update(sportsman_data)  # Merge sportsman data into the main data
+
+        elif instance.user_role == "trainer":
+            trainer_data = TrainerExportSerializer(instance.trainer_profile).data
+            data.update(trainer_data)  # Merge trainer data into the main data
+
+        return data
+
 
 class SportCreateSerializer(serializers.ModelSerializer):
     logo = InlineMediaSerializer(many=True, read_only=True)

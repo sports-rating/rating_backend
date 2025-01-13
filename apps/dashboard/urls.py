@@ -8,7 +8,8 @@ from dashboard.views import (
     SportListCreateView,
     SportRetrieveUpdateDeleteView,
     TeamListCreateView,
-    TeamRetrieveUpdateDeleteView
+    TeamRetrieveUpdateDeleteView,
+    ExportView
 )
 
 app_name = "dashboard"
@@ -24,4 +25,6 @@ urlpatterns = [
 
     path("team/", TeamListCreateView.as_view(), name='team-create-list'),
     path("team/<uuid:pk>/", TeamRetrieveUpdateDeleteView.as_view(), name='team-retrieve-update-delete'),
+
+    path("export-excel/", ExportView.as_view(), name='export-excel'),
 ]

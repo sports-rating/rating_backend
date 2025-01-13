@@ -20,10 +20,11 @@ class UserFilter(filters.FilterSet):
     user_role = filters.CharFilter(method="filter_user_role")
     start_time = filters.CharFilter(method="filter_start_time")
     end_time = filters.CharFilter(method="filter_end_time")
+    sport = filters.CharFilter(method='filter_sport')
 
     class Meta:
         model = User
-        fields = ["user_role", "start_time", "end_time"]
+        fields = ["user_role", "start_time", "end_time", "sport"]
     
     def filter_user_role(self, queryset, name, value):  # noqa
         if value == "sportsman":
@@ -48,7 +49,21 @@ class UserFilter(filters.FilterSet):
             if value:
                 end_date = make_aware(datetime.combine(value, datetime.min.time()))
                 return queryset.filter(created_time__lte=end_date)
-       
+    
+    def filter_sport(self, queryset, name, value):
+        user_role = self.request.query_params.get("user_role")
+        sport = value
+
+        if user_role:
+            queryset = queryset.filter(user_role=user_role)
+        if sport:
+            if user_role == "sportsman":
+                queryset = queryset.filter(sportsman_profile__sport__name=sport)
+            elif user_role == "trainer":
+                queryset = queryset.filter(trainer_profile__sport__name=sport)
+        
+        return queryset
+        
 
 class TournamentFilter(filters.FilterSet):
     start_time = filters.DateFilter(field_name="start_time", lookup_expr='gte')

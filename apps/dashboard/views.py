@@ -1,7 +1,10 @@
+import pandas
+
 from django.utils.translation import gettext as _, get_language
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
+from django.http import HttpResponse
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -42,6 +45,7 @@ from dashboard.serializers import (
     TeamCreateSerializer,
     TeamUpdateSerializer,
     TeamSerializer,
+    UserExportSerializer
 )
 
 from .filters import (
@@ -294,4 +298,27 @@ class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             message=_("Team deleted successfully"),
             code=204
         )
-    
+
+
+class ExportView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = User.objects.all()
+    serializer_class = UserExportSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = UserFilter
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        serializer = self.get_serializer(queryset, many=True)
+        df = pandas.DataFrame(serializer.data)
+
+        # Create the Excel file in memory
+        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = 'attachment; filename="filtered_data.xlsx"'
+
+        with pandas.ExcelWriter(response, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Filtered Data")
+
+        return response
+

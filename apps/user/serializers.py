@@ -743,7 +743,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         if user:
             raise_validation_error(message=_("Phone number is already registered"))
         
-        if user_role is not "ordinary":
+        if user_role != "ordinary":
             if pinfl:
                 if User.objects.filter(pinfl=pinfl).exists():
                     raise_validation_error(message=_("PINFL is already registered"))
@@ -895,7 +895,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             if User.objects.filter(phone_number=phone_number).exists():
                 raise_validation_error(message=_("Phone number is already registered"))
 
-        if user_role is not "ordinary":
+        if user_role != "ordinary":
             if pinfl:
                 if self.instance.pinfl != pinfl:
                     if User.objects.filter(pinfl=pinfl).exists():
