@@ -12,7 +12,7 @@ from django.conf import settings
 from shared.addons.custom_logging import logger
 from shared.addons.redis_utils import get_redis_connection
 
-# redis_connection = get_redis_connection()
+redis_connection = get_redis_connection()
 
 
 def generate_verification_code() -> str:

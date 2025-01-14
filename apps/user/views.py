@@ -78,10 +78,10 @@ class SendVerificationCodeView(generics.CreateAPIView):
     def post(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # code, message = send_verification_code(
-        #     serializer.validated_data["phone_number"]
-        # )
-        code, message = 200, "Verification code is successfully sent"
+        code, message = send_verification_code(
+            serializer.validated_data["phone_number"]
+        )
+        # code, message = 200, "Verification code is successfully sent"
 
         if code == 200:
             return success_response(message=_(message))
@@ -100,8 +100,8 @@ class VerifyCodeView(generics.GenericAPIView):
         phone_number: str = data.get("phone_number", None)
         code: str = data.get("code")
 
-        # response_code, message = verify_code(phone_number, code)
-        response_code, message = 200, "Verified successfully"
+        response_code, message = verify_code(phone_number, code)
+        # response_code, message = 200, "Verified successfully"
         print(f"response code: {response_code}, message: {message}")
         # if response_code == 200:
         #     if data["action"] == "signup":
