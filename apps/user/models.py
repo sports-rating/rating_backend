@@ -197,6 +197,23 @@ class Trainer(BaseModel):
         super().delete(*args, **kwargs)
 
 
+# class SportSchool(BaseModel):
+#     name = models.CharField(max_length=255)
+#     phone_number = models.CharField(max_length=13)
+#     email = models.EmailField()
+#     website = models.CharField(max_length=255, blank=True, null=True)
+#     established_date = models.DateField()
+    
+#     address = models.JSONField() # address, city, state, country...
+
+#     trainers = models.ManyToManyField(User, related_name='sport_schools')
+#     sports = models.ManyToManyField('Sport', related_name='sport_schools')
+#     media = models.ManyToManyField('Media', related_name='sport_schools', blank=True)
+
+#     class Meta:
+#         db_table = "sport_school"
+
+
 class Education(BaseModel):
     name = models.CharField(max_length=250)
     sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
@@ -204,6 +221,7 @@ class Education(BaseModel):
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)
     
+    # school = models.ForeignKey(SportSchool, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
     sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
     trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
 
@@ -232,15 +250,6 @@ class Result(BaseModel):
 
     class Meta:
         db_table = "result"
-
-    # def __str__(self):
-    #     return f'{self.tournament.name} result'
-
-    # def delete(self, *args, **kwargs):
-    #     if self.logo:
-    #         if os.path.isfile(self.logo.path):
-    #             os.remove(self.logo.path)
-    #     super().delete(*args, **kwargs)
 
 
 class Media(BaseModel):
