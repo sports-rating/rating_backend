@@ -196,7 +196,6 @@ class Trainer(BaseModel):
         
         super().delete(*args, **kwargs)
 
-
 # class SportSchool(BaseModel):
 #     name = models.CharField(max_length=255)
 #     phone_number = models.CharField(max_length=13)
