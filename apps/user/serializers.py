@@ -19,6 +19,7 @@ from .models import (
     Education,
     Result,
     Media,
+    School
 )
 
 from dashboard.models import (
@@ -92,13 +93,15 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
 
 class EducationCreateSerializer(serializers.ModelSerializer):
     sport_type = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True)
-    
+    school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), write_only=True)
+
     class Meta:
         model = Education
         fields = [
             "id",
             "name",
             "sport_type",
+            "school",
             "start_year",
             "end_year",
             "currently_studying",
@@ -115,13 +118,16 @@ class EducationCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         sport = validated_data.pop("sport")
-        education = Education.objects.create(sport=sport, **validated_data)
+        school = validated_data.pop("school")
+        education = Education.objects.create(sport=sport, school=school, **validated_data)
         return education
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["sport_id"] = instance.sport.id
         data["sport_type"] = instance.sport.name
+        data["school_id"] = instance.school.id
+        data["school_name"] = instance.school.name
         return data
 
 
@@ -628,7 +634,7 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
                 if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
                     raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
 
-            instance.media.set(media_objects) # 1c045b78-9723-4c64-abb1-885c9b009702
+            instance.media.set(media_objects) 
         
         # Update educations
         if educations_data:

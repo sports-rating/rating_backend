@@ -102,7 +102,6 @@ class VerifyCodeView(generics.GenericAPIView):
 
         response_code, message = verify_code(phone_number, code)
         # response_code, message = 200, "Verified successfully"
-        print(f"response code: {response_code}, message: {message}")
         # if response_code == 200:
         #     if data["action"] == "signup":
         #         user, created = User.objects.get_or_create(
@@ -538,4 +537,3 @@ class MediaDeleteView(generics.DestroyAPIView):
             message=_("Media deleted successfully"),
             code=204
         )
-    

@@ -9,6 +9,8 @@ from dashboard.views import (
     SportRetrieveUpdateDeleteView,
     TeamListCreateView,
     TeamRetrieveUpdateDeleteView,
+    SchoolListCreateView,
+    SchoolRetrieveUpdateDeleteView,
     ExportView
 )
 
@@ -27,4 +29,7 @@ urlpatterns = [
     path("team/<uuid:pk>/", TeamRetrieveUpdateDeleteView.as_view(), name='team-retrieve-update-delete'),
 
     path("export-excel/", ExportView.as_view(), name='export-excel'),
+
+    path("school/", SchoolListCreateView.as_view(), name='school-create-list'),
+    path("school/<uuid:pk>/", SchoolRetrieveUpdateDeleteView.as_view(), name='school-retrieve-update-delete'),
 ]

@@ -6,6 +6,10 @@ from dashboard.models import (
     Team
 )
 
+from user.models import (
+    School
+)
+
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "start_time", "end_time", "sport"]
@@ -23,3 +27,9 @@ class SportAdmin(admin.ModelAdmin):
 class TeamAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "founded_year", "sport"]
     search_fields = ["name",]
+
+
+@admin.register(School)
+class SchoolAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "phone_number"]
+    search_fields = ["name", ]

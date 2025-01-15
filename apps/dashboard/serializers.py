@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.utils.translation import gettext as _
+from django.db import transaction
 
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
@@ -12,6 +13,7 @@ from user.models import (
     Media,
     Education,
     Result,
+    School
 )
 
 from dashboard.models import (
@@ -19,7 +21,6 @@ from dashboard.models import (
     Sport,
     Team
 )
-
 
 from shared.addons.custom_logging import logger
 from shared.addons.exceptions import raise_validation_error
@@ -369,5 +370,135 @@ class TeamSerializer(serializers.ModelSerializer):
             "wins",
             "losses",
             "draws",
+        ]
+
+
+class SchoolCreateSerializer(serializers.ModelSerializer):
+    media_ids = serializers.ListField(child=serializers.UUIDField(format="hex_verbose"), write_only=True, required=False)
+    sport_ids = serializers.ListField(child=serializers.UUIDField(format="hex_verbose"), write_only=True, required=True)
+    trainer_ids = serializers.ListField(child=serializers.UUIDField(format="hex_verbose"), write_only=True, required=True)
+    media = InlineMediaSerializer(many=True, required=False, read_only=True)
+    trainers = UserListSerializer(many=True, read_only=True)
+    sports = SportSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = School
+        fields = [
+            "id",
+            "name",
+            "phone_number",
+            "email",
+            "website",
+            "established_date",
+            "address",
+            "media_ids",
+            "sport_ids",
+            "trainer_ids",
+            "sports",
+            "trainers",
+            "media"
+        ]
+        extra_kwargs = {"id": {"read_only": True},}
+
+    def create(self, validated_data):
+        media_ids = validated_data.pop("media_ids", None)
+        sport_ids = validated_data.pop("sport_ids", None)
+        trainer_ids = validated_data.pop("trainer_ids", None)
+        logger.info(f"Validated_data: {validated_data}")
+        with transaction.atomic():
+            school = School.objects.create(**validated_data)
+            if media_ids:
+                media_objects = Media.objects.filter(id__in=media_ids)
+
+                if not media_objects.exists():
+                    raise_validation_error(message=_(f"At least one media must be uploaded"))
+
+                school.media.set(media_objects)
+
+            if sport_ids:
+                sport_objects = Sport.objects.filter(id__in=sport_ids)
+
+                if not sport_objects.exists():
+                    raise_validation_error(message=_(f"At least one sport must be included"))
+                
+                school.sports.set(sport_objects)
+            
+            if trainer_ids:
+                trainer_objects = User.objects.filter(id__in=trainer_ids)
+
+                if not trainer_objects.exists():
+                    raise_validation_error(message=_(f"At least one trainer must be included"))
+
+                school.trainers.set(trainer_objects)
+
+            return school
+
+
+class SchoolUpdateSerializer(SchoolCreateSerializer):
+    media_ids = serializers.ListField(child=serializers.UUIDField(format="hex_verbose"), write_only=True, required=False)
+    sport_ids = serializers.ListField(child=serializers.UUIDField(format="hex_verbose"), write_only=True, required=True)
+    trainer_ids = serializers.ListField(child=serializers.UUIDField(format="hex_verbose"), write_only=True, required=True)
+    media = InlineMediaSerializer(many=True, required=False, read_only=True)
+    trainers = UserListSerializer(many=True, read_only=True)
+    sports = SportSerializer(many=True, read_only=True)
+
+    class Meta(SchoolCreateSerializer.Meta):
+        extra_kwargs = {
+            **SchoolCreateSerializer.Meta.extra_kwargs,
+            "sport_ids": {"required": False},
+            "trainer_ids": {"required": False},
+        }
+    
+    def update(self, instance, validated_data):
+        media_ids = validated_data.pop("media_ids", None)
+        sport_ids = validated_data.pop("sport_ids", None)
+        trainer_ids = validated_data.pop("trainer_ids", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if media_ids:
+            media_objects = Media.objects.filter(id__in=media_ids)
+            if not media_objects.exists():
+                raise_validation_error(message=_("At least one media must be uploaded"))
+            instance.media.set(media_objects)
+        
+        if sport_ids:
+            sport_objects = Sport.objects.filter(id__in=sport_ids)
+            if not sport_objects.exists():
+                raise_validation_error(message=_("At least one sport must be included"))
+            instance.sports.set(sport_objects)
+        
+        if trainer_ids:
+            trainer_objects = Trainer.objects.filter(id__in=trainer_ids)
+            if not trainer_objects.exists():
+                raise_validation_error(message=_("At least one trainer must be included"))
+            instance.trainers.set(trainer_objects)
+
+        return instance
+    
+    def to_representation(self, instance):
+        return super().to_representation(instance) # Parent's method is invoked here
+
+
+class SchoolSerializer(serializers.ModelSerializer):
+    sports = SportSerializer(many=True)
+    trainers = UserListSerializer(many=True)
+
+    class Meta:
+        model = School
+        fields = [
+            "id",
+            "name",
+            "phone_number",
+            "email",
+            "website",
+            "established_date",
+            "address",
+            "media",
+            "sports",
+            "trainers",
+            "media"
         ]
 

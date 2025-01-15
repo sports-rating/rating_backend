@@ -196,21 +196,22 @@ class Trainer(BaseModel):
         
         super().delete(*args, **kwargs)
 
-# class SportSchool(BaseModel):
-#     name = models.CharField(max_length=255)
-#     phone_number = models.CharField(max_length=13)
-#     email = models.EmailField()
-#     website = models.CharField(max_length=255, blank=True, null=True)
-#     established_date = models.DateField()
+
+class School(BaseModel):
+    name = models.CharField(max_length=255)
+    phone_number = models.CharField(max_length=13)
+    email = models.EmailField()
+    website = models.CharField(max_length=255, blank=True, null=True)
+    established_date = models.DateField()
     
-#     address = models.JSONField() # address, city, state, country...
+    address = models.JSONField() # address, city, state, country...
 
-#     trainers = models.ManyToManyField(User, related_name='sport_schools')
-#     sports = models.ManyToManyField('Sport', related_name='sport_schools')
-#     media = models.ManyToManyField('Media', related_name='sport_schools', blank=True)
+    trainers = models.ManyToManyField(User, related_name='sport_schools', blank=True)
+    sports = models.ManyToManyField('dashboard.Sport', related_name='sport_schools', blank=True)
+    media = models.ManyToManyField('Media', related_name='sport_schools', blank=True)
 
-#     class Meta:
-#         db_table = "sport_school"
+    class Meta:
+        db_table = "school"
 
 
 class Education(BaseModel):
@@ -220,12 +221,12 @@ class Education(BaseModel):
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)
     
-    # school = models.ForeignKey(SportSchool, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
     sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
     trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
 
     class Meta:
-        db_table = "school"
+        db_table = "education"
 
 
 class Result(BaseModel):

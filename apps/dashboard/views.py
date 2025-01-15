@@ -24,6 +24,7 @@ from user.models import (
     User,
     Sportsman,
     Trainer,
+    School
 )
 
 from dashboard.models import (
@@ -45,7 +46,10 @@ from dashboard.serializers import (
     TeamCreateSerializer,
     TeamUpdateSerializer,
     TeamSerializer,
-    UserExportSerializer
+    UserExportSerializer,
+    SchoolCreateSerializer,
+    SchoolSerializer,
+    SchoolUpdateSerializer
 )
 
 from .filters import (
@@ -321,4 +325,73 @@ class ExportView(generics.ListAPIView):
             df.to_excel(writer, index=False, sheet_name="Filtered Data")
 
         return response
+
+
+class SchoolListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = School.objects.all()
+    serializer_class = SchoolCreateSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return SchoolSerializer
+        return super().get_serializer_class()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("School created successfully"),
+            code=200
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(
+            data=serializer.data,
+            message=_("School list retrieved successfully"),
+            code=200
+        )
+    
+
+class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = School.objects.all()
+    serializer_class = SchoolUpdateSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return SchoolSerializer
+        return super().get_serializer_class()
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("School retrieved successfully"),
+            code=200,
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data, 
+            message=_("School updated successfully"),
+            code=200,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("School deleted successfully"),
+            code=204
+        )
 
