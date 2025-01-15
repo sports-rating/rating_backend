@@ -99,7 +99,6 @@ class EducationCreateSerializer(serializers.ModelSerializer):
         model = Education
         fields = [
             "id",
-            "name",
             "sport_type",
             "school",
             "start_year",
@@ -137,9 +136,9 @@ class EducationSerializer(serializers.ModelSerializer):
         model = Education
         fields = (
             "id",
-            "name",
             "start_year",
             "end_year",
+            "school",
             "currently_studying",
         )
     
@@ -147,6 +146,9 @@ class EducationSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["sport_id"] = instance.sport.id
         data["sport_type"] = instance.sport.name
+        if instance.school:
+            data["school_id"] = instance.school.id
+            data["school_name"] = instance.school.name
         return data
 
 
