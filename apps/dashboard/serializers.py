@@ -485,6 +485,7 @@ class SchoolUpdateSerializer(SchoolCreateSerializer):
 class SchoolSerializer(serializers.ModelSerializer):
     sports = SportSerializer(many=True)
     trainers = UserListSerializer(many=True)
+    media = InlineMediaSerializer(many=True)
 
     class Meta:
         model = School
