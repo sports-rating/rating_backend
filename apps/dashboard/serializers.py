@@ -471,7 +471,7 @@ class SchoolUpdateSerializer(SchoolCreateSerializer):
             instance.sports.set(sport_objects)
         
         if trainer_ids:
-            trainer_objects = Trainer.objects.filter(id__in=trainer_ids)
+            trainer_objects = User.objects.filter(id__in=trainer_ids)
             if not trainer_objects.exists():
                 raise_validation_error(message=_("At least one trainer must be included"))
             instance.trainers.set(trainer_objects)
