@@ -212,6 +212,7 @@ class MediaSerializer(serializers.ModelSerializer):
             ("sport", "sport"), 
             ("tournament", "tournament"),
             ("team", "team"),
+            ("school", "school"),
             ), 
             write_only=True
     )

@@ -71,6 +71,8 @@ class CorrectPath:
             return os.path.join("tournament/", filename)
         elif self.owner == "team":
             return os.path.join("team/logo/", filename)
+        elif self.owner == "school":
+            return os.path.join("school/", filename)
         else:
             return os.path.join(self.base_path, filename)
 
