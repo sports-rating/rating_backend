@@ -52,3 +52,7 @@ class UserRoles(BaseEnum):
     SPORTSMAN = "sportsman"
     TRAINER = "trainer"
     
+
+class SchoolChoices(BaseEnum):
+    ORDINARY = "ordinary"
+    CLUB = "club"

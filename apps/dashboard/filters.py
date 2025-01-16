@@ -8,7 +8,8 @@ from shared.addons.enums import GenderChoices, UserRoles
 from user.models import (
     Sportsman,
     Trainer,
-    User
+    User,
+    School
 )
 
 from dashboard.models import (
@@ -98,3 +99,15 @@ class TeamFilter(filters.FilterSet):
     
     def filter_sport(self, queryset, name, value): # noqa
         return queryset.filter(sport__name=value)
+
+
+class SchoolFilter(filters.FilterSet):
+    type = filters.CharFilter(method="filter_type")
+
+    class Meta:
+        model = School
+        fields = ["type"]
+    
+    def filter_type(self, queryset, name, value): # noqa
+        return queryset.filter(type=value)
+    

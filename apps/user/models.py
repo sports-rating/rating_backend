@@ -17,7 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from phonenumbers.phonenumberutil import NumberParseException
 from shared.models import BaseModel
-from shared.addons.enums import GenderChoices, MediaChoices, UserRoles
+from shared.addons.enums import GenderChoices, MediaChoices, UserRoles, SchoolChoices
 from core.settings import IMAGE_DIMENSION
 from shared.addons.utils import CorrectPath
 
@@ -200,12 +200,15 @@ class Trainer(BaseModel):
 class School(BaseModel):
     name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=13)
-    email = models.EmailField()
-    website = models.CharField(max_length=255, blank=True, null=True)
-    established_date = models.DateField()
-    
-    address = models.JSONField() # address, city, state, country...
+    director = models.CharField(max_length=255, blank=True, null=True)
 
+    address = models.JSONField() # address, district, region,...
+    type = models.CharField(max_length=50, choices=SchoolChoices.choices(), default=SchoolChoices.ORDINARY.value)
+
+    email = models.EmailField(blank=True, null=True)
+    website = models.CharField(max_length=255, blank=True, null=True)
+    established_date = models.DateField(blank=True, null=True)
+    
     trainers = models.ManyToManyField(User, related_name='sport_schools', blank=True)
     sports = models.ManyToManyField('dashboard.Sport', related_name='sport_schools', blank=True)
     media = models.ManyToManyField('Media', related_name='sport_schools', blank=True)

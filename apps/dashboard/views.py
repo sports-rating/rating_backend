@@ -55,7 +55,8 @@ from dashboard.serializers import (
 from .filters import (
     UserFilter,
     TournamentFilter,
-    TeamFilter
+    TeamFilter,
+    SchoolFilter
 )
 
 from shared.addons.exceptions import raise_validation_error
@@ -331,6 +332,9 @@ class SchoolListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = School.objects.all()
     serializer_class = SchoolCreateSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = SchoolFilter
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -348,7 +352,7 @@ class SchoolListCreateView(generics.ListCreateAPIView):
         )
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
