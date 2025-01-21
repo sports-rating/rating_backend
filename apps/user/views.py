@@ -279,7 +279,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return SportsmanListSerializer
+            return UsersMeSerializer
         return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
@@ -360,7 +360,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return TrainerListSerializer
+            return UsersMeSerializer
         return super().get_serializer_class()
     
     def create(self, request, *args, **kwargs):
