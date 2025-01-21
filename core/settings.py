@@ -245,6 +245,7 @@ IMAGE_TYPES = ["heic", "heif", "jpeg", "jpg", "png"]
 
 MAX_IMAGE_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
 
+MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024 # 10 MB
 
 # Logging
 

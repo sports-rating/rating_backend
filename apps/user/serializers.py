@@ -4,6 +4,7 @@ from django.utils.translation import gettext as _
 from django.contrib.auth.models import update_last_login
 from django.utils import timezone
 from django.db.models import Sum
+from django.conf import settings
 
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
@@ -231,6 +232,20 @@ class MediaSerializer(serializers.ModelSerializer):
             "owner" 
         )
         read_only_fields = ["created_time", "size", "extension", "media_type"]
+
+    def validate(self, data):
+        """
+        Validate the file size for PDFs
+        """
+        file = data.get("file")
+        if file:
+            if file.name.lower().endswith(".pdf"):
+                if file.size > settings.MAX_PDF_SIZE_BYTES:
+                    size_in_mb = file.size / (1024 * 1024)
+                    raise_validation_error(
+                        message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
+                    )
+        return data
 
     def create(self, validated_data):
         owner = validated_data.pop("owner", None)
