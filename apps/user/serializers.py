@@ -228,7 +228,7 @@ class MediaSerializer(serializers.ModelSerializer):
             "extension", 
             "created_time", 
             "file", 
-            "owner"
+            "owner" 
         )
         read_only_fields = ["created_time", "size", "extension", "media_type"]
 
