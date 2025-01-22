@@ -14,6 +14,7 @@ from rest_framework import generics, permissions, status, filters as rest_framew
 
 from datetime import datetime
 
+from shared.addons.permissions import IsAdmin
 from shared.addons.pagination import CustomPagination
 from shared.addons.utils import (
     success_response,
@@ -30,7 +31,9 @@ from user.models import (
 from dashboard.models import (
     Tournament,
     Sport,
-    Team
+    Team,
+    PrivacyPolicy,
+    TermsOfCondition
 )
 
 from user.serializers import (
@@ -49,7 +52,9 @@ from dashboard.serializers import (
     UserExportSerializer,
     SchoolCreateSerializer,
     SchoolSerializer,
-    SchoolUpdateSerializer
+    SchoolUpdateSerializer,
+    PrivacyPolicySerializer,
+    TermsOfConditionSerializer
 )
 
 from .filters import (
@@ -399,3 +404,135 @@ class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             code=204
         )
 
+
+class PrivacyPolicyAddListView(generics.ListCreateAPIView):
+    permission_classes = (permissions.AllowAny, ) # IsAdmin
+    serializer_class = PrivacyPolicySerializer
+    queryset = PrivacyPolicy.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(
+            data=serializer.data, 
+            message=_("List of PrivacyPolicies")
+        )
+
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data, 
+            message=_("PrivacyPolicy created successfully")
+        )
+
+
+class PrivacyPolicyDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.AllowAny,]
+    serializer_class = PrivacyPolicySerializer
+    queryset = PrivacyPolicy.objects.all()
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [permissions.AllowAny()]
+        return super().get_permissions()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            code=200,
+            message=_("PrivacyPolicy instance retrieved successfully"),
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("PrivacyPolicy is updated successfully"),
+            code=200,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("PrivacyPolicy is deleted successfully"), code=204
+        )
+
+    def get_object(self):
+        policy = self.queryset.filter(pk=self.kwargs["pk"]).first()
+        if not policy:
+            raise_validation_error(message=_("Privacy policy not found"), code=404)
+        return policy
+
+
+class TermsOfConditionAddListView(generics.ListCreateAPIView):
+    permission_classes = [permissions.AllowAny,]
+    serializer_class = TermsOfConditionSerializer
+    queryset = TermsOfCondition.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(
+            data=serializer.data, 
+            message=_("List of Terms of conditions")
+        )
+
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data, message=_("Terms of condition created successfully")
+        )
+
+
+class TermsOfConditionDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.AllowAny,]
+    serializer_class = TermsOfConditionSerializer
+    queryset = TermsOfCondition.objects.all()
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [permissions.AllowAny()]
+        return super().get_permissions()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            code=200,
+            message=_("Terms of condition instance retrieved successfully"),
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Terms of condition is updated successfully"),
+            code=200,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Terms of condition is deleted successfully"), code=204
+        )
+
+    def get_object(self):
+        condition = self.queryset.filter(pk=self.kwargs["pk"]).first()
+        if not condition:
+            raise_validation_error(message=_("Terms of condition not found"), code=404)
+        return condition

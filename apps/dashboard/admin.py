@@ -3,7 +3,9 @@ from django.contrib import admin
 from dashboard.models import (
     Tournament,
     Sport,
-    Team
+    Team,
+    PrivacyPolicy,
+    TermsOfCondition
 )
 
 from user.models import (
@@ -33,3 +35,17 @@ class TeamAdmin(admin.ModelAdmin):
 class SchoolAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "director", "phone_number"]
     search_fields = ["name", ]
+
+
+@admin.register(PrivacyPolicy)
+class PrivacyPolicyAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "language"]
+    search_fields = ["title",]
+    fields = ["language", "title", "text"]
+
+
+@admin.register(TermsOfCondition)
+class TermsOfConditionAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "language"]
+    search_fields = ["title",]
+    fields = ["language", "title", "text"]

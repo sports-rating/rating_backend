@@ -6,8 +6,7 @@ from django.db import models
 
 from rest_framework.exceptions import ValidationError
 from shared.models import BaseModel
-from shared.addons.utils import CorrectPath
-
+from shared.addons.enums import LanguageTypes
 
 
 class Sport(BaseModel):
@@ -24,9 +23,9 @@ class Sport(BaseModel):
 class Tournament(BaseModel):
     name = models.CharField(max_length=450)
     start_time = models.DateField()
-    end_time = models.DateField()
+    end_time = models.DateField() # will be removed
     place = models.CharField(max_length=450)
-    division = models.CharField(max_length=100)
+    division = models.CharField(max_length=100) # razdeleniya?
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="tournaments", blank=True, null=True)
     logo = models.ManyToManyField("user.Media", related_name='tournament_logo', blank=True)
 
@@ -64,4 +63,34 @@ class Team(BaseModel):
         db_table = "team"
 
 
+class PrivacyPolicy(BaseModel):
+    title = models.CharField(max_length=255)
+    language = models.CharField(
+        max_length=15, choices=LanguageTypes.choices(), default=LanguageTypes.EN.value
+    )
+    text = models.TextField()
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        db_table = "privacy_policy"
+        verbose_name = "Privacy Policy"
+        verbose_name_plural = "Privacy Policy"
+
+
+class TermsOfCondition(BaseModel):
+    title = models.CharField(max_length=255)
+    language = models.CharField(
+        max_length=15, choices=LanguageTypes.choices(), default=LanguageTypes.EN.value
+    )
+    text = models.TextField()
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        db_table = "terms_of_condition"
+        verbose_name = "Terms of Condition"
+        verbose_name_plural = "Terms of Conditions"
 

@@ -22,6 +22,8 @@ from dashboard.models import (
     Team
 )
 
+from .models import PrivacyPolicy, TermsOfCondition
+
 from shared.addons.custom_logging import logger
 from shared.addons.exceptions import raise_validation_error
 from shared.addons.utils import CorrectPath
@@ -433,3 +435,14 @@ class SchoolSerializer(serializers.ModelSerializer):
             "address",
         ]
 
+
+class PrivacyPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrivacyPolicy
+        fields = ("id", "title", "language", "text")
+
+
+class TermsOfConditionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TermsOfCondition
+        fields = ("id", "title", "language", "text")

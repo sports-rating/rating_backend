@@ -12,6 +12,8 @@ from rest_framework.generics import get_object_or_404
 import rest_framework_simplejwt.tokens as jwt_tokens
 import rest_framework_simplejwt.serializers as jwt_serializers
 
+from typing import List, Dict, Any
+
 # custom
 from .models import (
     User,
@@ -321,11 +323,11 @@ class SportsmanListSerializer(serializers.ModelSerializer):
             data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         return data
     
-    def get_statistics(self, obj):
+    def get_statistics(self, obj) -> Dict[str, Any]:
         sportsman = obj.sportsman_profile
         return calculate_sportsman_statistics(sportsman=sportsman)
 
-    def get_logo(self, obj):
+    def get_logo(self, obj) -> List[Dict[str, Any]]:
         if obj.sportsman_profile.sport:
             logos = obj.sportsman_profile.sport.logo.all()
             if logos.exists():
@@ -539,7 +541,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
         data.pop("moving_date", None)
         return data
     
-    def get_statistics(self, obj):
+    def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_sportsman_statistics(sportsman=obj)
     
 
@@ -565,11 +567,11 @@ class TrainerListSerializer(serializers.ModelSerializer):
             data["sport"] = instance.trainer_profile.sport.name
         return data
     
-    def get_statistics(self, obj):
+    def get_statistics(self, obj) ->  List[Dict[str, Any]]:
         trainer = obj.trainer_profile
         return calculate_trainer_statistics(trainer=trainer)
 
-    def get_logo(self, obj):
+    def get_logo(self, obj) -> List[Dict[str, Any]]:
         if obj.trainer_profile.sport:
             logos = obj.trainer_profile.sport.logo.all()
             if logos.exists():
@@ -760,7 +762,7 @@ class TrainerSerializer(serializers.ModelSerializer):
         data.pop("moving_date", None)
         return data
     
-    def get_statistics(self, obj):
+    def get_statistics(self, obj) ->  Dict[str, Any]:
         return calculate_trainer_statistics(trainer=obj)
     
 

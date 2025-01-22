@@ -11,7 +11,11 @@ from dashboard.views import (
     TeamRetrieveUpdateDeleteView,
     SchoolListCreateView,
     SchoolRetrieveUpdateDeleteView,
-    ExportView
+    ExportView,
+    TermsOfConditionAddListView,
+    TermsOfConditionDetailUpdateDeleteView,
+    PrivacyPolicyAddListView,
+    PrivacyPolicyDetailUpdateDeleteView,
 )
 
 app_name = "dashboard"
@@ -32,4 +36,10 @@ urlpatterns = [
 
     path("school/", SchoolListCreateView.as_view(), name='school-create-list'),
     path("school/<uuid:pk>/", SchoolRetrieveUpdateDeleteView.as_view(), name='school-retrieve-update-delete'),
+
+    path("privacy-policy/", PrivacyPolicyAddListView.as_view(), name="privacy-policy-create-list"),
+    path("privacy-policy/<uuid:pk>/", PrivacyPolicyDetailUpdateDeleteView.as_view(), name="privacy-policy-detail-update-delete"),
+
+    path("terms-of-condition/", TermsOfConditionAddListView.as_view(), name="terms-of-condition-create"),
+    path("terms-of-condition/<uuid:pk>/", TermsOfConditionDetailUpdateDeleteView.as_view(), name="terms-of-condition-detail-update-delete"),
 ]

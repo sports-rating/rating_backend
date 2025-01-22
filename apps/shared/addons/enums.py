@@ -56,3 +56,10 @@ class UserRoles(BaseEnum):
 class SchoolChoices(BaseEnum):
     ORDINARY = "ordinary"
     CLUB = "club"
+
+
+class LanguageTypes(BaseEnum):
+    EN = "en"
+    RU = "ru"
+    UZ = "uz"
+

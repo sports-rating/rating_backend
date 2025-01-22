@@ -134,7 +134,7 @@ class Sportsman(BaseModel):
     street = models.CharField(max_length=200)
     place_of_birth = models.CharField(max_length=100)
     citizenship = models.CharField(max_length=100)
-    moving_date = models.DateField(blank=True, null=True)
+    moving_date = models.DateField(blank=True, null=True) # remove
     # Contacts
     telegram = models.CharField(max_length=150, blank=True, null=True)
     instagram = models.CharField(max_length=150, blank=True, null=True)
