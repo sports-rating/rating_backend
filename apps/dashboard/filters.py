@@ -69,12 +69,23 @@ class UserFilter(filters.FilterSet):
 class TournamentFilter(filters.FilterSet):
     start_time = filters.DateFilter(field_name="start_time", lookup_expr='gte')
     end_time = filters.DateFilter(field_name="end_time", lookup_expr="lte")
+    sport = filters.CharFilter(method='filter_sport')
 
     class Meta:
         model = Tournament
-        fields = ["start_time", "end_time"]
+        fields = ["start_time", "end_time", "sport"]
     
+    def filter_sport(self, queryset, name, value):
+        if value:
+            queryset = queryset.filter(sport__name=value)
+        return queryset
+
     def filter_queryset(self, queryset):
+        
+        # Applying the default filters (e.g., sport filter)
+        queryset = super().filter_queryset(queryset)
+
+        # Applying custom date filtering
         start_time_incoming = self.request.query_params.get("start_time", None)
         end_time_incoming = self.request.query_params.get("end_time", None)
         
