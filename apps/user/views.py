@@ -279,8 +279,13 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return UsersMeSerializer
+            return SportsmanListSerializer
         return super().get_serializer_class()
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request  # Pass the request to the serializer
+        return context
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -303,7 +308,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
             message=_("Sportsman list"),
             code=200
         )
-    
+
 
 class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
@@ -320,6 +325,11 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         if not user_profile:
             raise_validation_error(message=_("Sportsman Profile not found"), code=404)
         return user_profile            
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request  # Pass the request to the serializer
+        return context
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -360,9 +370,14 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return UsersMeSerializer
+            return TrainerListSerializer
         return super().get_serializer_class()
     
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request  # Pass the request to the serializer
+        return context
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -401,6 +416,11 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         if not user_profile:
             raise_validation_error(message=_("Trainer Profile not found"), code=404)
         return user_profile  
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request  # Pass the request to the serializer
+        return context
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -514,6 +534,11 @@ class MediaUploadView(generics.CreateAPIView):
     queryset = Media.objects.all()
     serializer_class = MediaSerializer
     
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request  # Pass the request to the serializer
+        return context
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

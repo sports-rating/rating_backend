@@ -41,6 +41,8 @@ from shared.addons.send_verification import (
     verify_code,
     check_verification_status,
 )
+from .utils import calculate_sportsman_statistics, calculate_trainer_statistics
+
 from datetime import date
 
 SEND_VERIFICATION_ACTION = (
@@ -248,6 +250,13 @@ class MediaSerializer(serializers.ModelSerializer):
                     )
         return data
 
+    # def get_file(self, obj):
+    #     print('triggered')
+    #     request = self.context.get("request")
+    #     if obj.file and request:
+    #         return request.build_absolute_uri(obj.file.url)  # Build the full URL
+    #     return None
+
     def create(self, validated_data):
         owner = validated_data.pop("owner", None)
         media_instance = Media(**validated_data)
@@ -287,6 +296,9 @@ class UsersMeSerializer(serializers.ModelSerializer):
 
 
 class SportsmanListSerializer(serializers.ModelSerializer):
+    statistics = serializers.SerializerMethodField()
+    logo = serializers.SerializerMethodField() 
+
     class Meta:
         model = User
         fields = [
@@ -295,16 +307,31 @@ class SportsmanListSerializer(serializers.ModelSerializer):
             "middle_name",
             "last_name",
             "user_role",
+            "statistics",
+            "logo"
         ]
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.sportsman_profile.sport:
             data["sport"] = instance.sportsman_profile.sport.name
+
         if instance.sportsman_profile.trainer:
             data["trainer_id"] = instance.sportsman_profile.trainer.user.id
             data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         return data
+    
+    def get_statistics(self, obj):
+        sportsman = obj.sportsman_profile
+        return calculate_sportsman_statistics(sportsman=sportsman)
+
+    def get_logo(self, obj):
+        if obj.sportsman_profile.sport:
+            logos = obj.sportsman_profile.sport.logo.all()
+            if logos.exists():
+                return MediaSerializer(logos, many=True, context=self.context).data
+        return []
+    
 
 class SportsmanRegisterSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
@@ -476,6 +503,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
     results = ResultSerializer(many=True)
     media = MediaSerializer(many=True)
     sport = SportSerializer(many=False)
+    statistics = serializers.SerializerMethodField()
 
     class Meta:
         model = Sportsman
@@ -498,6 +526,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
             "educations",
             "media",
             "results",
+            "statistics"
         ]
     
     def to_representation(self, instance):
@@ -510,8 +539,14 @@ class SportsmanSerializer(serializers.ModelSerializer):
         data.pop("moving_date", None)
         return data
     
+    def get_statistics(self, obj):
+        return calculate_sportsman_statistics(sportsman=obj)
+    
 
 class TrainerListSerializer(serializers.ModelSerializer):
+    statistics = serializers.SerializerMethodField()
+    logo = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -520,6 +555,8 @@ class TrainerListSerializer(serializers.ModelSerializer):
             "middle_name",
             "last_name",
             "user_role",
+            "statistics",
+            "logo",
         ]
     
     def to_representation(self, instance):
@@ -527,7 +564,18 @@ class TrainerListSerializer(serializers.ModelSerializer):
         if instance.trainer_profile.sport:
             data["sport"] = instance.trainer_profile.sport.name
         return data
+    
+    def get_statistics(self, obj):
+        trainer = obj.trainer_profile
+        return calculate_trainer_statistics(trainer=trainer)
 
+    def get_logo(self, obj):
+        if obj.trainer_profile.sport:
+            logos = obj.trainer_profile.sport.logo.all()
+            if logos.exists():
+                return MediaSerializer(logos, many=True, context=self.context).data
+        return []
+    
 
 class TrainerRegisterSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
@@ -680,6 +728,7 @@ class TrainerSerializer(serializers.ModelSerializer):
     results = ResultSerializer(many=True)
     media = MediaSerializer(many=True)
     sport = SportSerializer(many=False)
+    statistics = serializers.SerializerMethodField()
 
     class Meta:
         model = Trainer
@@ -701,6 +750,7 @@ class TrainerSerializer(serializers.ModelSerializer):
             "educations",
             "media",
             "results",
+            "statistics",
         ]
     
     def to_representation(self, instance):
@@ -709,6 +759,9 @@ class TrainerSerializer(serializers.ModelSerializer):
         data["moving_date_year"] = str(instance.moving_date.year)
         data.pop("moving_date", None)
         return data
+    
+    def get_statistics(self, obj):
+        return calculate_trainer_statistics(trainer=obj)
     
 
 # TRIED TO MAKE PROFILE SERIALIZER DYNAMIC BUT COULDN'T
