@@ -341,8 +341,6 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    moving_date_year = serializers.IntegerField(write_only=True)
-    moving_date_month = serializers.IntegerField(write_only=True)
     media = MediaSerializer(many=True, required=False)
 
     class Meta:
@@ -362,9 +360,6 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
             "street",
             "place_of_birth",
             "citizenship",
-            "moving_date",
-            "moving_date_year",
-            "moving_date_month",
             "telegram",
             "instagram",
             "educations",
@@ -373,20 +368,6 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
             "results",
         ]
         extra_kwargs = {"id": {"read_only": True},}
-    
-    def validate(self, attrs):
-        year = attrs.pop("moving_date_year", None)
-        month = attrs.pop("moving_date_month", None)
-        
-        if year and month:
-            if not (1 <= month <= 12):
-                raise_validation_error("Invalid month. It must be between 1 and 12.")
-            
-            try:
-                attrs["moving_date"] = date(year, month, 1)
-            except ValueError:
-                raise_validation_error(message=_("Invalid year or month."))
-        return attrs
 
     def create(self, validated_data):
         educations_data = validated_data.pop("educations", None)
@@ -432,9 +413,6 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         if instance.trainer:
             data["trainer_id"] = User.objects.get(trainer_profile__id=instance.trainer.id).id
             data["trainer_name"] = f'{instance.trainer.user}'
-        data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
-        data["moving_date_year"] = str(instance.moving_date.year)
-        data.pop("moving_date", None)
         return data
 
 
@@ -522,7 +500,6 @@ class SportsmanSerializer(serializers.ModelSerializer):
             "street",
             "place_of_birth",
             "citizenship",
-            "moving_date",
             "telegram",
             "instagram",
             "educations",
@@ -533,12 +510,9 @@ class SportsmanSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
-        data["moving_date_year"] = str(instance.moving_date.year)
         if instance.trainer:
             data["trainer_id"] = instance.trainer.user.id
             data["trainer_name"] = f'{instance.trainer.user}'
-        data.pop("moving_date", None)
         return data
     
     def get_statistics(self, obj) -> Dict[str, Any]:
@@ -584,8 +558,6 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
     results = ResultCreateSerializer(many=True, required=True)
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    moving_date_year = serializers.IntegerField(write_only=True)
-    moving_date_month = serializers.IntegerField(write_only=True)
     media = MediaSerializer(many=True, required=False)
 
     class Meta:
@@ -604,9 +576,6 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
             "street",
             "place_of_birth",
             "citizenship",
-            "moving_date",
-            "moving_date_year",
-            "moving_date_month",
             "telegram",
             "instagram",
             "educations",
@@ -615,20 +584,6 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
             "results",
         ]
         extra_kwargs = {"id": {"read_only": True},}
-    
-    def validate(self, attrs):
-        year = attrs.pop("moving_date_year", None)
-        month = attrs.pop("moving_date_month", None)
-
-        if year and month:
-            if not (1 <= month <= 12):
-                raise_validation_error("Invalid month. It must be between 1 and 12.")
-            
-            try:
-                attrs["moving_date"] = date(year, month, 1)
-            except ValueError:
-                raise_validation_error(message=_("Invalid year or month."))
-        return attrs
     
     def create(self, validated_data):
         educations_data = validated_data.pop("educations", None)
@@ -666,9 +621,6 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["sport_id"] = instance.sport.id
         data["sport_name"] = instance.sport.name
-        data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
-        data["moving_date_year"] = str(instance.moving_date.year)
-        data.pop("moving_date", None)
         return data
 
 
@@ -757,9 +709,6 @@ class TrainerSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["moving_date_month"] = str(instance.moving_date.month).zfill(2)
-        data["moving_date_year"] = str(instance.moving_date.year)
-        data.pop("moving_date", None)
         return data
     
     def get_statistics(self, obj) ->  Dict[str, Any]:

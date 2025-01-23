@@ -134,7 +134,6 @@ class Sportsman(BaseModel):
     street = models.CharField(max_length=200)
     place_of_birth = models.CharField(max_length=100)
     citizenship = models.CharField(max_length=100)
-    moving_date = models.DateField(blank=True, null=True) # remove
     # Contacts
     telegram = models.CharField(max_length=150, blank=True, null=True)
     instagram = models.CharField(max_length=150, blank=True, null=True)
@@ -172,7 +171,6 @@ class Trainer(BaseModel):
     street = models.CharField(max_length=200)
     place_of_birth = models.CharField(max_length=100)
     citizenship = models.CharField(max_length=100)
-    moving_date = models.DateField(blank=True, null=True)
     # General Results
     number_of_games = models.PositiveIntegerField(blank=True, null=True)
     number_of_students = models.PositiveIntegerField(blank=True, null=True)

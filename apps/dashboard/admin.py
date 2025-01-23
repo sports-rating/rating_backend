@@ -14,7 +14,7 @@ from user.models import (
 
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "start_time", "end_time", "sport"]
+    list_display = ["id", "name", "start_time", "sport"]
     search_fields = ["name", "sport__name"]
     list_filter = ["sport",]
 

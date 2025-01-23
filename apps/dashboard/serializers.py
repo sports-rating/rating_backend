@@ -195,7 +195,6 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "start_time",
-            "end_time",
             "place",
             "division",
             "sport_id",
@@ -205,16 +204,37 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
         extra_kwargs = {"id": {"read_only": True}, "logo": {"required": False}}
     
     def validate(self, attrs):
-        start_time = attrs.get("start_time")
-        end_time = attrs.get("end_time")
-    
-        if start_time and end_time and start_time > end_time:
-            raise_validation_error(message=_("Start time must be less than end time"))  
+        name = attrs.get("name", None)
+        start_time = attrs.get("start_time", None)
+        instance = self.instance  # This will be None during creation and the instance during updating
+
+        if instance:  # Only for updates
+            current_name = instance.name
+            current_start_time = instance.start_time
+
+            # Check if the name or start_time is being updated
+            is_name_updated = name is not None and name != current_name
+            is_start_time_updated = start_time is not None and start_time != current_start_time
+
+            # If either name or start_time is being updated, perform the uniqueness check
+            if is_name_updated or is_start_time_updated:
+                queryset = Tournament.objects.filter(name=name, start_time=start_time)
+                queryset = queryset.exclude(id=instance.id)  # Exclude the current instance
+
+                if queryset.exists():
+                    raise_validation_error(_("Tournament with this name and start time already exists!"))
+        
+        else:  # For creation
+            if name and start_time:
+                queryset = Tournament.objects.filter(name=name, start_time=start_time)
+                if queryset.exists():
+                    raise_validation_error(_("Tournament with this name and start time already exists!"))
         
         return attrs
 
     def update(self, instance, validated_data):
         logo_id = validated_data.pop("logo_id", None)
+        
         if logo_id:
             current_logos = instance.logo.all() # Get the current logos
             instance.logo.clear() # Clear the current logo associations
@@ -250,7 +270,6 @@ class TournamentSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "start_time",
-            "end_time",
             "place",
             "division",
             "sport",
