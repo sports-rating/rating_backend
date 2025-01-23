@@ -769,10 +769,11 @@ class RegistrationSerializer(serializers.ModelSerializer):
         pinfl = attrs.get("pinfl", None)
         user_role = attrs.get("user_role")
         
-        user = User.objects.filter(phone_number=attrs["phone_number"]).first()
-        if user:
-            raise_validation_error(message=_("Phone number is already registered"))
-        
+        phone_number = attrs.get("phone_number")
+        if phone_number:
+            if User.objects.filter(phone_number=phone_number).exists() :
+                raise_validation_error(message=_("Phone number is already registered"))
+            
         if user_role != "ordinary":
             if pinfl:
                 if User.objects.filter(pinfl=pinfl).exists():

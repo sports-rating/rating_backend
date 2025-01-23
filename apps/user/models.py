@@ -33,7 +33,7 @@ class User(AbstractUser, BaseModel):
         null=True
     )
     user_role = models.CharField(max_length=50, choices=UserRoles.choices(), default=UserRoles.ORDINARY.value)
-    phone_number = models.CharField(max_length=13)
+    phone_number = models.CharField(max_length=13, null=True, blank=True)
     email = models.CharField(null=True, blank=True)
     
     photo = models.ManyToManyField('Media', related_name='user_profile', blank=True)
@@ -50,20 +50,8 @@ class User(AbstractUser, BaseModel):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
-        # if self.photo:
-        #     try:
-        #         image = Image.open(self.photo.path)
-        #         desired_size = IMAGE_DIMENSION
-        #         image.thumbnail(desired_size)
-        #         # Save the resized image back to the same path
-        #         image.save(self.photo.path)
-        #     except Exception as e:
-        #         print(f"Error resizing image: {e}")
-    
+       
     def delete(self, *args, **kwargs):
-        # if self.photo:
-        #     if os.path.isfile(self.photo.path):
-        #         os.remove(self.photo.path)
         media_objects = self.photo.all()
 
         for media in media_objects:
@@ -104,7 +92,10 @@ class User(AbstractUser, BaseModel):
             random_str = "".join(
                 random.choices(string.ascii_lowercase + string.digits, k=6)
             )
-            temp_username = f"user_{self.phone_number[-4:]}_{random_str}"
+            if self.phone_number:
+                temp_username = f"user_{self.phone_number[-4:]}_{random_str}"
+            else:
+                temp_username = f"user_no_phone_{random_str}"
             while User.objects.filter(username=temp_username).exists():
                 temp_username = f"{temp_username}{random.randint(0, 9)}"
             self.username = temp_username
