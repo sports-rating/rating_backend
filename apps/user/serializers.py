@@ -317,7 +317,6 @@ class SportsmanListSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         if instance.sportsman_profile.sport:
             data["sport"] = instance.sportsman_profile.sport.name
-
         if instance.sportsman_profile.trainer:
             data["trainer_id"] = instance.sportsman_profile.trainer.user.id
             data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
