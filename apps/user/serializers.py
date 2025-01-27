@@ -252,13 +252,6 @@ class MediaSerializer(serializers.ModelSerializer):
                     )
         return data
 
-    # def get_file(self, obj):
-    #     print('triggered')
-    #     request = self.context.get("request")
-    #     if obj.file and request:
-    #         return request.build_absolute_uri(obj.file.url)  # Build the full URL
-    #     return None
-
     def create(self, validated_data):
         owner = validated_data.pop("owner", None)
         media_instance = Media(**validated_data)
@@ -375,34 +368,34 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
         trainer_profile = trainer.trainer_profile
-        logger.info(f"Trainer profile: {trainer_profile}")
         # profile = Sportsman.objects.create(sport=sport, **validated_data)
-        if trainer_profile.sport.id == sport.id:
-            profile = Sportsman.objects.create(sport=sport, trainer=trainer_profile, **validated_data)
-        else:
-            raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
-        logger.info(f"Sportsman Profile created -> {profile}")
-        
-        if media_ids:
-            media_objects = Media.objects.filter(id__in=media_ids)
+        with transaction.atomic():
+            if trainer_profile.sport.id == sport.id:
+                profile = Sportsman.objects.create(sport=sport, trainer=trainer_profile, **validated_data)
+            else:
+                raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
+            logger.info(f"Sportsman Profile created -> {profile}")
             
-            if not media_objects.exists():
-                raise_validation_error(message=_(f"At least one media must be uploaded"))
-            
-            # Checking if medias are not associated with another objects
-            for media in media_objects:
-                if media.sportsmen.exists() and not media.sportsmen.filter(id=profile.id).exists():
-                    raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
-            
-            # Link existing media to the sportsman profile
-            profile.media.set(media_objects)
+            if media_ids:
+                media_objects = Media.objects.filter(id__in=media_ids)
+                
+                if not media_objects.exists():
+                    raise_validation_error(message=_(f"At least one media must be uploaded"))
+                
+                # Checking if medias are not associated with another objects
+                for media in media_objects:
+                    if media.sportsmen.exists() and not media.sportsmen.filter(id=profile.id).exists():
+                        raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
+                
+                # Link existing media to the sportsman profile
+                profile.media.set(media_objects)
 
-        for education_data in educations_data:
-            Education.objects.create(sportsman_profile=profile, **education_data)
-        
-        for result_data in results_data:
-            Result.objects.create(sportsman_profile=profile, **result_data)
-        
+            for education_data in educations_data:
+                Education.objects.create(sportsman_profile=profile, **education_data)
+            
+            for result_data in results_data:
+                Result.objects.create(sportsman_profile=profile, **result_data)
+            
         return profile
     
     def to_representation(self, instance):
@@ -448,15 +441,29 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
             for media in media_objects:
                 if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
                     raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
-            
-            # old_media = instance.media.all()
-            # instance.media.clear()
+           
+            current_media = instance.media.all() # Get current media 
+            media_to_delete = current_media.exclude(id__in=media_ids)
 
-            # # Deleting the old media 
-            # for media in old_media:
-            #     media.delete()
+            for media in media_to_delete:
+                # Disassociate the media from the current sportsman
+                instance.media.remove(media)
+                media.file.delete()  # Delete the file from the file system
+                media.delete()  # Delete the Media object from the database
 
+            # Associate the new media objects
             instance.media.set(media_objects)
+        else:
+            # If media_ids is None, remove all existing media associations
+            current_media = instance.media.all()
+            for media in current_media:
+                # Disassociate the media from the current sportsman
+                instance.media.remove(media)
+                media.file.delete()  # Delete the file from the file system
+                media.delete()  # Delete the Media object from the database
+
+            # Clear all media associations for the instance
+            instance.media.clear()    
 
         # Update educations
         if educations_data:
@@ -589,30 +596,31 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
         results_data = validated_data.pop("results", None)
         media_ids = validated_data.pop("media_ids", None)
         sport = validated_data.pop("sport", None)
+        
+        with transaction.atomic():
+            profile = Trainer.objects.create(sport=sport, **validated_data)
 
-        profile = Trainer.objects.create(sport=sport, **validated_data)
 
+            if media_ids:
+                # Link existing media to the trainer profile
+                media_objects = Media.objects.filter(id__in=media_ids)
+                
+                if not media_objects.exists():
+                    raise_validation_error(message=_(f"At least one media must be uploaded"))
 
-        if media_ids:
-            # Link existing media to the trainer profile
-            media_objects = Media.objects.filter(id__in=media_ids)
+                # Check if medias are not associated with another objects
+                for media in media_objects:
+                    if media.trainer.exists() and not media.trainer.filter(id=profile.id).exists():
+                        raise_validation_error(message=_(f"Media {media.id} is already associated with another trainer."))
+
+                profile.media.set(media_objects)
+
+            for education_data in educations_data:
+                Education.objects.create(trainer_profile=profile, **education_data)
             
-            if not media_objects.exists():
-                raise_validation_error(message=_(f"At least one media must be uploaded"))
-
-            # Check if medias are not associated with another objects
-            for media in media_objects:
-                if media.trainer.exists() and not media.trainer.filter(id=profile.id).exists():
-                    raise_validation_error(message=_(f"Media {media.id} is already associated with another trainer."))
-
-            profile.media.set(media_objects)
-
-        for education_data in educations_data:
-            Education.objects.create(trainer_profile=profile, **education_data)
-        
-        for result_data in results_data:
-            Result.objects.create(trainer_profile=profile, **result_data)
-        
+            for result_data in results_data:
+                Result.objects.create(trainer_profile=profile, **result_data)
+            
         logger.info(f"Trainer Profile created -> {profile}")
         return profile
 
@@ -646,7 +654,6 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
 
         # Update media associations
         if media_ids:
-            
             media_objects = Media.objects.filter(id__in=media_ids)
             if not media_objects.exists():
                 raise_validation_error(message=_("At least one media must be uploaded"))
@@ -654,8 +661,29 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
             for media in media_objects:
                 if media.sportsmen.exists() and not media.sportsmen.filter(id=instance.id).exists():
                     raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
+           
+            current_media = instance.media.all() # Get current media 
+            media_to_delete = current_media.exclude(id__in=media_ids)
 
-            instance.media.set(media_objects) 
+            for media in media_to_delete:
+                # Disassociate the media from the current sportsman
+                instance.media.remove(media)
+                media.file.delete()  # Delete the file from the file system
+                media.delete()  # Delete the Media object from the database
+
+            # Associate the new media objects
+            instance.media.set(media_objects)
+        else:
+            # If media_ids is None, remove all existing media associations
+            current_media = instance.media.all()
+            for media in current_media:
+                # Disassociate the media from the current sportsman
+                instance.media.remove(media)
+                media.file.delete()  # Delete the file from the file system
+                media.delete()  # Delete the Media object from the database
+
+            # Clear all media associations for the instance
+            instance.media.clear()    
         
         # Update educations
         if educations_data:

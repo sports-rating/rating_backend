@@ -222,14 +222,10 @@ class Education(BaseModel):
 
 
 class Result(BaseModel):
-    # tournament_name = models.CharField(max_length=255)
     country = models.CharField(max_length=100)
-    # start_year = models.DateField()
-    # end_year = models.DateField()
     year = models.DateField(blank=True, null=True)
     currently_participating = models.BooleanField(default=False)
     rating = models.IntegerField(null=True, blank=True)
-    # logo = models.ImageField(upload_to='user/tournaments/', null=True, blank=True)
     
     sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)

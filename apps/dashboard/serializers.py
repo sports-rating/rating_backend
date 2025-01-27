@@ -149,11 +149,24 @@ class SportCreateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         logo_id = validated_data.pop("logo_id", None)
         if logo_id:
-            current_logos = instance.logo.all() # Get the current logos
-            instance.logo.clear() # Clear the current logo associations
-            current_logos.delete() # Delete the old Media objects
             media_object = Media.objects.filter(id__in=logo_id)
+            if not media_object.exists():
+                raise_validation_error(message=_("At least one media must be uploaded"))
+            current_logos = instance.logo.all() # Get the current logos
+            logo_to_delete = current_logos.exclude(id__in=logo_id)
+            for logo in logo_to_delete:
+                instance.logo.remove(logo)
+                logo.file.delete()  # Delete the file from the file system
+                logo.delete()  # Delete the Media object from the database
+            
             instance.logo.set(media_object)
+        else:
+            current_logos = instance.logo.all()
+            for logo in current_logos:
+                instance.logo.remove(logo)
+                logo.file.delete()
+                logo.delete()
+            instance.logo.clear()
 
         return super().update(instance, validated_data)
 
@@ -207,28 +220,31 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
         name = attrs.get("name", None)
         start_time = attrs.get("start_time", None)
         instance = self.instance  # This will be None during creation and the instance during updating
+        new_year = start_time.year
+        print(new_year)
 
         if instance:  # Only for updates
             current_name = instance.name
-            current_start_time = instance.start_time
+            current_year = instance.start_time.year
+            print(f"current_year: {current_year}")
 
-            # Check if the name or start_time is being updated
+            # Check if the name or year is being updated
             is_name_updated = name is not None and name != current_name
-            is_start_time_updated = start_time is not None and start_time != current_start_time
+            is_year_updated = new_year is not None and new_year != current_year
 
-            # If either name or start_time is being updated, perform the uniqueness check
-            if is_name_updated or is_start_time_updated:
-                queryset = Tournament.objects.filter(name=name, start_time=start_time)
+            # If either name or year is being updated, perform the uniqueness check
+            if is_name_updated or is_year_updated:
+                queryset = Tournament.objects.filter(name=name, start_time__year=new_year)
                 queryset = queryset.exclude(id=instance.id)  # Exclude the current instance
 
                 if queryset.exists():
-                    raise_validation_error(_("Tournament with this name and start time already exists!"))
+                    raise_validation_error(_("Tournament with this name and year already exists!"))
         
         else:  # For creation
-            if name and start_time:
-                queryset = Tournament.objects.filter(name=name, start_time=start_time)
+            if name and new_year:
+                queryset = Tournament.objects.filter(name=name, start_time__year=new_year)
                 if queryset.exists():
-                    raise_validation_error(_("Tournament with this name and start time already exists!"))
+                    raise_validation_error(_("Tournament with this name and year already exists!"))
         
         return attrs
 
@@ -236,11 +252,25 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
         logo_id = validated_data.pop("logo_id", None)
         
         if logo_id:
-            current_logos = instance.logo.all() # Get the current logos
-            instance.logo.clear() # Clear the current logo associations
-            current_logos.delete() # Delete the old Media objects
             media_object = Media.objects.filter(id__in=logo_id)
+            if not media_object.exists():
+                raise_validation_error(message=_("At least one media must be uploaded"))
+            current_logos = instance.logo.all() # Get the current logos
+            logo_to_delete = current_logos.exclude(id__in=logo_id)
+            
+            for logo in logo_to_delete:
+                instance.logo.remove(logo)
+                logo.file.delete()
+                logo.delete()
+            
             instance.logo.set(media_object)
+        else:
+            current_logos = instance.logo.all()
+            for logo in current_logos:
+                instance.logo.remove(logo)
+                logo.file.delete()
+                logo.delete()
+            instance.logo.clear()
 
         return super().update(instance, validated_data)
     
@@ -367,8 +397,25 @@ class TeamUpdateSerializer(TeamCreateSerializer):
             instance.members.set(member_objects)
         
         if logo_id:
-            logo_object = Media.objects.get(id=logo_id)
-            instance.logo.set(logo_object)
+            media_object = Media.objects.filter(id__in=logo_id)
+            if not media_object.exists():
+                raise_validation_error(message=_("At least one media must be uploaded"))
+            current_logos = instance.logo.all() # Get the current logos
+            logo_to_delete = current_logos.exclude(id__in=logo_id)
+            
+            for logo in logo_to_delete:
+                instance.logo.remove(logo)
+                logo.file.delete()
+                logo.delete()
+            
+            instance.logo.set(media_object)
+        else:
+            current_logos = instance.logo.all()
+            for logo in current_logos:
+                instance.logo.remove(logo)
+                logo.file.delete()
+                logo.delete()
+            instance.logo.clear()
 
         return instance
 
@@ -394,7 +441,10 @@ class TeamSerializer(serializers.ModelSerializer):
         ]
 
 
-class SchoolCreateSerializer(serializers.ModelSerializer): 
+class SchoolCreateSerializer(serializers.ModelSerializer):
+    sport_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
+    sports = SportSerializer(many=True, required=False)
+
     class Meta:
         model = School
         fields = [
@@ -404,6 +454,8 @@ class SchoolCreateSerializer(serializers.ModelSerializer):
             "director",
             "type",
             "address",
+            "sport_ids",
+            "sports"
         ]
         extra_kwargs = {"id": {"read_only": True},}
 
@@ -416,11 +468,23 @@ class SchoolCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        school = School.objects.create(**validated_data)
+        sport_ids = validated_data.pop("sport_ids", None)
+        
+        with transaction.atomic():
+            school = School.objects.create(**validated_data)
+
+            if sport_ids:
+                sport_objects = Sport.objects.filter(id__in=sport_ids)
+                if not sport_objects.exists():
+                    raise_validation_error(message=_(f"At least one sport must be included"))
+                school.sports.set(sport_objects)
+            
         return school
 
 
 class SchoolUpdateSerializer(SchoolCreateSerializer):
+    sport_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
+    
     class Meta(SchoolCreateSerializer.Meta):
         extra_kwargs = {
             **SchoolCreateSerializer.Meta.extra_kwargs,
@@ -436,13 +500,23 @@ class SchoolUpdateSerializer(SchoolCreateSerializer):
         return attrs
     
     def update(self, instance, validated_data):
+        sport_ids = validated_data.pop("sport_ids", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        
+        if sport_ids:
+            sport_objects = Sport.objects.filter(id__in=sport_ids)
+            if not sport_objects.exists():
+                raise_validation_error(message=_("At least one sport must be included"))
+            instance.sports.set(sport_objects)
+
         return instance
     
 
 class SchoolSerializer(serializers.ModelSerializer):
+    sports = SportSerializer(many=True)
+
     class Meta:
         model = School
         fields = [
@@ -452,6 +526,7 @@ class SchoolSerializer(serializers.ModelSerializer):
             "director",
             "type",
             "address",
+            "sports",
         ]
 
 
@@ -460,8 +535,50 @@ class PrivacyPolicySerializer(serializers.ModelSerializer):
         model = PrivacyPolicy
         fields = ("id", "title", "language", "text")
 
+    def validate(self, attrs):
+        language = attrs.get('language')
+        instance = self.instance
+
+        if instance:
+            current_language = instance.language
+            is_language_updated = language is not None and language != current_language
+
+            if is_language_updated:                
+                queryset = PrivacyPolicy.objects.filter(language=language)
+                queryset = queryset.exclude(id=instance.id)
+
+                if queryset.exists():
+                    raise_validation_error(_("Privacy Policy with this language already exists"))
+        else:
+            if language:
+                if PrivacyPolicy.objects.filter(language=language).exists():
+                    raise_validation_error(message=_("Privacy Policy with this language already exists"))
+
+        return attrs
+
 
 class TermsOfConditionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TermsOfCondition
         fields = ("id", "title", "language", "text")
+
+    def validate(self, attrs):
+        language = attrs.get("language")
+        instance = self.instance
+
+        if instance:
+            current_language = instance.language
+            is_language_updated = language is not None and language != current_language
+
+            if is_language_updated:
+                queryset = TermsOfCondition.objects.filter(language=language)
+                queryset.exclude(id=instance.id)
+
+                if queryset.exists():
+                    raise_validation_error(_("Terms of Conditions with language already exists"))
+        else:
+            if language:
+                if TermsOfCondition.objects.filter(language=language).exists():
+                    raise_validation_error(message=_("Terms of Conditions with this language already exists"))
+            
+        return attrs
