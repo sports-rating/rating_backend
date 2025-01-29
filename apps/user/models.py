@@ -16,7 +16,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from phonenumbers.phonenumberutil import NumberParseException
-from shared.models import BaseModel
+from shared.models import BaseModel, BaseMedia
 from shared.addons.enums import GenderChoices, MediaChoices, UserRoles, SchoolChoices
 from core.settings import IMAGE_DIMENSION
 from shared.addons.utils import CorrectPath
@@ -24,8 +24,8 @@ from shared.addons.utils import CorrectPath
 
 class User(AbstractUser, BaseModel):
     first_name = models.CharField(max_length=100, null=True, blank=True)
-    last_name = models.CharField(max_length=100, null=True, blank=True)
     middle_name = models.CharField(max_length=100, null=True, blank=True)
+    last_name = models.CharField(max_length=100, null=True, blank=True)
     
     pinfl = models.CharField(
         max_length=14,
@@ -36,7 +36,6 @@ class User(AbstractUser, BaseModel):
     phone_number = models.CharField(max_length=13, null=True, blank=True)
     email = models.CharField(null=True, blank=True)
     
-    photo = models.ManyToManyField('Media', related_name='user_profile', blank=True)
     birth_date = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
 
@@ -45,7 +44,7 @@ class User(AbstractUser, BaseModel):
         ordering = ["-created_time"]
 
     def __str__(self):
-        return f"{self.first_name} {self.middle_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}"
     
     def save(self, *args, **kwargs):
         self.clean()
@@ -65,7 +64,7 @@ class User(AbstractUser, BaseModel):
 
     @property
     def full_name(self):
-        return f"{self.last_name} {self.first_name}"
+        return f"{self.last_name} {self.first_name} {self.middle_name}"
 
     def check_phone_valid(self):
         if self.phone_number:
@@ -109,26 +108,18 @@ class User(AbstractUser, BaseModel):
 
 
 class Sportsman(BaseModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='sportsman_profile')
-    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
+    user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='sportsman_profile')
+    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True) # will likely changes
     trainer = models.ForeignKey("user.Trainer", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
-    sport_type = models.CharField(max_length=100)
 
-    about_me = models.TextField(blank=True, null=True)
-    motto = models.CharField(max_length=100, blank=True, null=True)
-    height = models.DecimalField(max_digits=5, decimal_places=2)
-    weight = models.DecimalField(max_digits=5, decimal_places=2)
-    gender = models.CharField(max_length=50, choices=GenderChoices.choices(), default=GenderChoices.MALE.value)
+    skill_level = models.CharField(max_length=100)
+    bio = models.TextField(blank=True, null=True)
+    division = models.CharField(max_length=100, blank=True, null=True)
+    user_metrics = models.JSONField(blank=True)
     # Address
-    region = models.CharField(max_length=50)
-    city = models.CharField(max_length=50)
-    street = models.CharField(max_length=200)
-    place_of_birth = models.CharField(max_length=100)
-    citizenship = models.CharField(max_length=100)
+    adress = models.JSONField(blank=True)
     # Contacts
-    telegram = models.CharField(max_length=150, blank=True, null=True)
-    instagram = models.CharField(max_length=150, blank=True, null=True)
-    media = models.ManyToManyField('Media', related_name='sportsmen', blank=True)
+    social_media = models.JSONField(blank=True)
 
     class Meta:
         db_table = "sportsman"
@@ -136,40 +127,34 @@ class Sportsman(BaseModel):
     def __str__(self):
         return f"Sportsman {self.user.first_name} - {self.user.last_name}"
 
-    # Here all media associated to sportsman will be deleted
-    def delete(self, *args, **kwargs):
-        media_objects = self.media.all()
+    # # Here all media associated to sportsman will be deleted
+    # def delete(self, *args, **kwargs):
+    #     media_objects = self.media.all()
 
-        for media in media_objects:
-            media.delete()
+    #     for media in media_objects:
+    #         media.delete()
         
-        super().delete(*args, **kwargs)
+    #     super().delete(*args, **kwargs)
             
 
 class Trainer(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='trainer_profile')
     sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
-    sport_type = models.CharField(max_length=100)
     
-    about_me = models.TextField(blank=True, null=True)
-    motto = models.CharField(max_length=100, blank=True, null=True)
-    height = models.DecimalField(max_digits=5, decimal_places=2)
-    weight = models.DecimalField(max_digits=5, decimal_places=2)
-    gender = models.CharField(max_length=50, choices=GenderChoices.choices(), default=GenderChoices.MALE.value)
+    skill_level = models.CharField(max_length=100)
+    bio = models.TextField(blank=True, null=True)
+    division = models.CharField(max_length=100, blank=True, null=True)
+    user_metrics = models.JSONField(blank=True)
+
     # Address
-    region = models.CharField(max_length=50)
-    city = models.CharField(max_length=50)
-    street = models.CharField(max_length=200)
-    place_of_birth = models.CharField(max_length=100)
-    citizenship = models.CharField(max_length=100)
-    # General Results
-    number_of_games = models.PositiveIntegerField(blank=True, null=True)
-    number_of_students = models.PositiveIntegerField(blank=True, null=True)
-    number_of_awards = models.PositiveIntegerField(blank=True, null=True)
+    adress = models.JSONField(blank=True)
     # Contacts
-    telegram = models.CharField(max_length=150, blank=True, null=True)
-    instagram = models.CharField(max_length=150, blank=True, null=True)
-    media = models.ManyToManyField('Media', related_name='trainer', blank=True)
+    social_media = models.JSONField(blank=True)
+    
+    # General Results
+    # number_of_games = models.PositiveIntegerField(blank=True, null=True)
+    # number_of_students = models.PositiveIntegerField(blank=True, null=True)
+    # number_of_awards = models.PositiveIntegerField(blank=True, null=True)
 
     class Meta:
         db_table = "trainer"
@@ -177,96 +162,14 @@ class Trainer(BaseModel):
     def __str__(self):
         return f"Trainer {self.user.first_name} - {self.user.last_name}"
 
-    def delete(self, *args, **kwargs):
-        media_objects = self.media.all()
+    # def delete(self, *args, **kwargs):
+    #     media_objects = self.media.all()
 
-        for media in media_objects:
-            media.delete()
+    #     for media in media_objects:
+    #         media.delete()
         
-        super().delete(*args, **kwargs)
+    #     super().delete(*args, **kwargs)
 
 
-class School(BaseModel):
-    name = models.CharField(max_length=255)
-    phone_number = models.CharField(max_length=13)
-    director = models.CharField(max_length=255, blank=True, null=True)
-
-    address = models.JSONField() # address, district, region,...
-    type = models.CharField(max_length=50, choices=SchoolChoices.choices(), default=SchoolChoices.ORDINARY.value)
-
-    email = models.EmailField(blank=True, null=True)
-    website = models.CharField(max_length=255, blank=True, null=True)
-    established_date = models.DateField(blank=True, null=True)
-    
-    trainers = models.ManyToManyField(User, related_name='sport_schools', blank=True)
-    sports = models.ManyToManyField('dashboard.Sport', related_name='sport_schools', blank=True)
-    media = models.ManyToManyField('Media', related_name='sport_schools', blank=True)
-
-    class Meta:
-        db_table = "school"
-
-
-class Education(BaseModel):
-    name = models.CharField(max_length=250, blank=True, null=True)
-    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
-    start_year = models.DateField()
-    end_year = models.DateField()
-    currently_studying = models.BooleanField(default=False)
-    
-    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
-    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
-    trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
-
-    class Meta:
-        db_table = "education"
-
-
-class Result(BaseModel):
-    country = models.CharField(max_length=100)
-    year = models.DateField(blank=True, null=True)
-    currently_participating = models.BooleanField(default=False)
-    
-    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
-    trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
-    tournament = models.ForeignKey("dashboard.Tournament", models.CASCADE, related_name="results", blank=True, null=True)
-    additional_attributes = models.JSONField(null=True, blank=True)
-
-    rating = models.IntegerField(null=True, blank=True)
-    number_of_gold = models.PositiveIntegerField(blank=True, null=True)
-    number_of_silver = models.PositiveIntegerField(blank=True, null=True)
-    number_of_bronze = models.PositiveIntegerField(blank=True, null=True)
-
-    class Meta: 
-        db_table = "result"
-
-
-class Media(BaseModel):
-    media_type = models.CharField(max_length=100, choices=MediaChoices.choices(), default=MediaChoices.IMAGE.value)
-    file = models.FileField(upload_to=CorrectPath('media'))
-    size = models.PositiveIntegerField(null=True, blank=True)
-    extension = models.CharField(max_length=10, blank=True)
-
-    def save(self, *args, **kwargs):
-        if self.file and hasattr(self.file, 'file'):
-            self.size = self.file.size
-           
-            _, ext = os.path.splitext(self.file.name)
-            self.extension = ext.lower().lstrip('.')
-           
-            guessed_type, _ = mimetypes.guess_type(self.file.name)
-            if guessed_type:
-                if guessed_type.startswith("image/"):
-                    self.media_type = MediaChoices.IMAGE.value
-                elif guessed_type.startswith("video/"):
-                    self.media_type = MediaChoices.VIDEO.value
-                else:
-                    self.media_type = MediaChoices.PDF.value        
-        super().save(*args, **kwargs)  # Final save to ensure the object is saved
-
-    def delete(self, *args, **kwargs):
-        print(self.file)
-        if self.file:
-            print(self.file.path)
-            if os.path.isfile(self.file.path):
-                os.remove(self.file.path)
-        super().delete(*args, **kwargs)
+class UserMedia(BaseMedia):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='medias')

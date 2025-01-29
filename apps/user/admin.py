@@ -5,9 +5,7 @@ from .models import (
     User, 
     Sportsman, 
     Trainer,
-    Media, 
-    Education, 
-    Result
+    UserMedia,
 )
 
 
@@ -98,18 +96,7 @@ class TrainerAdmin(admin.ModelAdmin):
     list_filter = ["sport_type", "gender"]
 
 
-@admin.register(Education)
-class EducationAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "sport", "start_year", "end_year"]
-
-
-@admin.register(Result)
-class ResultAdmin(admin.ModelAdmin):
-    list_display = ["id", "country", "tournament", "year", "currently_participating"]
-    list_filter = ["currently_participating",]
-
-
-@admin.register(Media)
-class MediaAdmin(admin.ModelAdmin):
+@admin.register(UserMedia)
+class UserMediaAdmin(admin.ModelAdmin):
     list_display = ["id", "media_type", "size", "extension"]
     list_filter = ["media_type", "extension"]
