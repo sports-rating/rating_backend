@@ -225,18 +225,18 @@ class Result(BaseModel):
     country = models.CharField(max_length=100)
     year = models.DateField(blank=True, null=True)
     currently_participating = models.BooleanField(default=False)
-    rating = models.IntegerField(null=True, blank=True)
     
     sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     tournament = models.ForeignKey("dashboard.Tournament", models.CASCADE, related_name="results", blank=True, null=True)
     additional_attributes = models.JSONField(null=True, blank=True)
 
+    rating = models.IntegerField(null=True, blank=True)
     number_of_gold = models.PositiveIntegerField(blank=True, null=True)
     number_of_silver = models.PositiveIntegerField(blank=True, null=True)
     number_of_bronze = models.PositiveIntegerField(blank=True, null=True)
 
-    class Meta:
+    class Meta: 
         db_table = "result"
 
 

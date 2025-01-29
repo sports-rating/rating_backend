@@ -5,6 +5,7 @@ from django.utils.timezone import make_aware
 from datetime import datetime
 
 from shared.addons.enums import GenderChoices, UserRoles
+from shared.addons.custom_logging import logger
 from user.models import (
     Sportsman,
     Trainer,
@@ -41,14 +42,15 @@ class UserFilter(filters.FilterSet):
             value = parse_date(value)
             if value:
                 start_date = make_aware(datetime.combine(value, datetime.min.time()))
+                logger.info(f"Start time filtering - {start_date}")
                 return queryset.filter(created_time__gte=start_date)
         
-
     def filter_end_time(self, queryset, name, value):
         if value:
             value = parse_date(value)
             if value:
                 end_date = make_aware(datetime.combine(value, datetime.min.time()))
+                logger.info(f"End time filtering - {end_date}")
                 return queryset.filter(created_time__lte=end_date)
     
     def filter_sport(self, queryset, name, value):
