@@ -8,7 +8,7 @@ from .models import (
 
 @admin.register(Education)
 class EducationAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "sport", "start_year", "end_year"]
+    list_display = ["id", "sport", "start_year", "end_year"]
 
 
 @admin.register(School)

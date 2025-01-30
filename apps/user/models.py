@@ -21,6 +21,10 @@ from shared.addons.enums import GenderChoices, MediaChoices, UserRoles, SchoolCh
 from core.settings import IMAGE_DIMENSION
 from shared.addons.utils import CorrectPath
 
+from sport.models import (
+    Sport
+)
+
 
 class User(AbstractUser, BaseModel):
     first_name = models.CharField(max_length=100, null=True, blank=True)
@@ -32,6 +36,7 @@ class User(AbstractUser, BaseModel):
         blank=True, 
         null=True
     )
+    gender = models.CharField(max_length=30, choices=GenderChoices.choices(), default=GenderChoices.MALE.value, null=True, blank=True)
     user_role = models.CharField(max_length=50, choices=UserRoles.choices(), default=UserRoles.ORDINARY.value)
     phone_number = models.CharField(max_length=13, null=True, blank=True)
     email = models.CharField(null=True, blank=True)
@@ -51,10 +56,10 @@ class User(AbstractUser, BaseModel):
         super().save(*args, **kwargs)
        
     def delete(self, *args, **kwargs):
-        media_objects = self.photo.all()
+        # media_objects = self.photo.all()
 
-        for media in media_objects:
-            media.delete()
+        # for media in media_objects:
+        #     media.delete()
 
         if hasattr(self, 'sportsman_profile'):
             self.sportsman_profile.delete() # triggers delete method in Sportsman
@@ -107,9 +112,9 @@ class User(AbstractUser, BaseModel):
         )
 
 
-class Sportsman(BaseModel):
+class Sportsman(models.Model):
     user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='sportsman_profile')
-    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True) # will likely changes
+    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True) # will likely changes
     trainer = models.ForeignKey("user.Trainer", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
 
     skill_level = models.CharField(max_length=100)
@@ -117,9 +122,13 @@ class Sportsman(BaseModel):
     division = models.CharField(max_length=100, blank=True, null=True)
     user_metrics = models.JSONField(blank=True)
     # Address
-    adress = models.JSONField(blank=True)
+    address = models.JSONField(blank=True)
     # Contacts
     social_media = models.JSONField(blank=True)
+
+    created_time = models.DateTimeField(auto_now_add=True, null=True)
+    updated_time = models.DateTimeField(auto_now=True, null=True)
+
 
     class Meta:
         db_table = "sportsman"
@@ -137,20 +146,23 @@ class Sportsman(BaseModel):
     #     super().delete(*args, **kwargs)
             
 
-class Trainer(BaseModel):
+class Trainer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='trainer_profile')
-    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
+    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
     
     skill_level = models.CharField(max_length=100)
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
     user_metrics = models.JSONField(blank=True)
-
     # Address
-    adress = models.JSONField(blank=True)
+    address = models.JSONField(blank=True, null=True)
     # Contacts
-    social_media = models.JSONField(blank=True)
-    
+    social_media = models.JSONField(blank=True, null=True)
+
+    created_time = models.DateTimeField(auto_now_add=True, null=True)
+    updated_time = models.DateTimeField(auto_now=True, null=True)
+
+
     # General Results
     # number_of_games = models.PositiveIntegerField(blank=True, null=True)
     # number_of_students = models.PositiveIntegerField(blank=True, null=True)
@@ -172,4 +184,4 @@ class Trainer(BaseModel):
 
 
 class UserMedia(BaseMedia):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='medias')
+    user = models.ManyToManyField(User, related_name='media')

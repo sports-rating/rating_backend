@@ -22,9 +22,12 @@ class BaseModel(models.Model):
 
 class BaseMedia(BaseModel):
     media_type = models.CharField(max_length=100, choices=MediaChoices.choices(), default=MediaChoices.IMAGE.value)
-    file = models.FileField(upload_to=CorrectPath('media'))
+    file = models.FileField(upload_to=CorrectPath('media'), null=True)
     size = models.PositiveIntegerField(null=True, blank=True)
     extension = models.CharField(max_length=10, blank=True)
+
+    class Meta:
+        abstract=True
 
     def save(self, *args, **kwargs):
         if self.file and hasattr(self.file, 'file'):

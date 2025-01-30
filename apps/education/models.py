@@ -14,6 +14,10 @@ from user.models import (
     User
 )
 
+from sport.models import (
+    Sport
+)
+
 
 class School(BaseModel):
     name = models.CharField(max_length=255)
@@ -22,14 +26,14 @@ class School(BaseModel):
 
     address = models.JSONField() # address, district, region,...
     type = models.CharField(max_length=50, choices=SchoolChoices.choices(), default=SchoolChoices.ORDINARY.value)    
+    sports = models.ManyToManyField(Sport, related_name='schools')
 
     class Meta:
         db_table = "school"
 
 
 class Education(BaseModel):
-    name = models.CharField(max_length=250, blank=True, null=True)
-    sport = models.ForeignKey("dashboard.Sport", on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
+    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
     start_year = models.DateField()
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)

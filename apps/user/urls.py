@@ -17,8 +17,6 @@ from user.views import (
     TrainerRetrieveUpdateDeleteView,
     MediaUploadView,
     MediaDeleteView,
-    ResultRetrieveUpdateDestroyView,
-    EducationRetrieveUpdateDestroyView,
 )
 
 app_name = "user"
@@ -36,8 +34,6 @@ urlpatterns = [
     path("profile/trainer/<uuid:pk>/", TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-retrieve"),
     path("media-upload/", MediaUploadView.as_view(), name='media-upload'),
     path("media/<uuid:pk>/", MediaDeleteView.as_view(), name='media-delete'),
-    # path("profile/sportsman/results/<uuid:pk>/", ResultRetrieveUpdateDestroyView.as_view(), name='result-retrieve-update-delete'),
-    # path("profile/sportsman/educations/<uuid:pk>/", EducationRetrieveUpdateDestroyView.as_view(), name='education-retrieve-update-delete'),
 ]
 
 if settings.DEBUG:

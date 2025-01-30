@@ -16,6 +16,7 @@ class UserAdmin(admin.ModelAdmin):
         "username",
         "phone_number",
         "user_role",
+        "gender",
         "is_verified",
         "created_time",
     ]
@@ -31,6 +32,7 @@ class UserAdmin(admin.ModelAdmin):
                     "first_name",
                     "middle_name",
                     "last_name",
+                    "gender",
                     "pinfl",
                     "phone_number",
                     "is_verified",
@@ -45,58 +47,57 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Sportsman)
 class SportsmanAdmin(admin.ModelAdmin):
-    list_display = ["id", "user", "sport_type", "sport", "gender"]
+    list_display = ["user_id", "user", "sport", "created_time"]
     fieldsets = (
         (
             None,
             {
                 "fields": (
                     "user",
-                    "sport_type",
                     "sport",
-                    "motto",
-                    "height",
-                    "weight",
+                    "trainer",
+                    "skill_level",
+                    "division",
+                    "bio",
                 )
             },
         ),
-        ("Adress", {"fields": ("region", "city", "street", "place_of_birth", "citizenship", "moving_date")}),
-        ("Contacts", {"fields": ("telegram", "instagram")}),
-        ("Media", {"fields": ("media",)}),
+        ("User Metrics", {"fields": ("user_metrics", )}),
+        ("Adress", {"fields": ("address",)}),
+        ("Social media", {"fields": ("social_media",)}),
+        # ("Media", {"fields": ("media",)}),
         
     )
-    list_filter = ["sport_type", "gender"]
+    list_filter = ["skill_level",]
 
 
 @admin.register(Trainer)
 class TrainerAdmin(admin.ModelAdmin):
-    list_display = ["id", "user", "sport_type", "sport","gender"]
+    list_display = ["user_id", "user", "sport", "created_time"]
     fieldsets = (
         (
             None,
             {
                 "fields": (
                     "user",
-                    "sport_type",
                     "sport",
-                    "motto",
-                    "height",
-                    "weight",
-                    "number_of_games",
-                    "number_of_students",
-                    "number_of_awards",
+                    "skill_level",
+                    "division",
+                    "bio",
                 )
             },
         ),
-        ("Adress", {"fields": ("region", "city", "street", "place_of_birth", "citizenship")}),
-        ("Contacts", {"fields": ("telegram", "instagram")}),
-        ("Media", {"fields": ("media",)}),
+        ("User Metrics", {"fields": ("user_metrics", )}),
+        ("Adress", {"fields": ("address",)}),
+        ("Social media", {"fields": ("social_media",)}),
+        # ("Media", {"fields": ("media",)}),
         
     )
-    list_filter = ["sport_type", "gender"]
+    list_filter = ["skill_level",]
 
 
 @admin.register(UserMedia)
 class UserMediaAdmin(admin.ModelAdmin):
     list_display = ["id", "media_type", "size", "extension"]
     list_filter = ["media_type", "extension"]
+    

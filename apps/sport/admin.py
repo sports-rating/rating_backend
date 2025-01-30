@@ -3,9 +3,9 @@ from django.contrib import admin
 from .models import (
     Sport,
     Tournament,
-    Result
+    Result,
+    Team
 )
-
 
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
@@ -24,3 +24,9 @@ class SportAdmin(admin.ModelAdmin):
 class ResultAdmin(admin.ModelAdmin):
     list_display = ["id", "country", "tournament", "year", "currently_participating"]
     list_filter = ["currently_participating",]
+
+
+@admin.register(Team)
+class TeamAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "sport", "founded_year"]
+    search_fields = ["name",]
