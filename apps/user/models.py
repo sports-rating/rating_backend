@@ -99,7 +99,7 @@ class User(AbstractUser, BaseModel):
             if self.phone_number:
                 temp_username = f"user_{self.phone_number[-4:]}_{random_str}"
             else:
-                temp_username = f"user_no_phone_{random_str}"
+                temp_username = f"user_{self.first_name}_{random_str}"
             while User.objects.filter(username=temp_username).exists():
                 temp_username = f"{temp_username}{random.randint(0, 9)}"
             self.username = temp_username
@@ -120,11 +120,11 @@ class Sportsman(models.Model):
     skill_level = models.CharField(max_length=100)
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
-    user_metrics = models.JSONField(blank=True)
+    user_metrics = models.JSONField(blank=True, null=True)
     # Address
-    address = models.JSONField(blank=True)
+    address = models.JSONField(blank=True, null=True)
     # Contacts
-    social_media = models.JSONField(blank=True)
+    social_media = models.JSONField(blank=True, null=True)
 
     created_time = models.DateTimeField(auto_now_add=True, null=True)
     updated_time = models.DateTimeField(auto_now=True, null=True)
@@ -147,13 +147,13 @@ class Sportsman(models.Model):
             
 
 class Trainer(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='trainer_profile')
+    user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='trainer_profile')
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
     
     skill_level = models.CharField(max_length=100)
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
-    user_metrics = models.JSONField(blank=True)
+    user_metrics = models.JSONField(blank=True, null=True)
     # Address
     address = models.JSONField(blank=True, null=True)
     # Contacts

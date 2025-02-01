@@ -49,12 +49,19 @@ class UserListSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         if instance.user_role == "sportsman":
             if instance.sportsman_profile and instance.sportsman_profile.trainer:
-                data["trainer_id"] = instance.sportsman_profile.trainer.user.id
+                data["trainer_id"] = instance.sportsman_profile.trainer.user_id
                 data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         return data
 
 
 class SportsmanExportSerializer(serializers.ModelSerializer):
+    height = serializers.SerializerMethodField()
+    weight = serializers.SerializerMethodField()
+    region = serializers.SerializerMethodField()
+    city = serializers.SerializerMethodField()
+    street = serializers.SerializerMethodField()
+    citizenship = serializers.SerializerMethodField()
+
     class Meta:
         model = Sportsman
         fields = [
@@ -66,6 +73,24 @@ class SportsmanExportSerializer(serializers.ModelSerializer):
             "citizenship",
         ]
 
+    def get_height(self, obj):
+        return obj.user_metrics.get("height") if obj.user_metrics else None
+    
+    def get_weight(self, obj):
+        return obj.user_metrics.get("weight") if obj.user_metrics else None
+
+    def get_region(self, obj):
+        return obj.address.get("region") if obj.address else None
+
+    def get_city(self, obj):
+        return obj.address.get("city") if obj.address else None
+
+    def get_street(self, obj):
+        return obj.address.get("street") if obj.address else None
+
+    def get_citizenship(self, obj):
+        return obj.address.get("citizenship") if obj.address else None
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.trainer:
@@ -76,8 +101,15 @@ class SportsmanExportSerializer(serializers.ModelSerializer):
 
 
 class TrainerExportSerializer(serializers.ModelSerializer):
+    height = serializers.SerializerMethodField()
+    weight = serializers.SerializerMethodField()
+    region = serializers.SerializerMethodField()
+    city = serializers.SerializerMethodField()
+    street = serializers.SerializerMethodField()
+    citizenship = serializers.SerializerMethodField()
+
     class Meta:
-        model = Trainer
+        model = Sportsman
         fields = [
             "height",
             "weight",
@@ -86,6 +118,24 @@ class TrainerExportSerializer(serializers.ModelSerializer):
             "street",
             "citizenship",
         ]
+
+    def get_height(self, obj):
+        return obj.user_metrics.get("height") if obj.user_metrics else None
+    
+    def get_weight(self, obj):
+        return obj.user_metrics.get("weight") if obj.user_metrics else None
+
+    def get_region(self, obj):
+        return obj.address.get("region") if obj.address else None
+
+    def get_city(self, obj):
+        return obj.address.get("city") if obj.address else None
+
+    def get_street(self, obj):
+        return obj.address.get("street") if obj.address else None
+
+    def get_citizenship(self, obj):
+        return obj.address.get("citizenship") if obj.address else None
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

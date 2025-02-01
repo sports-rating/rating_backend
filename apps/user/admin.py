@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
@@ -22,7 +23,8 @@ class UserAdmin(admin.ModelAdmin):
     ]
     search_fields = ["username", "phone_number"]
     list_filter = ["is_verified",]
-    readonly_fields = ["created_time"]
+    readonly_fields = ["created_time", "educations", "results", "profile"]
+
     fieldsets = (
         (
             None,
@@ -37,12 +39,57 @@ class UserAdmin(admin.ModelAdmin):
                     "phone_number",
                     "is_verified",
                     "user_role",
+                    "educations",
+                    "results",
+                    "profile",
                 )
             },
         ),
         ("Permissions", {"fields": ("is_staff", "is_superuser", "user_permissions")}),
     )
     filter_horizontal = ("user_permissions",)
+
+    def educations(self, obj):
+        """Display educations as clickable links."""
+        links = [
+            format_html(
+                '<a href="{}">{}</a>',
+                reverse("admin:education_education_change", args=[edu.id]),
+                str(edu),
+            )
+            for edu in obj.educations.all()
+        ]
+        return format_html("<br>".join(links)) if links else "-"
+
+    def results(self, obj):
+        """Display results as clickable links."""
+        links = [
+            format_html(
+                '<a href="{}">{}</a>',
+                reverse("admin:sport_result_change", args=[res.id]),
+                str(res),
+            )
+            for res in obj.results.all()
+        ]
+        return format_html("<br>".join(links)) if links else "-"
+
+    def profile(self, obj):
+        """Display trainer or sportsman profile as a clickable link."""
+        if obj.user_role == "trainer" and hasattr(obj, "trainer_profile"):
+            return format_html(
+                '<a href="{}">Trainer Profile</a>',
+                reverse("admin:user_trainer_change", args=[obj.id]),
+            )
+        elif obj.user_role == "sportsman" and hasattr(obj, "sportsman_profile"):
+            return format_html(
+                '<a href="{}">Sportsman Profile</a>',
+                reverse("admin:user_sportsman_change", args=[obj.id]),
+            )
+        return "-"
+
+    educations.short_description = "Educations"
+    results.short_description = "Results"
+    profile.short_description = "Profile"
 
 
 @admin.register(Sportsman)
@@ -100,4 +147,3 @@ class TrainerAdmin(admin.ModelAdmin):
 class UserMediaAdmin(admin.ModelAdmin):
     list_display = ["id", "media_type", "size", "extension"]
     list_filter = ["media_type", "extension"]
-    

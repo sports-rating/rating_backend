@@ -30,6 +30,9 @@ class School(BaseModel):
 
     class Meta:
         db_table = "school"
+    
+    def __str__(self):
+        return f"{self.name}"
 
 
 class Education(BaseModel):
@@ -43,3 +46,7 @@ class Education(BaseModel):
 
     class Meta:
         db_table = "education"
+
+    def __str__(self):
+        return f"School: {self.school} -> {self.start_year} - {self.end_year}"
+    

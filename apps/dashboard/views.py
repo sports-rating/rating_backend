@@ -79,6 +79,9 @@ class ExportView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = UserFilter
 
+    def get_queryset(self):
+        return self.queryset.exclude(user_role="admin")
+
     def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 

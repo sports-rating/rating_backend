@@ -152,7 +152,7 @@ class BaseMediaSerializer(serializers.ModelSerializer): # need to be updated
 
 
 class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
-    media = serializers.SerializerMethodField()
+    media = BaseMediaSerializer(many=True)
 
     class Meta:
         model = User
@@ -169,23 +169,18 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             "is_superuser",
             "media",
         ]
-    
-    def get_media(self, instance):
-        queryset = instance.media.all()
-        return BaseMediaSerializer(queryset, many=True).data
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.user_role == "sportsman":
-            data["sportsman_profile"] = SportsmanProfileSerializer(instance.sportsman_profile).data
+            data["sportsman_profile"] = SportsmanProfileSerializer(instance.sportsman_profile, context=self.context).data
         elif instance.user_role == "trainer":
-            data["trainer_profile"] = TrainerProfileSerializer(instance.trainer_profile).data
+            data["trainer_profile"] = TrainerProfileSerializer(instance.trainer_profile, context=self.context).data
         return data
 
 
 class SportsmanListSerializer(serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
-    logo = serializers.SerializerMethodField() 
 
     class Meta:
         model = User
@@ -195,28 +190,24 @@ class SportsmanListSerializer(serializers.ModelSerializer):
             "middle_name",
             "last_name",
             "user_role",
-            "statistics",
-            "logo"
+            "statistics"
         ]
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        request = self.context.get("request")
         if instance.sportsman_profile.sport:
             data["sport"] = instance.sportsman_profile.sport.name
+            if instance.sportsman_profile.sport.logo:
+                data["logo"] = request.build_absolute_uri(instance.sportsman_profile.sport.logo.url)
         if instance.sportsman_profile.trainer:
-            data["trainer_id"] = instance.sportsman_profile.trainer.user.id
+            data["trainer_id"] = instance.sportsman_profile.trainer.user_id
             data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         return data
     
     def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_sportsman_statistics(sportsman=obj)
 
-    def get_logo(self, obj) -> List[Dict[str, Any]]: # change
-        if obj.sportsman_profile.sport:
-            logo = obj.sportsman_profile.sport.logo
-            if logo.exists():
-                return BaseMediaSerializer(logo, context=self.context).data
-        return []
     
 
 class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
@@ -250,8 +241,7 @@ class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
-        
-        profile = Sportsman.objects.create(sport=sport, trainer=trainer, **validated_data)
+        profile = Sportsman.objects.create(sport=sport, trainer=trainer.trainer_profile, **validated_data)
         logger.info(f"Sportsman Profile created -> {profile}")
 
         return profile
@@ -262,7 +252,7 @@ class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
         data["sport_name"] = instance.sport.name
         if instance.trainer:
             logger.info(f"Trainer id: {instance.trainer.user}")
-            data["trainer_id"] = instance.trainer.user
+            data["trainer_id"] = instance.trainer.user_id
             data["trainer_name"] = f'{instance.trainer.user}'
         return data
 
@@ -276,7 +266,7 @@ class SportsmanProfileUpdateSerializer(SportsmanProfileCreateSerializer):
         if sport:
             instance.sport = sport
         if trainer:
-            instance.trainer = trainer
+            instance.trainer = trainer.trainer_profile
 
         # Update other fields
         for attr, value in validated_data.items():
@@ -288,7 +278,7 @@ class SportsmanProfileUpdateSerializer(SportsmanProfileCreateSerializer):
     
 
 class SportsmanProfileSerializer(serializers.ModelSerializer):
-    sport = SportSerializer(many=False)
+    sport = SportSerializer(many=False, read_only=True)
     statistics = serializers.SerializerMethodField()
 
     class Meta:
@@ -307,7 +297,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.trainer:
-            data["trainer_id"] = instance.trainer
+            data["trainer_id"] = instance.trainer.user_id
             data["trainer_name"] = f'{instance.trainer.user}'
         return data
     
@@ -343,13 +333,6 @@ class TrainerListSerializer(serializers.ModelSerializer):
     def get_statistics(self, obj) ->  List[Dict[str, Any]]:
         return calculate_trainer_statistics(trainer=obj)
 
-    def get_logo(self, obj):
-        if obj.trainer_profile.sport:
-            logo = obj.trainer_profile.sport
-            return logo
-            # if logo.exists():
-            #     return BaseMediaSerializer(logo, context=self.context).data
-        return []
     
 
 class TrainerProfileCreateSerializer(serializers.ModelSerializer):
@@ -401,7 +384,7 @@ class TrainerProfileUpdateSerializer(TrainerProfileCreateSerializer):
     
 
 class TrainerProfileSerializer(serializers.ModelSerializer):
-    sport = SportSerializer(many=False)
+    sport = SportSerializer(many=False, read_only=True)
     statistics = serializers.SerializerMethodField()
 
     class Meta:
@@ -417,12 +400,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "statistics",
         ]
     
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        return data
-    
-    def get_statistics(self, obj) ->  Dict[str, Any]:
-        logger.info(f"{isinstance(obj.user, User)}")
+    def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_trainer_statistics(trainer=obj.user)
 
 
@@ -450,11 +428,11 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "media",
             "birth_date",
             "user_role",
-            "sportsman_profile",
             "educations",
             "results",
-            "trainer_profile",
             "is_verified",
+            "sportsman_profile",
+            "trainer_profile",
             "created_time",
         )
         extra_kwargs = {

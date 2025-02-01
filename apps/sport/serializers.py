@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Optional
+
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
 from django.contrib.auth.models import update_last_login
@@ -40,20 +42,15 @@ class SportCreateSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {"id": {"read_only": True}, "logo": {"required": False}}
 
-
-    def create(self, validated_data):
-        sport = Sport.objects.filter(name=validated_data["name"]).first()
-        sport_name = validated_data["name"]
-        if sport:
+    def validate(self, attrs):
+        sport_name = attrs.get("name")
+        if Sport.objects.filter(name=sport_name).exists():
             raise_validation_error(message=_(f"{sport_name} - sport is already created"))
-
-        
-        sport = Sport.objects.create(**validated_data)
-
-        return sport
+        return attrs
 
 
 class SportSerializer(serializers.ModelSerializer):
+    logo = serializers.SerializerMethodField()
 
     class Meta:
         model = Sport
@@ -62,6 +59,13 @@ class SportSerializer(serializers.ModelSerializer):
             "name",
             "logo",
         )
+
+    def get_logo(self, obj) -> Optional[str]:
+        """Ensure full URL for the logo file"""
+        request = self.context.get("request")  # Get the request context
+        if obj.logo:  # Make sure the file exists
+            return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
+        return None
 
 
 class TournamentCreateSerializer(serializers.ModelSerializer):
