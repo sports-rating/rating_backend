@@ -19,10 +19,11 @@ from .models import (
     User,
     Sportsman,
     Trainer,
+    ArchivedTrainer,
     Education,
     Result,
     Media,
-    School
+    School,
 )
 
 from dashboard.models import (
@@ -97,7 +98,7 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
 
 
 class EducationCreateSerializer(serializers.ModelSerializer):
-    sport_type = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True)
+    sport_type = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True, required=True)
     school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), write_only=True)
 
     class Meta:
@@ -162,6 +163,8 @@ class ResultCreateSerializer(serializers.ModelSerializer):
     # This field will accept the tournament ID in the request data and convert it to a Tournament object.
     # source='tournament' to map the tournament_id field to the tournament field on the Result model.
     tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source='tournament', write_only=True)
+    trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='trainer', write_only=True, required=False)
+    archived_trainer_name = serializers.CharField(max_length=255, required=False)
 
     class Meta:
         model = Result
@@ -169,6 +172,8 @@ class ResultCreateSerializer(serializers.ModelSerializer):
             "id",
             "country",
             "tournament_id",
+            "trainer_id",
+            "archived_trainer_name",
             "year",
             "currently_participating",
             "rating",
@@ -181,13 +186,31 @@ class ResultCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         tournament = validated_data.pop('tournament')
-        result = Result.objects.create(tournament=tournament, **validated_data)
+        trainer = validated_data.pop('trainer', None)
+        archived_trainer_name = validated_data.pop('archived_trainer_name', None)
+        
+        if trainer:
+            logger.info(f"Trainer: {trainer}, instance: {trainer.__class__}")
+            trainer_profile = getattr(trainer, 'trainer_profile', None)
+            if trainer_profile:
+                result = Result.objects.create(trainer=trainer_profile, tournament=tournament, **validated_data)
+        elif archived_trainer_name:
+            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+            result = Result.objects.create(archived_trainer=archived_trainer, tournament=tournament, **validated_data)
+        else:
+            result = Result.objects.create(tournament=tournament, **validated_data)
         return result
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["tournament_id"] = instance.tournament.id
         data["tournament_name"] = instance.tournament.name
+        if instance.trainer:
+            data["trainer_id"] = instance.trainer.user.id
+            data["trainer_name"] = f'{instance.trainer.user}'
+        elif instance.archived_trainer:
+            data["archived_trainer_id"] = instance.archived_trainer.id
+            data["archived_trainer_name"] = instance.archived_trainer.name
         return data
 
 
@@ -208,7 +231,17 @@ class ResultSerializer(serializers.ModelSerializer):
             "number_of_silver",
             "number_of_bronze",
         )
-
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.trainer:
+            data["trainer_id"] = instance.trainer.user.id
+            data["trainer_name"] = f'{instance.trainer.user}'
+        elif instance.archived_trainer:
+            data["archived_trainer_id"] = instance.archived_trainer.id
+            data["archived_trainer_name"] = instance.archived_trainer.name
+        return data
+    
 
 class MediaSerializer(serializers.ModelSerializer):
     owner = serializers.ChoiceField(
@@ -329,7 +362,7 @@ class SportsmanListSerializer(serializers.ModelSerializer):
 
 class SportsmanRegisterSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
-    results = ResultCreateSerializer(many=True, required=True)
+    sportsman_results = ResultCreateSerializer(many=True, required=True)
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
@@ -357,13 +390,13 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
             "educations",
             "media_ids",
             "media",
-            "results",
+            "sportsman_results",
         ]
         extra_kwargs = {"id": {"read_only": True},}
 
     def create(self, validated_data):
         educations_data = validated_data.pop("educations", None)
-        results_data = validated_data.pop("results", None)
+        results_data = validated_data.pop("sportsman_results", None)
         media_ids = validated_data.pop("media_ids", None)
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
@@ -374,7 +407,6 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
                 profile = Sportsman.objects.create(sport=sport, trainer=trainer_profile, **validated_data)
             else:
                 raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
-            logger.info(f"Sportsman Profile created -> {profile}")
             
             if media_ids:
                 media_objects = Media.objects.filter(id__in=media_ids)
@@ -394,8 +426,14 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
                 Education.objects.create(sportsman_profile=profile, **education_data)
             
             for result_data in results_data:
+                if 'trainer' in result_data:
+                    result_data['trainer'] = result_data['trainer'].trainer_profile
+                elif 'archived_trainer_name' in result_data:
+                    archived_trainer_name = result_data.pop('archived_trainer_name')
+                    archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+                    result_data['archived_trainer'] = archived_trainer
                 Result.objects.create(sportsman_profile=profile, **result_data)
-            
+        
         return profile
     
     def to_representation(self, instance):
@@ -403,26 +441,26 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
         data["sport_id"] = instance.sport.id
         data["sport_name"] = instance.sport.name
         if instance.trainer:
-            data["trainer_id"] = User.objects.get(trainer_profile__id=instance.trainer.id).id
-            data["trainer_name"] = f'{instance.trainer.user}'
+            data["trainer_id"] = instance.trainer.user.id
+            data["trainer_name"] = f'{instance.trainer.user}' 
         return data
 
 
 class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
     educations = EducationCreateSerializer(many=True, required=False)
-    results = ResultCreateSerializer(many=True, required=False)
+    sportsman_results = ResultCreateSerializer(many=True, required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
 
     class Meta(SportsmanRegisterSerializer.Meta):
         extra_kwargs = {
             **SportsmanRegisterSerializer.Meta.extra_kwargs,
             "educations": {"required": False},
-            "results": {"required": False},
+            "sportsman_results": {"required": False},
         }
 
     def update(self, instance, validated_data):
         educations_data = validated_data.pop("educations", None)
-        results_data = validated_data.pop("results", None)
+        results_data = validated_data.pop("sportsman_results", None)
         media_ids = validated_data.pop("media_ids", None)
 
         # Update basic sportsman profile fields
@@ -475,6 +513,12 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
         if results_data:
             instance.results.all().delete()
             for result_data in results_data:
+                if 'trainer' in result_data:
+                    result_data['trainer'] = result_data['trainer'].trainer_profile
+                elif 'archived_trainer_name' in result_data:
+                    archived_trainer_name = result_data.pop('archived_trainer_name')
+                    archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+                    result_data['archived_trainer'] = archived_trainer
                 Result.objects.create(sportsman_profile=instance, **result_data)
 
         return instance
@@ -486,7 +530,7 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
 
 class SportsmanSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True)
-    results = ResultSerializer(many=True)
+    sportsman_results = ResultSerializer(many=True)
     media = MediaSerializer(many=True)
     sport = SportSerializer(many=False)
     statistics = serializers.SerializerMethodField()
@@ -510,7 +554,7 @@ class SportsmanSerializer(serializers.ModelSerializer):
             "instagram",
             "educations",
             "media",
-            "results",
+            "sportsman_results",
             "statistics"
         ]
     
@@ -561,7 +605,7 @@ class TrainerListSerializer(serializers.ModelSerializer):
 
 class TrainerRegisterSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
-    results = ResultCreateSerializer(many=True, required=True)
+    trainer_results = ResultCreateSerializer(many=True, required=True)
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = MediaSerializer(many=True, required=False)
@@ -587,19 +631,18 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
             "educations",
             "media_ids",
             "media",
-            "results",
+            "trainer_results",
         ]
         extra_kwargs = {"id": {"read_only": True},}
     
     def create(self, validated_data):
         educations_data = validated_data.pop("educations", None)
-        results_data = validated_data.pop("results", None)
+        results_data = validated_data.pop("trainer_results", None)
         media_ids = validated_data.pop("media_ids", None)
         sport = validated_data.pop("sport", None)
         
         with transaction.atomic():
             profile = Trainer.objects.create(sport=sport, **validated_data)
-
 
             if media_ids:
                 # Link existing media to the trainer profile
@@ -621,7 +664,6 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
             for result_data in results_data:
                 Result.objects.create(trainer_profile=profile, **result_data)
             
-        logger.info(f"Trainer Profile created -> {profile}")
         return profile
 
     def to_representation(self, instance):
@@ -633,14 +675,14 @@ class TrainerRegisterSerializer(serializers.ModelSerializer):
 
 class TrainerUpdateSerializer(TrainerRegisterSerializer):
     educations = EducationCreateSerializer(many=True, required=False)
-    results = ResultCreateSerializer(many=True, required=False)
+    trainer_results = ResultCreateSerializer(many=True, required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
 
     class Meta(TrainerRegisterSerializer.Meta):
         extra_kwargs = {
             **TrainerRegisterSerializer.Meta.extra_kwargs,
             'educations': {"required": False},
-            "results": {"required": False},
+            "trainer_results": {"required": False},
         }
     
     def update(self, instance, validated_data):
@@ -706,7 +748,7 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
 
 class TrainerSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True)
-    results = ResultSerializer(many=True)
+    trainer_results = ResultSerializer(many=True)
     media = MediaSerializer(many=True)
     sport = SportSerializer(many=False)
     statistics = serializers.SerializerMethodField()
@@ -730,7 +772,7 @@ class TrainerSerializer(serializers.ModelSerializer):
             "instagram",
             "educations",
             "media",
-            "results",
+            "trainer_results",
             "statistics",
         ]
     
@@ -827,7 +869,6 @@ class RegistrationSerializer(serializers.ModelSerializer):
             if photo_id:
                 media_object = Media.objects.filter(id__in=photo_id)
                 user.photo.set(media_object)
-            logger.info(f"User created -> {user}")
             if user_role == "sportsman" and sportsman_profile_data:
                 sportsman_profile_data["user"] = user
                 SportsmanRegisterSerializer().create(sportsman_profile_data)

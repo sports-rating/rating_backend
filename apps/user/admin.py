@@ -7,7 +7,8 @@ from .models import (
     Trainer,
     Media, 
     Education, 
-    Result
+    Result,
+    ArchivedTrainer,
 )
 
 
@@ -113,3 +114,8 @@ class ResultAdmin(admin.ModelAdmin):
 class MediaAdmin(admin.ModelAdmin):
     list_display = ["id", "media_type", "size", "extension"]
     list_filter = ["media_type", "extension"]
+
+
+@admin.register(ArchivedTrainer)
+class ArchivedTrainerAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "created_time"]

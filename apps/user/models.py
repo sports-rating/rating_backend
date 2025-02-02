@@ -186,6 +186,15 @@ class Trainer(BaseModel):
         super().delete(*args, **kwargs)
 
 
+class ArchivedTrainer(BaseModel):
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = "archived_trainer"
+    
+    def __str__(self):
+        return self.name
+
 class School(BaseModel):
     name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=13)
@@ -226,15 +235,18 @@ class Result(BaseModel):
     year = models.DateField(blank=True, null=True)
     currently_participating = models.BooleanField(default=False)
     
-    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
-    trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
-    tournament = models.ForeignKey("dashboard.Tournament", models.CASCADE, related_name="results", blank=True, null=True)
-    additional_attributes = models.JSONField(null=True, blank=True)
+    sportsman_profile = models.ForeignKey(Sportsman, on_delete=models.CASCADE, related_name="sportsman_results", blank=True, null=True)
+    trainer_profile = models.ForeignKey(Trainer, on_delete=models.CASCADE, related_name="trainer_results", blank=True, null=True)
+    tournament = models.ForeignKey("dashboard.Tournament", models.CASCADE, related_name="tournament_results", blank=True, null=True)
+    
+    trainer = models.ForeignKey(Trainer, on_delete=models.SET_NULL, related_name='assisted_results', blank=True, null=True)
+    archived_trainer = models.ForeignKey(ArchivedTrainer, on_delete=models.SET_NULL, related_name='archived_assisted_results', blank=True, null=True)
 
+    additional_attributes = models.JSONField(null=True, blank=True)
     rating = models.IntegerField(null=True, blank=True)
-    number_of_gold = models.PositiveIntegerField(blank=True, null=True)
-    number_of_silver = models.PositiveIntegerField(blank=True, null=True)
-    number_of_bronze = models.PositiveIntegerField(blank=True, null=True)
+    number_of_gold = models.PositiveIntegerField(default=0)
+    number_of_silver = models.PositiveIntegerField(default=0)
+    number_of_bronze = models.PositiveIntegerField(default=0)
 
     class Meta: 
         db_table = "result"
