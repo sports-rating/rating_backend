@@ -154,6 +154,8 @@ class BaseMediaSerializer(serializers.ModelSerializer): # need to be updated
 
 class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
     media = BaseMediaSerializer(many=True)
+    educations = EducationCreateSerializer(many=True, required=False)
+    results = ResultCreateSerializer(many=True, required=False)
 
     class Meta:
         model = User
@@ -169,6 +171,8 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             "birth_date",
             "is_superuser",
             "media",
+            "educations",
+            "results",
         ]
 
     def to_representation(self, instance):
