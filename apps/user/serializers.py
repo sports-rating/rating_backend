@@ -430,6 +430,7 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
                     result_data['trainer'] = result_data['trainer'].trainer_profile
                 elif 'archived_trainer_name' in result_data:
                     archived_trainer_name = result_data.pop('archived_trainer_name')
+                    ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
                     archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
                     result_data['archived_trainer'] = archived_trainer
                 Result.objects.create(sportsman_profile=profile, **result_data)
@@ -1035,4 +1036,20 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     TrainerUpdateSerializer().update(trainer_profile, trainer_profile_data)
 
         return instance
+    
+
+class ArchivedTrainerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArchivedTrainer
+        fields = ["id", "name"]
+        extra_kwargs = {"id": {"read_only": True}}
+
+    def validate(self, attrs):
+        name = attrs.get('name', None)
+        
+        if name:
+            if ArchivedTrainer.objects.filter(name=name).exists():
+                raise_validation_error(message=_("Archived Trainer with this name already exists"))
+        
+        return attrs
     

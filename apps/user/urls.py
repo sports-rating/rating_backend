@@ -19,6 +19,8 @@ from user.views import (
     MediaDeleteView,
     ResultRetrieveUpdateDestroyView,
     EducationRetrieveUpdateDestroyView,
+    ArchivedTrainerCreateListView,
+    ArchivedTrainerRetriveUpdateDeleteView
 )
 
 app_name = "user"
@@ -27,13 +29,20 @@ urlpatterns = [
     path("auth/send-code/", SendVerificationCodeView.as_view(), name='send-code'),
     path("auth/verify-code/", VerifyCodeView.as_view(), name='verify-code'),
     path("auth/register/", RegistrationView.as_view(), name='registration'),
+    
     path("profile/", UserRetrieveUpdateView.as_view(), name='profile-retrieve-update'),
     path("logout/", LogoutView.as_view()),
     path("refresh-token/", LoginRefreshView.as_view()),
+    
     path("profile/sportsman/", SportsmanListCreateView.as_view(), name='sportsman-register-list'),
     path("profile/sportsman/<uuid:pk>/", SportsmanRetrieveUpdateDeleteView.as_view(), name='sportsman-retrieve-update-delete'),
+    
     path("profile/trainer/", TrainerListCreateView.as_view(), name='trainer-register-list'),
     path("profile/trainer/<uuid:pk>/", TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-retrieve"),
+    
+    path("profile/archived-trainer/", ArchivedTrainerCreateListView.as_view(), name='archived-trainer-register-list'),
+    path("profile/archived-trainer/<uuid:pk>/", ArchivedTrainerRetriveUpdateDeleteView.as_view(), name='archived-trainer-retrieve-update-delete'),
+
     path("media-upload/", MediaUploadView.as_view(), name='media-upload'),
     path("media/<uuid:pk>/", MediaDeleteView.as_view(), name='media-delete'),
     # path("profile/sportsman/results/<uuid:pk>/", ResultRetrieveUpdateDestroyView.as_view(), name='result-retrieve-update-delete'),
