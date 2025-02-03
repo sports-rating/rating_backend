@@ -77,13 +77,16 @@ class Result(BaseModel):
     currently_participating = models.BooleanField(default=False)
     
     user = models.ForeignKey("user.User", on_delete=models.CASCADE, related_name="results", blank=True, null=True)
-    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="results", blank=True, null=True)
+    trainer = models.ForeignKey("user.Trainer", on_delete=models.SET_NULL, related_name='assisted_results', blank=True, null=True)
+    archived_trainer = models.ForeignKey("user.ArchivedTrainer", on_delete=models.SET_NULL, related_name='archived_assisted_results', blank=True, null=True)
+
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="tournament_results", blank=True, null=True)
     additional_attributes = models.JSONField(null=True, blank=True)
 
-    rating = models.IntegerField(null=True, blank=True)
-    number_of_gold = models.PositiveIntegerField(blank=True, null=True)
-    number_of_silver = models.PositiveIntegerField(blank=True, null=True)
-    number_of_bronze = models.PositiveIntegerField(blank=True, null=True)
+    rating = models.PositiveIntegerField(default=0)
+    gold = models.PositiveIntegerField(default=0)
+    silver = models.PositiveIntegerField(default=0)
+    bronze = models.PositiveIntegerField(default=0)
 
     class Meta: 
         db_table = "result"

@@ -38,9 +38,9 @@ def calculate_trainer_statistics(trainer):
                 own_total_bronze += 1
         else:
             # Trainer is participating as a trainer: calculate based on students' achievements
-            students_total_gold += result.number_of_gold or 0
-            students_total_silver += result.number_of_silver or 0
-            students_total_bronze += result.number_of_bronze or 0
+            students_total_gold += result.gold or 0
+            students_total_silver += result.silver or 0
+            students_total_bronze += result.bronze or 0
 
     total_gold = own_total_gold + students_total_gold
     total_silver = own_total_silver + students_total_silver

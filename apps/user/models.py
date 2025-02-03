@@ -135,15 +135,6 @@ class Sportsman(models.Model):
 
     def __str__(self):
         return f"Sportsman {self.user.first_name} - {self.user.last_name}"
-
-    # # Here all media associated to sportsman will be deleted
-    # def delete(self, *args, **kwargs):
-    #     media_objects = self.media.all()
-
-    #     for media in media_objects:
-    #         media.delete()
-        
-    #     super().delete(*args, **kwargs)
             
 
 class Trainer(models.Model):
@@ -174,13 +165,9 @@ class Trainer(models.Model):
     def __str__(self):
         return f"Trainer {self.user.first_name} - {self.user.last_name}"
 
-    # def delete(self, *args, **kwargs):
-    #     media_objects = self.media.all()
 
-    #     for media in media_objects:
-    #         media.delete()
-        
-    #     super().delete(*args, **kwargs)
+class ArchivedTrainer(models.Model):
+    name = models.CharField(max_length=255)
 
 
 class UserMedia(BaseMedia):

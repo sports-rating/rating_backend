@@ -7,6 +7,7 @@ from .models import (
     Sportsman, 
     Trainer,
     UserMedia,
+    ArchivedTrainer
 )
 
 
@@ -147,3 +148,8 @@ class TrainerAdmin(admin.ModelAdmin):
 class UserMediaAdmin(admin.ModelAdmin):
     list_display = ["id", "media_type", "size", "extension"]
     list_filter = ["media_type", "extension"]
+
+
+@admin.register(ArchivedTrainer)
+class ArchivedTrainerAdmin(admin.ModelAdmin):
+    list_display = ["id", "name"]

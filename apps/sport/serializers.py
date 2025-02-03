@@ -22,7 +22,9 @@ from sport.models import (
 )
 
 from user.models import (
-    User
+    User,
+    Trainer,
+    ArchivedTrainer
 )
 
 from dashboard.serializers import (
@@ -146,6 +148,8 @@ class TournamentSerializer(serializers.ModelSerializer):
 
 class ResultCreateSerializer(serializers.ModelSerializer):
     tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source="tournament", write_only=True)
+    trainer_id = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), source="trainer", required=False)
+    archived_trainer_name = serializers.CharField(max_length=255, required=False)
 
     class Meta:
         model = Result
@@ -153,25 +157,39 @@ class ResultCreateSerializer(serializers.ModelSerializer):
             "id",
             "country",
             "tournament_id",
+            "trainer_id",
+            "archived_trainer_name",
             "year",
             "currently_participating",
             "rating",
             "additional_attributes",
-            "number_of_gold",
-            "number_of_silver",
-            "number_of_bronze",
+            "gold",
+            "silver",
+            "bronze",
         ]
         extra_kwargs = {"id": {"read_only": True}}
 
     def create(self, validated_data):
         tournament = validated_data.pop('tournament')
-        result = Result.objects.create(tournament=tournament, **validated_data)
+        trainer = validated_data.pop("trainer")
+        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
+        if trainer:
+            result = Result.objects.create(trainer=trainer, tournament=tournament, **validated_data)
+        elif archived_trainer_name:
+            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+            result = Result.objects.create(archived_trainer=archived_trainer, tournament=tournament, **validated_data)
+        else:  
+            result = Result.objects.create(tournament=tournament, **validated_data)
         return result
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["tournament_id"] = instance.tournament.id
         data["tournament_name"] = instance.tournament.name
+        if instance.trainer:
+            data["trainer_name"] = instance.trainer.user.full_name
+        elif instance.archived_trainer:
+            data["archived_trainer_name"] = instance.archived_trainer.name    
         return data
 
 
@@ -188,9 +206,9 @@ class ResultSerializer(serializers.ModelSerializer):
             "rating",
             "tournament",
             "additional_attributes",
-            "number_of_gold",
-            "number_of_silver",
-            "number_of_bronze",
+            "gold",
+            "silver",
+            "bronze",
         )
     
 

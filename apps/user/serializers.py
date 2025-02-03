@@ -30,6 +30,7 @@ from user.models import (
     User,
     Sportsman,
     Trainer,
+    ArchivedTrainer,
     UserMedia
 )
 
@@ -483,25 +484,33 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 if not media_objects.exists():
                     raise_validation_error(message=_(f"At least one media must be uploaded"))
                 
-                for media in media_objects:
-                    if media.user.exists() and not media.user.filter(id=user.id).exists():
-                        raise_validation_error(message=_(f"Media {media.id} is already associated with another user."))
+                # Check for media linked to other users
+                if media_objects.exclude(user__isnull=True).exists():
+                    raise_validation_error(message=_("One or more media are already associated with another user."))
 
                 user.media.set(media_objects)
             logger.info(f"User created -> {user}")
             
-            for education_data in educations_data:
-                Education.objects.create(user=user, **education_data)
+            # Bulk create educations
+            if educations_data:
+                Education.objects.bulk_create([
+                    Education(user=user, **ed_data) for ed_data in educations_data
+                ])
             
+            # create() inside the loop, because has to trigger signal!
             for result_data in results_data:
+                if 'archived_trainer_name' in result_data:
+                    archived_trainer_name = result_data.pop('archived_trainer_name')
+                    ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
+                    archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+                    result_data['archived_trainer'] = archived_trainer
                 Result.objects.create(user=user, **result_data)
 
             if user_role == "sportsman" and sportsman_profile_data:
-                sportsman_profile_data["user"] = user
-                SportsmanProfileCreateSerializer().create(sportsman_profile_data)
+                sportsman_profile_data['trainer'] = sportsman_profile_data.get('trainer').trainer_profile
+                Sportsman.objects.create(user=user, **sportsman_profile_data)
             elif user_role == "trainer" and trainer_profile_data:
-                trainer_profile_data["user"] = user
-                TrainerProfileCreateSerializer().create(trainer_profile_data)
+                Trainer.objects.create(user=user, **trainer_profile_data)
             
             return user
 
@@ -704,4 +713,19 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     TrainerProfileUpdateSerializer().update(trainer_profile, trainer_profile_data)
 
         return instance
-    
+
+
+class ArchivedTrainerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArchivedTrainer
+        fields = ["id", "name"]
+        extra_kwargs = {"id": {"read_only": True}}
+
+    def validate(self, attrs):
+        name = attrs.get('name', None)
+        
+        if name:
+            if ArchivedTrainer.objects.filter(name=name).exists():
+                raise_validation_error(message=_("Archived Trainer with this name already exists"))
+        
+        return attrs
