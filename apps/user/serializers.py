@@ -512,7 +512,7 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
 
         # Update results
         if results_data:
-            instance.results.all().delete()
+            instance.sportsman_results.all().delete()
             for result_data in results_data:
                 if 'trainer' in result_data:
                     result_data['trainer'] = result_data['trainer'].trainer_profile
@@ -688,7 +688,7 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
     
     def update(self, instance, validated_data):
         educations_data = validated_data.pop("educations", None)
-        results_data = validated_data.pop("results", None)
+        results_data = validated_data.pop("trainer_results", None)
         media_ids = validated_data.pop("media_ids", None)
 
         for attr, value in validated_data.items():
@@ -736,7 +736,7 @@ class TrainerUpdateSerializer(TrainerRegisterSerializer):
 
         # Update results
         if results_data:
-            instance.results.all().delete()
+            instance.trainer_results.all().delete()
             for result_data in results_data:
                 Result.objects.create(trainer_profile=instance, **result_data)
 
