@@ -70,8 +70,9 @@ def update_or_delete_trainer_result(sender, instance, **kwargs):
             decrement_field = 'number_of_silver'
         elif rating == 3:
             decrement_field = 'number_of_bronze'
-
+        logger.info(f"Rating: {rating}")
         logger.info(f"Decrement field: {decrement_field}")
+        logger.info(f"Tournament: {instance.tournament}")
         # Check if other sportsmen have results for the same trainer & tournament
         other_sportsman_results = Result.objects.filter(trainer=trainer_profile, tournament=tournament).exclude(id=instance.id)
         
@@ -80,7 +81,7 @@ def update_or_delete_trainer_result(sender, instance, **kwargs):
             # If other sportsmen exist, subtract the counts instead of deleting
             trainer_result = Result.objects.filter(trainer_profile=trainer_profile, tournament=tournament, currently_participating=False).first()
             if trainer_result and decrement_field:
-                max(0, setattr(trainer_result, decrement_field, getattr(trainer_result, decrement_field) -1))
+                setattr(trainer_result, decrement_field, max(0, getattr(trainer_result, decrement_field) -1))
             trainer_result.save()
         else:
             logger.info(f"(pre_delete) No other sportsmans exists in trainer's result, deleting it...")
