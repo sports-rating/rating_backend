@@ -163,8 +163,8 @@ class ResultCreateSerializer(serializers.ModelSerializer):
     # This field will accept the tournament ID in the request data and convert it to a Tournament object.
     # source='tournament' to map the tournament_id field to the tournament field on the Result model.
     tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source='tournament', write_only=True)
-    trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='trainer', write_only=True, required=False)
-    archived_trainer_name = serializers.CharField(max_length=255, required=False)
+    trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='trainer', write_only=True, required=False, allow_null=True)
+    archived_trainer_name = serializers.CharField(max_length=255, required=False, allow_null=True)
 
     class Meta:
         model = Result
@@ -427,12 +427,18 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
             
             for result_data in results_data:
                 if 'trainer' in result_data:
-                    result_data['trainer'] = result_data['trainer'].trainer_profile
-                elif 'archived_trainer_name' in result_data:
+                    print('trainer')
+                    trainer = result_data['trainer']
+                    if trainer:
+                        result_data['trainer'] = trainer.trainer_profile
+                if 'archived_trainer_name' in result_data:
+                    print('archived_trainer_name')
                     archived_trainer_name = result_data.pop('archived_trainer_name')
-                    ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
-                    archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-                    result_data['archived_trainer'] = archived_trainer
+                    if archived_trainer_name:
+                        print('hello')
+                        ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
+                        archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+                        result_data['archived_trainer'] = archived_trainer
                 Result.objects.create(sportsman_profile=profile, **result_data)
         
         return profile
