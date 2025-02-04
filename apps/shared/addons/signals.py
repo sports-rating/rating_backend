@@ -74,7 +74,7 @@ def update_or_delete_trainer_result(sender, instance, **kwargs):
         logger.info(f"Decrement field: {decrement_field}")
         logger.info(f"Tournament: {instance.tournament}")
         # Check if other sportsmen have results for the same trainer & tournament
-        other_sportsman_results = Result.objects.filter(trainer=trainer_profile, tournament=tournament, currently_participating=False).exclude(id=instance.id)
+        other_sportsman_results = Result.objects.filter(trainer=trainer_profile, tournament=tournament).exclude(id=instance.id)
         
         if other_sportsman_results.exists():
             logger.info(f"(pre_delete) Other sportsmans exists in trainer's result, updating it...")
