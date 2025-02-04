@@ -2,9 +2,9 @@ def calculate_sportsman_statistics(sportsman):
     """
     Calculate statistics for a sportsman based on their results.
     """
-    total_gold = sportsman.results.filter(rating=1).count()
-    total_silver = sportsman.results.filter(rating=2).count()
-    total_bronze = sportsman.results.filter(rating=3).count()
+    total_gold = sportsman.sportsman_results.filter(rating=1).count()
+    total_silver = sportsman.sportsman_results.filter(rating=2).count()
+    total_bronze = sportsman.sportsman_results.filter(rating=3).count()
 
     return {
         "total_gold": total_gold,
