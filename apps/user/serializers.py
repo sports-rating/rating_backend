@@ -427,15 +427,12 @@ class SportsmanRegisterSerializer(serializers.ModelSerializer):
             
             for result_data in results_data:
                 if 'trainer' in result_data:
-                    print('trainer')
                     trainer = result_data['trainer']
                     if trainer:
                         result_data['trainer'] = trainer.trainer_profile
                 if 'archived_trainer_name' in result_data:
-                    print('archived_trainer_name')
                     archived_trainer_name = result_data.pop('archived_trainer_name')
                     if archived_trainer_name:
-                        print('hello')
                         ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
                         archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
                         result_data['archived_trainer'] = archived_trainer
@@ -521,11 +518,15 @@ class SportsmanUpdateSerializer(SportsmanRegisterSerializer):
             instance.sportsman_results.all().delete()
             for result_data in results_data:
                 if 'trainer' in result_data:
-                    result_data['trainer'] = result_data['trainer'].trainer_profile
-                elif 'archived_trainer_name' in result_data:
+                    trainer = result_data['trainer']
+                    if trainer:
+                        result_data['trainer'] = trainer.trainer_profile
+                if 'archived_trainer_name' in result_data:
                     archived_trainer_name = result_data.pop('archived_trainer_name')
-                    archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-                    result_data['archived_trainer'] = archived_trainer
+                    if archived_trainer_name:
+                        ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
+                        archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+                        result_data['archived_trainer'] = archived_trainer
                 Result.objects.create(sportsman_profile=instance, **result_data)
 
         return instance
