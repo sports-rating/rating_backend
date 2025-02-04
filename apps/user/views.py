@@ -406,6 +406,9 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = User.objects.all()
     serializer_class = UserUpdateSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_Class = TrainerFilter
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":

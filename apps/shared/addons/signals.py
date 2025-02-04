@@ -36,7 +36,7 @@ def update_trainer_results(sender, instance, created, **kwargs):
             # Increment the appropriate field
             if increment_field:
                 setattr(trainer_result, increment_field, getattr(trainer_result, increment_field) + 1)
-            logger(f"After updating: {getattr(trainer_result, increment_field)}")
+            logger.info(f"After updating: {getattr(trainer_result, increment_field)}")
             trainer_result.save()
         else:
             logger.info(f"Result does not exist or trainer participated in tournament: {trainer_result.tournament.name if trainer_result else None}, creating...")
@@ -46,6 +46,8 @@ def update_trainer_results(sender, instance, created, **kwargs):
                 tournament=tournament,
                 country=instance.country,
                 year=instance.year,
+                currently_participating=False,
+                rating=0,
                 number_of_gold=(1 if rating == 1 else 0),
                 number_of_silver=(1 if rating == 2 else 0),
                 number_of_bronze=(1 if rating == 3 else 0)

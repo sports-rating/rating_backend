@@ -4,7 +4,8 @@ from datetime import datetime
 
 from user.models import (
     Sportsman,
-    User
+    User,
+    Result
 )
 
 class SportsmanFilter(filters.FilterSet):
