@@ -205,12 +205,11 @@ class ResultCreateSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["tournament_id"] = instance.tournament.id
         data["tournament_name"] = instance.tournament.name
-        if instance.trainer:
-            data["trainer_id"] = instance.trainer.user.id
-            data["trainer_name"] = f'{instance.trainer.user}'
-        elif instance.archived_trainer:
-            data["archived_trainer_id"] = instance.archived_trainer.id
-            data["archived_trainer_name"] = instance.archived_trainer.name
+        data["trainer_id"] = instance.trainer.user.id if instance.trainer else None
+        data["trainer_name"] = str(instance.trainer.user) if instance.trainer else None
+
+        data["archived_trainer_id"] = instance.archived_trainer.id if instance.archived_trainer else None
+        data["archived_trainer_name"] = instance.archived_trainer.name if instance.archived_trainer else None
         return data
 
 
@@ -234,12 +233,11 @@ class ResultSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if instance.trainer:
-            data["trainer_id"] = instance.trainer.user.id
-            data["trainer_name"] = f'{instance.trainer.user}'
-        elif instance.archived_trainer:
-            data["archived_trainer_id"] = instance.archived_trainer.id
-            data["archived_trainer_name"] = instance.archived_trainer.name
+        data["trainer_id"] = instance.trainer.user.id if instance.trainer else None
+        data["trainer_name"] = str(instance.trainer.user) if instance.trainer else None
+
+        data["archived_trainer_id"] = instance.archived_trainer.id if instance.archived_trainer else None
+        data["archived_trainer_name"] = instance.archived_trainer.name if instance.archived_trainer else None
         return data
     
 
