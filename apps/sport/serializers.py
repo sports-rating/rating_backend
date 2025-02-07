@@ -147,7 +147,7 @@ class TournamentSerializer(serializers.ModelSerializer):
 
 
 class ResultCreateSerializer(serializers.ModelSerializer):
-    tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source="tournament", write_only=True, null=True)
+    tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source="tournament", write_only=True)
     trainer_id = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), source="trainer", required=False, allow_null=True)
     archived_trainer_name = serializers.CharField(max_length=255, required=False, allow_null=True)
 
