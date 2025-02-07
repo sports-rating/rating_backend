@@ -92,3 +92,29 @@ def parse_nested_querydict(querydict):
         else:
             data[key] = value[0] if len(value) == 1 else value
     return data
+
+
+def handle_file_update(instance, field_name):
+    """
+    Handles file deletion when updating or deleting a model instance.
+    """
+    if instance.pk:
+        try:
+            old_instance = instance.__class__.objects.get(pk=instance.pk)
+            old_file = getattr(old_instance, field_name, None)
+            new_file = getattr(instance, field_name, None)
+            if old_file and old_file != new_file:
+                if os.path.isfile(old_file.path):
+                    os.remove(old_file.path)
+        except instance.__class__.DoesNotExist:
+            pass  # Instance is being created for the first time
+
+
+def handle_file_delete(instance, field_name):
+    """
+    Handles file deletion when deleting a model instance.
+    """
+    file = getattr(instance, field_name, None)
+    if file and os.path.isfile(file.path):
+        os.remove(file.path)
+        

@@ -34,6 +34,9 @@ BACKEND_APPS = [
     "user",
     "shared",
     "dashboard",
+    "sport",
+    "education",
+    "payment",
 ]
 
 INTERNAL_APPS = [

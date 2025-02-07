@@ -6,4 +6,4 @@ class SharedConfig(AppConfig):
     name = 'shared'
 
     def ready(self):
-        import shared.addons.signals
+        from shared.addons import signals

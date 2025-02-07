@@ -32,9 +32,7 @@ from .models import (
     Sportsman,
     Trainer,
     ArchivedTrainer,
-    Media,
-    Result,
-    Education,
+    UserMedia,
 )
 
 from .serializers import (
@@ -47,16 +45,11 @@ from .serializers import (
     UpdatePhoneNumberSerializer,
     CustomTokenRefreshSerializer,
     UserUpdateSerializer,
-    SportsmanRegisterSerializer,
-    MediaSerializer,
-    SportsmanSerializer,
-    TrainerSerializer,
+    SportsmanProfileSerializer,
+    TrainerProfileSerializer,
+    BaseMediaSerializer,
     SportsmanListSerializer,
     TrainerListSerializer,
-    ResultCreateSerializer,
-    ResultSerializer,
-    EducationCreateSerializer,
-    EducationSerializer,
     ArchivedTrainerSerializer
 )
 
@@ -455,92 +448,22 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
-class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny, )
-    queryset = Result.objects.all()
-    serializer_class = ResultCreateSerializer
-
-    def get_serializer_class(self):
-        if self.request.method == "GET":
-            return ResultSerializer
-        return super().get_serializer_class()
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return success_response(
-            data=serializer.data,
-            message=_("Result retrieved successfully"),
-            code=200,
-        )
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return success_response(
-            data=serializer.data,
-            message=_("Result updated successfully"),
-            code=200,
-        )
-    
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.delete()
-        return success_response(
-            message=_("Result deleted successfully"),
-            code=204
-        )
-
-
-class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny, )
-    queryset = Education.objects.all()
-    serializer_class = EducationCreateSerializer
-
-    def get_serializer_class(self):
-        if self.request.method == "GET":
-            return EducationSerializer
-        return super().get_serializer_class()
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return success_response(
-            data=serializer.data,
-            message=_("Education retrieved successfully"),
-            code=200,
-        )
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return success_response(
-            data=serializer.data,
-            message=_("Education updated successfully"),
-            code=200,
-        )
-
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.delete()
-        return success_response(
-            message=_("Education deleted successfully"),
-            code=204
-        )
-
-
 class MediaUploadView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
-    queryset = Media.objects.all()
-    serializer_class = MediaSerializer
+    queryset = UserMedia.objects.all()
+    serializer_class = BaseMediaSerializer
     
+    def get_queryset(self):
+        model_type = self.request.data.get("model_type")
+        model = self.get_model(model_type=model_type)
+        return model.objects.all() if model else UserMedia.objects.none()
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
+        model_type = self.request.data.get("model_type")
+        if model_type:
+            context["model"] = self.get_model(model_type=model_type)
         return context
 
     def create(self, request, *args, **kwargs):
@@ -552,12 +475,22 @@ class MediaUploadView(generics.CreateAPIView):
             message="Media uploaded successfully",
             code=200
         )
+    
+    def get_model(self, model_type):
+        """
+        Returns the appropriate model based on the media type
+        """
+        model_mapping = {
+            "user": UserMedia,
+            "other": None
+        }
+        return model_mapping.get(model_type)
 
 
 class MediaDeleteView(generics.DestroyAPIView):
     permission_classes = (permissions.AllowAny,)
-    queryset = Media.objects.all()
-    serializer_class = MediaSerializer
+    queryset = UserMedia.objects.all()
+    serializer_class = BaseMediaSerializer
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -566,10 +499,10 @@ class MediaDeleteView(generics.DestroyAPIView):
             message=_("Media deleted successfully"),
             code=204
         )
-    
+
 
 class ArchivedTrainerCreateListView(generics.ListCreateAPIView):
-    permission_classes = (permissions.AllowAny, )
+    permission_classes = (permissions.AllowAny,)
     queryset = ArchivedTrainer.objects.all()
     serializer_class = ArchivedTrainerSerializer
 
@@ -579,37 +512,36 @@ class ArchivedTrainerCreateListView(generics.ListCreateAPIView):
         serializer.save()
         return success_response(
             data=serializer.data,
-            message=_("Archived trainer created successfully"),
-            code=200
+            message=_("Archived Trainer created successfully")
         )
-    
+
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
-            message=_("Archived trainer list retrieved successfully"),
+            message=_("Archived Trainer list"),
             code=200
         )
 
 
-class ArchivedTrainerRetriveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny, )
+class ArchivedTrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.AllowAny,)
     queryset = ArchivedTrainer.objects.all()
     serializer_class = ArchivedTrainerSerializer
 
     def get_object(self):
         archived_trainer = self.queryset.filter(pk=self.kwargs.get("pk")).first()
         if not archived_trainer:
-            raise_validation_error(message=_("Archived Trainer not found"), code=404)
-        return archived_trainer    
-    
+            raise_validation_error(message=_("Trainer Profile not found"), code=404)
+        return archived_trainer  
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
             data=serializer.data, 
-            message=_("Archived trainer retrieved successfully"),
+            message=_("Archived Trainer retrieved successfully"),
             code=200,
         )
 
@@ -620,14 +552,14 @@ class ArchivedTrainerRetriveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIVi
         serializer.save()
         return success_response(
             data=serializer.data, 
-            message=_("Archived trainer updated successfully"),
+            message=_("Archived Trainer profile updated successfully"),
             code=200,
         )
-    
+
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.delete()
         return success_response(
-            message=_("Archived trainer deleted successfully"),
+            message=_("Archived Trainer deleted successfully"),
             code=204
         )
