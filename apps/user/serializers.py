@@ -505,9 +505,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
             for result_data in results_data:
                 if 'archived_trainer_name' in result_data:
                     archived_trainer_name = result_data.pop('archived_trainer_name')
-                    ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
-                    archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-                    result_data['archived_trainer'] = archived_trainer
+                    if archived_trainer_name:
+                        ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
+                        archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+                        result_data['archived_trainer'] = archived_trainer
                 Result.objects.create(user=user, **result_data)
 
             if user_role == "sportsman" and sportsman_profile_data:
@@ -704,6 +705,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             if results_data:
                 instance.results.all().delete()
                 for result_data in results_data:
+                    if 'archived_trainer_name' in result_data:
+                        archived_trainer_name = result_data.pop('archived_trainer_name')
+                        if archived_trainer_name:
+                            ArchivedTrainerSerializer().validate(attrs={"name": archived_trainer_name})
+                            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+                            result_data['archived_trainer'] = archived_trainer
                     Result.objects.create(user=instance, **result_data)
 
             if sportsman_profile_data:
