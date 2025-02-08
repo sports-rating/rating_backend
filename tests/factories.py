@@ -13,24 +13,6 @@ Tournament = apps.get_model('sport', 'Tournament')
 Education = apps.get_model('education', 'Education')
 School = apps.get_model('education', 'School')
 
-# from apps.user.models import (
-#     User, 
-#     Sportsman,
-#     Trainer,
-#     ArchivedTrainer,
-# )
-
-# from apps.sport.models import (
-#     Sport,
-#     Result,
-#     Tournament
-# )
-
-# from apps.education.models import (
-#     Education,
-#     School
-# )
-
 
 class SportFactory(factory.django.DjangoModelFactory):
     class Meta:

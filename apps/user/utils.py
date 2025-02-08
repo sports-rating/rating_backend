@@ -25,7 +25,7 @@ def calculate_trainer_statistics(trainer):
     students_total_silver = 0
     students_total_bronze = 0
 
-    trainer_results = trainer.trainer_results.all()
+    trainer_results = trainer.results.all()
 
     for result in trainer_results:
         if result.currently_participating:
