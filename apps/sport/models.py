@@ -9,12 +9,12 @@ from rest_framework.exceptions import ValidationError
 
 from shared.models import BaseModel
 from shared.addons.enums import LanguageTypes
-from shared.addons.utils import handle_file_update, handle_file_delete
+from shared.addons.utils import handle_file_update, handle_file_delete, CorrectPath
 
 class Sport(BaseModel):
     name = models.CharField(max_length=250)
     logo = models.ImageField(
-        upload_to='sport/logos', 
+        upload_to=CorrectPath('media'), 
         validators=[
             FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
         ],
@@ -46,7 +46,7 @@ class Tournament(BaseModel):
     division = models.CharField(max_length=100) # razdeleniya?
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="tournaments", blank=True, null=True)
     logo = models.ImageField(
-        upload_to='tournament/logos', 
+        upload_to=CorrectPath('media'), 
         validators=[
             FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
         ],
@@ -101,7 +101,7 @@ class Team(BaseModel):
 
     founded_year = models.IntegerField(blank=True, null=True)
     logo = models.ImageField(
-        upload_to='team/logos', 
+        upload_to=CorrectPath('media'), 
         validators=[
             FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
         ],
@@ -124,6 +124,14 @@ class Team(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        handle_file_update(self, 'logo')
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        handle_file_delete(self, 'logo')
+        super().delete(*args, **kwargs)
 
     class Meta:
         db_table = "team"

@@ -454,16 +454,17 @@ class MediaUploadView(generics.CreateAPIView):
     serializer_class = BaseMediaSerializer
     
     def get_queryset(self):
-        model_type = self.request.data.get("model_type")
+        model_type = self.request.data.get("type")
         model = self.get_model(model_type=model_type)
         return model.objects.all() if model else UserMedia.objects.none()
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
-        model_type = self.request.data.get("model_type")
+        model_type = self.request.data.get("type") # user, sportcomplex # 
         if model_type:
             context["model"] = self.get_model(model_type=model_type)
+        self.request.data.pop("type")
         return context
 
     def create(self, request, *args, **kwargs):

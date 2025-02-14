@@ -56,11 +56,6 @@ class User(AbstractUser, BaseModel):
         super().save(*args, **kwargs)
        
     def delete(self, *args, **kwargs):
-        # media_objects = self.photo.all()
-
-        # for media in media_objects:
-        #     media.delete()
-
         if hasattr(self, 'sportsman_profile'):
             self.sportsman_profile.delete() # triggers delete method in Sportsman
         elif hasattr(self, 'trainer_profile'):
@@ -171,4 +166,4 @@ class ArchivedTrainer(models.Model):
 
 
 class UserMedia(BaseMedia):
-    user = models.ManyToManyField(User, related_name='media')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='media', blank=True, null=True)

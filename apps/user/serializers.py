@@ -103,15 +103,8 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
         return data
 
 
-class BaseMediaSerializer(serializers.ModelSerializer): # need to be updated
-    type = serializers.ChoiceField(
-        choices=(
-            ("sportsman", "sportsman"), 
-            ("trainer", "trainer"), 
-            ("user", "user"), 
-            ), 
-            write_only=True
-    )
+class BaseMediaSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = UserMedia
@@ -121,8 +114,8 @@ class BaseMediaSerializer(serializers.ModelSerializer): # need to be updated
             "size", 
             "extension", 
             "created_time", 
-            "file", 
-            "type" 
+            "file",
+            "type", 
         )
         read_only_fields = ["created_time", "size", "extension", "media_type"]
 
@@ -141,13 +134,8 @@ class BaseMediaSerializer(serializers.ModelSerializer): # need to be updated
         return data
 
     def create(self, validated_data):
-        type = validated_data.pop("type", None)
         model = self.context.get("model")
         media_instance = model(**validated_data)
-
-        if type:
-            correct_path = CorrectPath('media', owner=type)
-            media_instance.file.field.upload_to = correct_path
         media_instance.save()
         return media_instance
 
@@ -488,11 +476,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 if not media_objects.exists():
                     raise_validation_error(message=_(f"At least one media must be uploaded"))
                 
-                # Check for media linked to other users
-                if media_objects.exclude(user__isnull=True).exists():
-                    raise_validation_error(message=_("One or more media are already associated with another user."))
+                media_objects.update(user=user) # view in sql 
 
-                user.media.set(media_objects)
             logger.info(f"User created -> {user}")
             
             # Bulk create educations
@@ -667,35 +652,26 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
             if media_ids:
                 media_objects = UserMedia.objects.filter(id__in=media_ids)
+                
                 if not media_objects.exists():
                     raise_validation_error(message=_("At least one media must be uploaded"))
 
-                for media in media_objects:
-                    if media.user.exists() and not media.user.filter(id=instance.id).exists():
-                        raise_validation_error(message=_(f"Media {media.id} is already associated with another sportsman."))
-            
+                
                 current_media = instance.media.all() # Get current media 
                 media_to_delete = current_media.exclude(id__in=media_ids)
 
                 for media in media_to_delete:
-                    # Disassociate the media from the current sportsman
-                    instance.media.remove(media)
                     media.file.delete()  # Delete the file from the file system
                     media.delete()  # Delete the Media object from the database
 
                 # Associate the new media objects
-                instance.media.set(media_objects)
+                media_objects.update(user=instance)
             else:
                 # If media_ids is None, remove all existing media associations
                 current_media = instance.media.all()
                 for media in current_media:
-                    # Disassociate the media from the current sportsman
-                    instance.media.remove(media)
                     media.file.delete()  # Delete the file from the file system
                     media.delete()  # Delete the Media object from the database
-
-                # Clear all media associations for the instance
-                instance.media.clear()
 
             if educations_data:
                 instance.educations.all().delete()

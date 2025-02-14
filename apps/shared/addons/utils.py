@@ -1,6 +1,7 @@
 import uuid
 import string
 import random
+import mimetypes
 import typing as t
 import os
 from uuid import UUID
@@ -58,23 +59,37 @@ class CorrectPath:
         self.base_path = base_path
         self.owner = owner
     
-    def __call__(self, instance, filename):
-        if self.owner == "sportsman":   
-            return os.path.join("sportsman/profile", filename)
-        elif self.owner == "trainer":
-            return os.path.join("trainer/profile", filename)
-        elif self.owner == "user":
-            return os.path.join("user/images", filename)
-        elif self.owner == "sport":
-            return os.path.join("sport/", filename)
-        elif self.owner == "tournament":
-            return os.path.join("tournament/", filename)
-        elif self.owner == "team":
-            return os.path.join("team/logo/", filename)
-        elif self.owner == "school":
-            return os.path.join("school/", filename)
+    def __call__(self, instance, filename): # images, videos, pdfs
+        guessed_type, _ = mimetypes.guess_type(filename)
+
+        if guessed_type:
+            if guessed_type.startswith("image/"):
+                subfolder = "images"
+            elif guessed_type.startswith("video/"):
+                subfolder = "videos"
+            else:
+                subfolder = "files"
         else:
-            return os.path.join(self.base_path, filename)
+            subfolder = "files"
+        
+        return os.path.join(subfolder, filename)
+
+        # if self.owner == "sportsman":   
+        #     return os.path.join("sportsman/profile", filename)
+        # elif self.owner == "trainer":
+        #     return os.path.join("trainer/profile", filename)
+        # elif self.owner == "user":
+        #     return os.path.join("user/images", filename)
+        # elif self.owner == "sport":
+        #     return os.path.join("sport/", filename)
+        # elif self.owner == "tournament":
+        #     return os.path.join("tournament/", filename)
+        # elif self.owner == "team":
+        #     return os.path.join("team/logo/", filename)
+        # elif self.owner == "school":
+        #     return os.path.join("school/", filename)
+        # else:
+        #     return os.path.join(self.base_path, filename)
 
 
 def parse_nested_querydict(querydict):

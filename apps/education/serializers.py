@@ -90,7 +90,7 @@ class EducationSerializer(serializers.ModelSerializer):
 
 class SchoolCreateSerializer(serializers.ModelSerializer):
     sport_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
-    sports = SportSerializer(many=True, required=False)
+    sports = SportSerializer(many=True, write_only=True, required=False)
 
     class Meta:
         model = School
