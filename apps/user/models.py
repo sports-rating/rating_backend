@@ -167,3 +167,10 @@ class ArchivedTrainer(models.Model):
 
 class UserMedia(BaseMedia):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='media', blank=True, null=True)
+    is_profile_photo = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        if self.is_profile_photo:
+            # Ensure only one profile photo per user
+            UserMedia.objects.filter(user=self.user, is_profile_photo=True).update(is_profile_photo=False)
+        super().save(*args, **kwargs)

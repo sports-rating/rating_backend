@@ -468,6 +468,8 @@ class MediaUploadView(generics.CreateAPIView):
         return context
 
     def create(self, request, *args, **kwargs):
+        data = request.data
+        is_profile_photo = data.get("is_profile_photo", "false").lower() == "true"
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()

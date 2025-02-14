@@ -116,6 +116,7 @@ class BaseMediaSerializer(serializers.ModelSerializer):
             "created_time", 
             "file",
             "type", 
+            "is_profile_photo",
         )
         read_only_fields = ["created_time", "size", "extension", "media_type"]
 
@@ -403,7 +404,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
     sportsman_profile = SportsmanProfileCreateSerializer(required=False)
     trainer_profile = TrainerProfileCreateSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    media = BaseMediaSerializer(many=True, required=False)
+    media = BaseMediaSerializer(many=True, required=False, read_only=True)
     
     class Meta:
         model = User
@@ -433,10 +434,6 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "is_verified": {"read_only": True}, 
             "media_ids": {"required": False},
             }
-    
-    # def get_media(self, instance):
-    #     queryset = instance.media.all()
-    #     return BaseMediaSerializer(queryset, many=True).data()
 
     def validate(self, attrs):
         pinfl = attrs.get("pinfl", None)

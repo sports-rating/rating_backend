@@ -59,7 +59,7 @@ def update_or_delete_trainer_result(sender, instance, **kwargs):
     same tournament and updates or deletes them accordingly.
     """
     if instance.trainer:
-        trainer_profile = instance.trainer.user
+        trainer_profile = instance.trainer
         tournament = instance.tournament
         rating = instance.rating
 
@@ -77,17 +77,17 @@ def update_or_delete_trainer_result(sender, instance, **kwargs):
         logger.info(f"Tournament: {instance.tournament}")
 
         # Check if other sportsmen have results for the same trainer & tournament
-        other_sportsman_results = Result.objects.filter(trainer=trainer_profile.user, tournament=tournament).exclude(id=instance.id)
+        other_sportsman_results = Result.objects.filter(trainer=trainer_profile, tournament=tournament).exclude(id=instance.id)
 
         if other_sportsman_results.exists():
             logger.info(f"(pre_delete) Other sportsmans exists in trainer's result, updating it...")
             # If other sportsmen exist, subtract the counts instead of deleting
-            trainer_result = Result.objects.filter(trainer_profile=trainer_profile.user, tournament=tournament, currently_participating=False).first()
+            trainer_result = Result.objects.filter(user=trainer_profile.user, tournament=tournament, currently_participating=False).first()
             if trainer_result and decrement_field:
                 setattr(trainer_result, decrement_field, max(0, getattr(trainer_result, decrement_field) - 1))
             trainer_result.save()
         else:
             logger.info(f"(pre_delete) No other sportsmans exists in trainer's result, deleting it...")
             # If no other sportsman exist in trainer's result, delete the result entirely
-            Result.objects.filter(trainer_profile=trainer_profile.user, tournament=tournament, currently_participating=False).delete()
+            Result.objects.filter(user=trainer_profile.user, tournament=tournament, currently_participating=False).delete()
             
