@@ -38,7 +38,7 @@ def update_trainer_results(sender, instance, created, **kwargs):
         else:
             logger.info(f"(post_save) Result does not exist or trainer participated in tournament: {trainer_result.tournament.name if trainer_result else None}, creating...")
             # Create a new result
-            Result.objects.create(
+            result = Result.objects.create(
                 user=trainer_profile.user,
                 tournament=tournament,
                 country=instance.country,
@@ -49,6 +49,7 @@ def update_trainer_results(sender, instance, created, **kwargs):
                 silver=(1 if rating == 2 else 0),
                 bronze=(1 if rating == 3 else 0)
             )
+            logger.info(f"(post_save) Currently_participating: {result.currently_participating}")
 
 
 @receiver(pre_delete, sender=Result)
