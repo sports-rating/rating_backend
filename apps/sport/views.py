@@ -44,7 +44,7 @@ from sport.filters import (
 
 class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny, )
-    queryset = Result.objects.all()
+    queryset = Result.objects.all().select_related('trainer', 'archived_trainer', 'tournament')
     serializer_class = ResultCreateSerializer
 
     def get_serializer_class(self):
@@ -98,8 +98,8 @@ class TournamentListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         name = self.request.query_params.get("name")
         if name:
-            return self.queryset.filter(name__icontains=name)
-        return self.queryset.all()
+            return self.queryset.select_related("sport").filter(name__icontains=name)
+        return self.queryset.select_related("sport")
 
 
     def create(self, request, *args, **kwargs):
@@ -131,6 +131,9 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method == "GET":
             return TournamentSerializer
         return super().get_serializer_class()
+
+    def get_queryset(self):
+        return self.queryset.select_related("sport")
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()

@@ -292,7 +292,10 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         )
     
     def get_queryset(self):
-        return self.queryset.filter(user_role='sportsman')
+        queryset = User.objects.filter(user_role='sportsman').prefetch_related(
+            'sportsman_profile__sport', 'sportsman_profile__trainer', 
+        )
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -306,7 +309,9 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
 class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
-    queryset = User.objects.all()
+    queryset = User.objects.all().select_related(
+        "sportsman_profile", "sportsman_profile__sport", "sportsman_profile__trainer"
+    ).prefetch_related("media", "educations", "results")
     serializer_class = UserUpdateSerializer
 
     def get_serializer_class(self):
@@ -383,7 +388,10 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         )
 
     def get_queryset(self):
-        return self.queryset.filter(user_role='trainer')
+        queryset = User.objects.filter(user_role='trainer').prefetch_related(
+            "trainer_profile__sport",
+        )
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -397,7 +405,9 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 
 class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
-    queryset = User.objects.all()
+    queryset = User.objects.all().select_related(
+        "trainer_profile", "trainer_profile__sport"
+    ).prefetch_related("media", "educations", "results")
     serializer_class = UserUpdateSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_Class = TrainerFilter

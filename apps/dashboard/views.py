@@ -60,7 +60,12 @@ class UserListView(generics.ListAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        return self.queryset.exclude(user_role="ordinary")
+        queryset = User.objects.exclude(user_role="ordinary").select_related(
+            "sportsman_profile", "trainer_profile"
+        ).prefetch_related(
+            "sportsman_profile__trainer"
+        )
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -80,7 +85,14 @@ class ExportView(generics.ListAPIView):
     filterset_class = UserFilter
 
     def get_queryset(self):
-        return self.queryset.exclude(user_role="admin")
+        queryset = User.objects.select_related(
+            "sportsman_profile", "trainer_profile"
+        ).prefetch_related(
+            "sportsman_profile__trainer", 
+            "sportsman_profile__sport", 
+            "trainer_profile__sport"
+        )
+        return queryset
 
     def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

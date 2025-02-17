@@ -84,3 +84,4 @@ pytest-django==4.9.0
 factory-boy==3.3.3
 pytest-factoryboy==2.7.0
 locust==2.32.8
+django-querycount==0.8.3 

@@ -58,6 +58,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "querycount.middleware.QueryCountMiddleware",
 ]
 
 REDIS_DB: int = config("REDIS_DB", default=0, cast=int)
@@ -251,7 +252,6 @@ MAX_IMAGE_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
 MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024 # 10 MB
 
 # Logging
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -274,4 +274,18 @@ LOGGING = {
             "handlers": ["console"],
         },
     },
+}
+
+# QueryCount
+QUERYCOUNT = {
+    'THRESHOLDS': {
+        'MEDIUM': 50,
+        'HIGH': 200,
+        'MIN_TIME_TO_LOG':0,
+        'MIN_QUERY_COUNT_TO_LOG':0
+    },
+    'IGNORE_REQUEST_PATTERNS': [r'^/admin/', r'^/favicon.ico'],
+    'IGNORE_SQL_PATTERNS': [],
+    'DISPLAY_DUPLICATES': 10,
+    'RESPONSE_HEADER': 'X-DjangoQueryCount-Count'
 }

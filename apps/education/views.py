@@ -87,6 +87,9 @@ class SchoolListCreateView(generics.ListCreateAPIView):
             return SchoolSerializer
         return super().get_serializer_class()
 
+    def get_queryset(self):
+        return self.queryset.prefetch_related("sports")
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -117,6 +120,9 @@ class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             return SchoolSerializer
         return super().get_serializer_class()
     
+    def get_queryset(self):
+        return self.queryset.prefetch_related("sports")
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)

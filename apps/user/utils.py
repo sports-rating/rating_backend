@@ -5,63 +5,46 @@ def calculate_sportsman_statistics(sportsman):
     """
     Calculate statistics for a sportsman based on their results.
     """
-    result_counts = (
-        sportsman.results
-        .values('rating')
-        .annotate(count=Count('id'))
+    # Aggregate counts directly in the database
+    stats = sportsman.results.aggregate(
+        total_gold=Count('id', filter=Q(rating=1)),
+        total_silver=Count('id', filter=Q(rating=2)),
+        total_bronze=Count('id', filter=Q(rating=3))
     )
-    logger.info(f"{result_counts}")
-
-    # Initialize counts
-    stats = {"total_gold": 0, "total_silver": 0, "total_bronze": 0}
-    
-    # Map result counts to the corresponding keys
-    for result in result_counts:
-        if result['rating'] == 1:
-            stats["total_gold"] = result['count']
-        elif result['rating'] == 2:
-            stats["total_silver"] = result['count']
-        elif result['rating'] == 3:
-            stats["total_bronze"] = result['count']
     
     return stats
-
 
 def calculate_trainer_statistics(trainer):
     """
     Calculate statistics for a trainer based on their results and their students' results.
     """
-    # Calculate trainer's own achievements
-    own_statistics = trainer.results.filter(currently_participating=True).aggregate(
-        own_total_gold=Count('id', filter=Q(rating=1)),
-        own_total_silver=Count('id', filter=Q(rating=2)),
-        own_total_bronze=Count('id', filter=Q(rating=3)),
-    )
-    
-    # Calculate students' achievements (total gold, silver, bronze from their results)
-    students_statistics = trainer.results.filter(currently_participating=False).aggregate(
-        students_total_gold=Sum('gold', default=0),
-        students_total_silver=Sum('silver', default=0),
-        students_total_bronze=Sum('bronze', default=0),
+    # Aggregate both trainer's own achievements and students' achievements in a single query
+    statistics = trainer.results.aggregate(
+        own_total_gold=Count('id', filter=Q(currently_participating=True, rating=1)),
+        own_total_silver=Count('id', filter=Q(currently_participating=True, rating=2)),
+        own_total_bronze=Count('id', filter=Q(currently_participating=True, rating=3)),
+        students_total_gold=Sum('gold', filter=Q(currently_participating=False)),
+        students_total_silver=Sum('silver', filter=Q(currently_participating=False)),
+        students_total_bronze=Sum('bronze', filter=Q(currently_participating=False)),
     )
 
     # Combine all statistics
     total_statistics = {
-        "gold": own_statistics["own_total_gold"] + students_statistics["students_total_gold"],
-        "silver": own_statistics["own_total_silver"] + students_statistics["students_total_silver"],
-        "bronze": own_statistics["own_total_bronze"] + students_statistics["students_total_bronze"],
+        "gold": statistics["own_total_gold"] + statistics["students_total_gold"],
+        "silver": statistics["own_total_silver"] + statistics["students_total_silver"],
+        "bronze": statistics["own_total_bronze"] + statistics["students_total_bronze"],
     }
 
     return {
         "own_statistics": {
-            "gold": own_statistics["own_total_gold"],
-            "silver": own_statistics["own_total_silver"],
-            "bronze": own_statistics["own_total_bronze"],
+            "gold": statistics["own_total_gold"],
+            "silver": statistics["own_total_silver"],
+            "bronze": statistics["own_total_bronze"],
         },
         "students_statistics": {
-            "gold": students_statistics["students_total_gold"],
-            "silver": students_statistics["students_total_silver"],
-            "bronze": students_statistics["students_total_bronze"],
+            "gold": statistics["students_total_gold"],
+            "silver": statistics["students_total_silver"],
+            "bronze": statistics["students_total_bronze"],
         },
         "total_statistics": total_statistics,
     }
