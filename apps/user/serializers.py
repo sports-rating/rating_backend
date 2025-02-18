@@ -441,12 +441,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
         
         phone_number = attrs.get("phone_number")
         if phone_number:
-            if User.objects.filter(phone_number=phone_number).exists() :
+            if User.objects.only("id").filter(phone_number=phone_number).exists() :
                 raise_validation_error(message=_("Phone number is already registered"))
             
         if user_role != "ordinary":
             if pinfl:
-                if User.objects.filter(pinfl=pinfl).exists():
+                if User.objects.only("id").filter(pinfl=pinfl).exists():
                     raise_validation_error(message=_("PINFL is already registered"))
                 if not pinfl.isdigit():
                     raise_validation_error(message=_("PINFL must contain only numbers."))
@@ -467,14 +467,21 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             user = User.objects.create(**validated_data)
+            # if media_ids:
+            #     media_objects = UserMedia.objects.filter(id__in=media_ids)
+                
+            #     if not media_objects.exists():
+            #         raise_validation_error(message=_(f"At least one media must be uploaded"))
+                
+            #     media_objects.update(user=user) # view in sql 
             if media_ids:
-                media_objects = UserMedia.objects.filter(id__in=media_ids)
+                media_objects = list(UserMedia.objects.filter(id__in=media_ids))  # Convert to list to avoid multiple queries
+                if not media_objects:
+                    raise_validation_error(message=_("At least one media must be uploaded"))
                 
-                if not media_objects.exists():
-                    raise_validation_error(message=_(f"At least one media must be uploaded"))
-                
-                media_objects.update(user=user) # view in sql 
-
+                for media in media_objects:
+                    media.user = user
+                UserMedia.objects.bulk_update(media_objects, ["user"])
             logger.info(f"User created -> {user}")
             
             # Bulk create educations

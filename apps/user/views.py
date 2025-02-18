@@ -1,6 +1,6 @@
 from django.utils.translation import gettext as _, get_language
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import QueryDict
+from django.db.models import Prefetch
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -33,6 +33,15 @@ from .models import (
     Trainer,
     ArchivedTrainer,
     UserMedia,
+)
+
+from education.models import (
+    Education,
+    School
+)
+
+from sport.models import (
+    Result
 )
 
 from .serializers import (
@@ -265,7 +274,6 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
 
 class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
-    queryset = User.objects.all()
     serializer_class = RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = SportsmanFilter
@@ -292,7 +300,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         )
     
     def get_queryset(self):
-        queryset = User.objects.filter(user_role='sportsman').prefetch_related(
+        queryset = User.objects.filter(user_role='sportsman').select_related(
             'sportsman_profile__sport', 'sportsman_profile__trainer', 
         )
         return queryset
