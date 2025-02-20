@@ -482,7 +482,6 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 for media in media_objects:
                     media.user = user
                 UserMedia.objects.bulk_update(media_objects, ["user"])
-            logger.info(f"User created -> {user}")
             
             # Bulk create educations
             if educations_data:
@@ -506,6 +505,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
             elif user_role == "trainer" and trainer_profile_data:
                 Trainer.objects.create(user=user, **trainer_profile_data)
             
+            logger.info(f"User created -> {user}")
             return user
 
     def get_tokens(self, user):  # noqa
