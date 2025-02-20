@@ -1,4 +1,5 @@
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, Sum, Value
+from django.db.models.functions import Coalesce
 from shared.addons.custom_logging import logger
 
 def calculate_sportsman_statistics(sportsman):
@@ -20,12 +21,12 @@ def calculate_trainer_statistics(trainer):
     """
     # Aggregate both trainer's own achievements and students' achievements in a single query
     statistics = trainer.results.aggregate(
-        own_total_gold=Count('id', filter=Q(currently_participating=True, rating=1)),
-        own_total_silver=Count('id', filter=Q(currently_participating=True, rating=2)),
-        own_total_bronze=Count('id', filter=Q(currently_participating=True, rating=3)),
-        students_total_gold=Sum('gold', filter=Q(currently_participating=False)),
-        students_total_silver=Sum('silver', filter=Q(currently_participating=False)),
-        students_total_bronze=Sum('bronze', filter=Q(currently_participating=False)),
+        own_total_gold=Coalesce(Count('id', filter=Q(currently_participating=True, rating=1)), Value(0)),
+        own_total_silver=Coalesce(Count('id', filter=Q(currently_participating=True, rating=2)), Value(0)),
+        own_total_bronze=Coalesce(Count('id', filter=Q(currently_participating=True, rating=3)), Value(0)),
+        students_total_gold=Coalesce(Sum('gold', filter=Q(currently_participating=False)), Value(0)),
+        students_total_silver=Coalesce(Sum('silver', filter=Q(currently_participating=False)), Value(0)),
+        students_total_bronze=Coalesce(Sum('bronze', filter=Q(currently_participating=False)), Value(0)),
     )
 
     # Combine all statistics

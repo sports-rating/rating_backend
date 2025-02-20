@@ -282,10 +282,10 @@ QUERYCOUNT = {
         'MEDIUM': 50,
         'HIGH': 200,
         'MIN_TIME_TO_LOG':0,
-        'MIN_QUERY_COUNT_TO_LOG':0
+        'MIN_QUERY_COUNT_TO_LOG':1
     },
     'IGNORE_REQUEST_PATTERNS': [r'^/admin/', r'^/favicon.ico'],
     'IGNORE_SQL_PATTERNS': [],
-    'DISPLAY_DUPLICATES': 10,
+    'DISPLAY_DUPLICATES': 0,
     'RESPONSE_HEADER': 'X-DjangoQueryCount-Count'
 }
