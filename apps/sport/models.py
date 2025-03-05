@@ -2,7 +2,6 @@ from django.db import models
 import string 
 import os
 
-from django.db import models
 from django.core.validators import FileExtensionValidator
 
 from rest_framework.exceptions import ValidationError
