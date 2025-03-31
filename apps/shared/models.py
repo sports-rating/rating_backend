@@ -32,7 +32,7 @@ class BaseMedia(BaseModel):
     def save(self, *args, **kwargs):
         if self.file and hasattr(self.file, 'file'):
             self.size = self.file.size
-           
+            
             _, ext = os.path.splitext(self.file.name)
             self.extension = ext.lower().lstrip('.')
            

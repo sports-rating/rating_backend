@@ -40,7 +40,8 @@ class Sport(BaseModel):
 
 class Tournament(BaseModel):
     name = models.CharField(max_length=450)
-    start_time = models.DateField()
+    start_time = models.DateField() # remove this field when 
+    year = models.PositiveIntegerField(default=2000, blank=True, null=True)
     place = models.CharField(max_length=450)
     division = models.CharField(max_length=100) # razdeleniya?
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="tournaments", blank=True, null=True)

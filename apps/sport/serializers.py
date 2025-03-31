@@ -79,6 +79,7 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "year",
             "start_time",
             "place",
             "division",
@@ -90,12 +91,14 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         name = attrs.get("name", None)
         start_time = attrs.get("start_time", None)
+        new_year = attrs.get("year", None)
         instance = self.instance  # This will be None during creation and the instance during updating
-        new_year = start_time.year if start_time else None
+        # new_year = start_time.year if start_time else None
 
         if instance:  # Only for updates
             current_name = instance.name
-            current_year = instance.start_time.year
+            current_year = instance.year
+            # current_year = instance.start_time.year
 
             # Check if the name or year is being updated
             is_name_updated = name is not None and name != current_name
@@ -103,7 +106,7 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 
             # If either name or year is being updated, perform the uniqueness check
             if is_name_updated or is_year_updated:
-                queryset = Tournament.objects.filter(name=name, start_time__year=new_year)
+                queryset = Tournament.objects.filter(name=name, year=new_year)
                 queryset = queryset.exclude(id=instance.id)  # Exclude the current instance
 
                 if queryset.exists():
@@ -111,7 +114,7 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
         
         else:  # For creation
             if name and new_year:
-                queryset = Tournament.objects.filter(name=name, start_time__year=new_year)
+                queryset = Tournament.objects.filter(name=name, year=new_year)
                 if queryset.exists():
                     raise_validation_error(_("Tournament with this name and year already exists!"))
         
@@ -139,6 +142,7 @@ class TournamentSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "start_time",
+            "year",
             "place",
             "division",
             "sport",
