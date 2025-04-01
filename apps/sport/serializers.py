@@ -80,7 +80,6 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "year",
-            "start_time",
             "place",
             "division",
             "sport_id",
@@ -90,7 +89,6 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         name = attrs.get("name", None)
-        start_time = attrs.get("start_time", None)
         new_year = attrs.get("year", None)
         instance = self.instance  # This will be None during creation and the instance during updating
         # new_year = start_time.year if start_time else None
