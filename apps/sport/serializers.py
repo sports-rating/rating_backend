@@ -139,7 +139,6 @@ class TournamentSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
-            "start_time",
             "year",
             "place",
             "division",
