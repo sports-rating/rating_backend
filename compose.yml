@@ -32,6 +32,9 @@ services:
     image: redis:latest
     volumes:
       - redis-data:/data
+    command: [ "redis-server", "--save", "900", "1", "--loglevel", "notice" ]
+    restart: always
+
 
 volumes:
   postgres_data:
