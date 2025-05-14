@@ -2,7 +2,7 @@ from django.db import models
 import string 
 import os
 
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 
 from rest_framework.exceptions import ValidationError
 
@@ -72,7 +72,13 @@ class Tournament(BaseModel):
 
 class Result(BaseModel):
     country = models.CharField(max_length=100)
-    year = models.DateField(blank=True, null=True)
+    year = models.PositiveIntegerField(
+        default=1800,
+        null=True,
+        validators=[
+            MinValueValidator(1800)
+        ]
+        )
     currently_participating = models.BooleanField(default=False)
     
     user = models.ForeignKey("user.User", on_delete=models.CASCADE, related_name="results", blank=True, null=True)

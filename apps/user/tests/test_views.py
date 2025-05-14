@@ -59,7 +59,7 @@ class TestUserRegistrationView:
             "tournament_id": tournament.id,
             "trainer_id": trainer_id,
         }
-    
+
     def test_sportsman_registration(
             self, 
             api_client: APIClient,
