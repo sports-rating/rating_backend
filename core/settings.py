@@ -95,8 +95,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5500",
-    "https://*.7srating.uz",
     "https://7srating.uz",
+    "https://www.7srating.uz",
+    "https://admin.7srating.uz",
 ]
 
 CORS_ALLOWED_METHODS = [
@@ -121,7 +122,9 @@ CORS_ALLOW_HEADERS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://*.7srating.uz",
+    "https://7srating.uz",
+    "https://www.7srating.uz",
+    "https://admin.7srating.uz",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
     "http://localhost:5174",
