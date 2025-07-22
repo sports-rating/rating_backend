@@ -17,6 +17,7 @@ def get_redis_connection() -> Redis:
             port=settings.REDIS_PORT,
             password=settings.REDIS_PASSWORD if settings.REDIS_PASSWORD else None,
             db=0,
+            decode_responses=True,  # Ensure that responses are decoded to strings
         )
 
     return redis_connection
