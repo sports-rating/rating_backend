@@ -79,7 +79,7 @@ SECURE_HSTS_SECONDS = 3600
 
 CORS_ALLOW_HEADERS = ["*"]
 CORS_ORIGIN_ALLOW_ALL = False
-CORS_ALLOW_CREDENTIALS = True # extra added
+# CORS_ALLOW_CREDENTIALS = True # extra added
 
 CORS_ALLOWED_HEADERS = [
     "content-type",
@@ -93,6 +93,7 @@ CORS_ALLOWED_HEADERS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:5174",
     "http://localhost:5500",
     "https://*.7srating.uz",
     "https://7srating.uz",
@@ -123,6 +124,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.7srating.uz",
     "http://127.0.0.1:8000",
     "http://localhost:5173",
+    "http://localhost:5174",
 ]
 
 ROOT_URLCONF = "core.urls"
