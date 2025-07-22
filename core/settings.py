@@ -1,8 +1,9 @@
 import os
 import sys
+import redis
 from pathlib import Path
 from datetime import timedelta
-
+from dotenv import load_dotenv
 from decouple import config
 
 from django.utils.translation import gettext_lazy as _
@@ -11,8 +12,11 @@ from django.utils.translation import gettext_lazy as _
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(os.path.join(BASE_DIR, "apps"))
 
+load_dotenv()
+
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=True, cast=bool)
+PRODUCTION = os.getenv("PRODUCTION", "false").lower() == "true"
 
 ALLOWED_HOSTS = ["*"]
 
@@ -40,6 +44,7 @@ BACKEND_APPS = [
 ]
 
 INTERNAL_APPS = [
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -61,19 +66,6 @@ MIDDLEWARE = [
     "querycount.middleware.QueryCountMiddleware",
 ]
 
-REDIS_DB: int = config("REDIS_DB", default=0, cast=int)
-REDIS_HOST: str = config("REDIS_HOST", default="localhost")
-REDIS_PASSWORD: str = config("REDIS_PASSWORD", default=None)
-REDIS_PORT: int = config("REDIS_PORT", default=6379, cast=int)
-
-REDIS_CREDENTIALS: dict[str, str] = {
-    "db": REDIS_DB,
-    "host": REDIS_HOST,
-    "port": REDIS_PORT,
-    "password": REDIS_PASSWORD,
-    "decode_responses": True,
-}
-
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
@@ -86,13 +78,16 @@ SECURE_HSTS_SECONDS = 3600
 
 
 CORS_ALLOW_HEADERS = ["*"]
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOW_CREDENTIALS = True # extra added
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://*.7srating.uz",
-    "http://127.0.0.1:8000",
-    "http://localhost:5173",
+CORS_ALLOWED_HEADERS = [
+    "content-type",
+    "authorization",
+    "x-requested-with",
+    "accept",
+    "origin",
+    "accept-language",
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -101,6 +96,33 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5500",
     "https://*.7srating.uz",
     "https://7srating.uz",
+]
+
+CORS_ALLOWED_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "access-control-allow-origin",
+    "access-control-allow-credentials",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.7srating.uz",
+    "http://127.0.0.1:8000",
+    "http://localhost:5173",
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -128,11 +150,11 @@ WSGI_APPLICATION = "core.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DATABASE_NAME"),
-        "USER": config("DATABASE_USERNAME"),
-        "PASSWORD": config("DATABASE_PASSWORD"),
-        "HOST": config("DATABASE_HOST", default="127.0.0.1"),
-        "PORT": config("DATABASE_PORT", default=5432, cast=int),
+        "NAME": os.getenv("DATABASE_NAME"),
+        "USER": os.getenv("DATABASE_USERNAME"),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD"),
+        "HOST": os.getenv("DATABASE_HOST", default="127.0.0.1"),
+        "PORT": os.getenv("DATABASE_PORT", default=5432),
     }
 }
 
@@ -230,14 +252,136 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": r"/api/",
 }
 
-# SMS configuration via Playmobile
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
+REDIS_HOST = os.getenv("REDIS_HOST", default="localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
+redis_connection = redis.Redis(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    password=REDIS_PASSWORD if REDIS_PASSWORD else None,
+    db=0,
+)
 
-PLAY_MOBILE_URL = config("PLAY_MOBILE_URL")
-PLAY_MOBILE_LOGIN = config("PLAY_MOBILE_LOGIN")
-PLAY_MOBILE_PASSWORD = config("PLAY_MOBILE_PASSWORD")
+# Celery settings
+CELERY_BROKER_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_TIMEZONE = "Asia/Tashkent"
+CELERY_ENABLE_UTC = False
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_TASK_ACKS_LATE = True
+CELERYD_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_SOFT_TIME_LIMIT = 300
+CELERY_TASK_TIME_LIMIT = 600
+CELERY_TASK_DEFAULT_RATE_LIMIT = "10/m"
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Jazzmin settings for Django Admin
+JAZZMIN_SETTINGS = {
+    "site_title": "Receipt.ai - Admin Panel",
+    "site_header": "Receipt.ai management",
+    "site_brand": "Receipt.ai",
+    "site_icon": "images/favicon.png",
+    # Add your own branding here
+    "site_logo": None,
+    "welcome_sign": "Welcome to the Receipt.ai",
+    # Copyright on the footer
+    "copyright": "receipt.ai",
+    "user_avatar": None,
+    ############
+    # Top Menu #
+    ############
+    # Links to put along the top menu
+    "topmenu_links": [
+        # Url that gets reversed (Permissions can be added)
+        {"name": "receipt.ai", "url": "home", "permissions": ["auth.view_user"]},
+        # model admin to link to (Permissions checked against model)
+        {"model": "auth.User"},
+    ],
+    #############
+    # Side Menu #
+    #############
+    # Whether to display the side menu
+    "show_sidebar": True,
+    # Whether to aut expand the menu
+    "navigation_expanded": True,
+    # for the full list of 5.13.0 free icon classes
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "users.User": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "admin.LogEntry": "fas fa-file",
+    },
+    # # Icons that are used when one is not manually specified
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-arrow-circle-right",
+    #################
+    # Related Modal #
+    #################
+    # Use modals instead of popups
+    "related_modal_active": False,
+    #############
+    # UI Tweaks #
+    #############
+    # Relative paths to custom CSS/JS scripts (must be present in static files)
+    # Uncomment this line once you create the bootstrap-dark.css file
+    # "custom_css": "css/bootstrap-dark.css",
+    "custom_js": None,
+    # Whether to show the UI customizer on the sidebar
+    "show_ui_builder": False,
+    ###############
+    # Change view #
+    ###############
+    "changeform_format": "horizontal_tabs",
+    # override change forms on a per modeladmin basis
+    "changeform_format_overrides": {
+        "auth.user": "collapsible",
+        "auth.group": "vertical_tabs",
+    },
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-success",
+    "accent": "accent-teal",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": False,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": False,
+    "sidebar": "sidebar-dark-info",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "cosmo",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+}
+
+# SMS configuration via Playmobile
+PLAY_MOBILE_URL = os.getenv("PLAY_MOBILE_URL")
+PLAY_MOBILE_LOGIN = os.getenv("PLAY_MOBILE_LOGIN")
+PLAY_MOBILE_PASSWORD = os.getenv("PLAY_MOBILE_PASSWORD")
 VERIFICATION_CODE_EXPIRE = 1 * 60  # 2 minute
-SMS_ID_PREFIX = config("SMS_ID_PREFIX", default="PulseEv")
-SMS_ORIGINATOR = config("SMS_ORIGINATOR", default=3700)
+SMS_ID_PREFIX = os.getenv("SMS_ID_PREFIX", default="PulseEv")
+SMS_ORIGINATOR = os.getenv("SMS_ORIGINATOR", default=3700)
 VERIFICATION_CODE_MESSAGE_TEMPLATE = (
     "Gigawat.uz! \n" "Sizning tasdiqlash kodingiz - {verification_code}\ndaORdCftPDL"
 )
@@ -245,7 +389,6 @@ VERIFICATION_CODE_LENGTH: int = 6
 
 
 # IMAGE configuration
-
 IMAGE_DIMENSION = (500, 500)
 IMAGE_TYPES = ["heic", "heif", "jpeg", "jpg", "png"]
 
