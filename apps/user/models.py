@@ -120,6 +120,7 @@ class Sportsman(models.Model):
     address = models.JSONField(blank=True, null=True)
     # Contacts
     social_media = models.JSONField(blank=True, null=True)
+    is_verified = models.BooleanField(default=False)
 
     created_time = models.DateTimeField(auto_now_add=True, null=True)
     updated_time = models.DateTimeField(auto_now=True, null=True)
@@ -130,7 +131,7 @@ class Sportsman(models.Model):
 
     def __str__(self):
         return f"Sportsman {self.user.first_name} - {self.user.last_name}"
-            
+
 
 class Trainer(models.Model):
     user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='trainer_profile')

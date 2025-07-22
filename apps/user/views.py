@@ -48,6 +48,7 @@ from .serializers import (
     SendVerificationCodeSerializer,
     VerifyCodeSerializer,
     RegistrationSerializer,
+    SelfRegistrationSerializer,
     LogoutSerializer,
     UsersMeSerializer,
     ChangePasswordSerializer,
@@ -124,7 +125,7 @@ class VerifyCodeView(generics.GenericAPIView):
 class RegistrationView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = User.objects.all()
-    serializer_class = RegistrationSerializer
+    serializer_class = SelfRegistrationSerializer
 
     def create(self, request):
         serializer = self.serializer_class(data=request.data)

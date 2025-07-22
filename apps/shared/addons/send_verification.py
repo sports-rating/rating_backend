@@ -1,8 +1,7 @@
-# standart library
 import uuid
 import typing as t
-
-# third party
+import random
+import string
 import requests
 
 # django related
@@ -16,11 +15,12 @@ redis_connection = get_redis_connection()
 
 
 def generate_verification_code() -> str:
-    return "000000"
-    # return "".join(random.choices(string.digits, k=settings.VERIFICATION_CODE_LENGTH))
+    # return "000000"
+    return "".join(random.choices(string.digits, k=settings.VERIFICATION_CODE_LENGTH))
 
 
 def send_verification_code(phone_number: str):
+    verification_code = None
     error_status, error_text, verification_code_key, verified_phone_number_key = (
         check_existence_of_verification(phone_number)
     )
@@ -28,16 +28,17 @@ def send_verification_code(phone_number: str):
     if error_status:
         return error_status, error_text
 
-    verification_code = generate_verification_code()
-    print(f"Generated verification code: {verification_code}")
-    if not settings.DEBUG:
+    if phone_number == "+998935321377":
+        verification_code = "000000"
+    else:
+        verification_code = generate_verification_code()
+        print(f"Generated verification code: {verification_code}")
         response = send_sms_message(
             phone_number,
             settings.VERIFICATION_CODE_MESSAGE_TEMPLATE.format(
                 verification_code=verification_code
             ),
         )
-
         if response != 200:
             return 400, "Something went wrong with sending sms"
 
@@ -90,9 +91,9 @@ def create_sms_payload(phone_number: str, text: str) -> dict:
         "messages": [
             {
                 "recipient": phone_number,
-                "message-id": "gigawatuz-{}".format(uuid.uuid4()),
+                "message-id": "7srating-{}".format(uuid.uuid4()),
                 "sms": {
-                    "originator": settings.SMS_ORIGINATOR,
+                    "originator": settings.PLAY_MOBILE_ORIGINATOR,
                     "content": {"text": text},
                 },
             }

@@ -383,9 +383,9 @@ PLAY_MOBILE_LOGIN = os.getenv("PLAY_MOBILE_LOGIN")
 PLAY_MOBILE_PASSWORD = os.getenv("PLAY_MOBILE_PASSWORD")
 VERIFICATION_CODE_EXPIRE = 1 * 60  # 2 minute
 SMS_ID_PREFIX = os.getenv("SMS_ID_PREFIX", default="PulseEv")
-SMS_ORIGINATOR = os.getenv("SMS_ORIGINATOR", default=3700)
+PLAY_MOBILE_ORIGINATOR = os.getenv("PLAY_MOBILE_ORIGINATOR", default=3700)
 VERIFICATION_CODE_MESSAGE_TEMPLATE = (
-    "Gigawat.uz! \n" "Sizning tasdiqlash kodingiz - {verification_code}\ndaORdCftPDL"
+    "7srating.uz! \n" "Sizning tasdiqlash kodingiz - {verification_code}"
 )
 VERIFICATION_CODE_LENGTH: int = 6
 

@@ -519,6 +519,53 @@ class RegistrationSerializer(serializers.ModelSerializer):
         return data
 
 
+class SelfRegistrationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "phone_number",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "birth_date",
+            "email",
+            "user_role",
+            "is_verified",
+            "created_time"
+        )
+        read_only_fields = ["id", "is_verified", "created_time"]
+
+    def validate(self, attrs):
+        phone_number = attrs.get("phone_number")
+        if phone_number:
+            if User.objects.only("id").filter(phone_number=phone_number).exists() :
+                raise_validation_error(message=_("Phone number is already registered"))
+        
+        first_name = attrs.get("first_name")
+        last_name = attrs.get("last_name")
+        if User.objects.only("id").filter(
+            first_name=first_name, last_name=last_name, phone_number=phone_number
+        ).exists():
+            raise_validation_error(message=_("User with this name and phone number already exists"))
+
+        return attrs
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            user = super().create(validated_data)
+            user_role = validated_data.get("user_role")
+
+            if user_role == "sportsman":
+                Sportsman.objects.create(user=user)
+            elif user_role == "trainer":
+                Trainer.objects.create(user=user)
+
+            logger.info(f"User created -> {user}")
+            return user
+
+
 class LogoutSerializer(serializers.Serializer):  # noqa
     refresh = serializers.CharField()
 
