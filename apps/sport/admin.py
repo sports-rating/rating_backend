@@ -9,7 +9,7 @@ from .models import (
 
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "year", "sport"]
+    list_display = ["id", "name", "sport"]
     search_fields = ["name", "sport__name"]
     list_filter = ["sport",]
 

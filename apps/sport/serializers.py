@@ -79,43 +79,38 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
-            "year",
-            "place",
-            "division",
             "sport_id",
             "logo",
         )
-        extra_kwargs = {"id": {"read_only": True}, "logo": {"required": False}}
+        extra_kwargs = {
+            "id": {"read_only": True}, 
+            "logo": {"required": False},
+        }
     
     def validate(self, attrs):
         name = attrs.get("name", None)
-        new_year = attrs.get("year", None)
         instance = self.instance  # This will be None during creation and the instance during updating
-        # new_year = start_time.year if start_time else None
 
         if instance:  # Only for updates
             current_name = instance.name
-            current_year = instance.year
-            # current_year = instance.start_time.year
 
-            # Check if the name or year is being updated
+            # Check if the name is being updated
             is_name_updated = name is not None and name != current_name
-            is_year_updated = new_year is not None and new_year != current_year
 
-            # If either name or year is being updated, perform the uniqueness check
-            if is_name_updated or is_year_updated:
-                queryset = Tournament.objects.filter(name=name, year=new_year)
+            # If name is being updated, perform the uniqueness check
+            if is_name_updated:
+                queryset = Tournament.objects.filter(name=name)
                 queryset = queryset.exclude(id=instance.id)  # Exclude the current instance
 
                 if queryset.exists():
-                    raise_validation_error(_("Tournament with this name and year already exists!"))
+                    raise_validation_error(message=_("Tournament with this name already exists!"))
         
         else:  # For creation
-            if name and new_year:
-                queryset = Tournament.objects.filter(name=name, year=new_year)
+            if name:
+                queryset = Tournament.objects.filter(name=name)
                 if queryset.exists():
-                    raise_validation_error(_("Tournament with this name and year already exists!"))
-        
+                    raise_validation_error(message=_("Tournament with this name already exists!"))
+
         return attrs
     
     def create(self, validated_data):
@@ -139,9 +134,6 @@ class TournamentSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
-            "year",
-            "place",
-            "division",
             "sport",
             "logo",
         )

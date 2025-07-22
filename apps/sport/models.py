@@ -40,9 +40,6 @@ class Sport(BaseModel):
 
 class Tournament(BaseModel):
     name = models.CharField(max_length=450)
-    year = models.PositiveIntegerField(default=2000, blank=True, null=True)
-    place = models.CharField(max_length=450)
-    division = models.CharField(max_length=100) # razdeleniya?
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="tournaments", blank=True, null=True)
     logo = models.ImageField(
         upload_to=CorrectPath('media'), 
