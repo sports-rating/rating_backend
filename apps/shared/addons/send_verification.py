@@ -117,6 +117,7 @@ def verify_code(phone_number: str, code: str):
         return 400, "Send phone number to check verification"
 
     verification_code_key = f"verification_code:{phone_number}"
+    logger.info(f"Verification code: {redis_connection.get(verification_code_key)}")
 
     if code != redis_connection.get(verification_code_key):
         return 400, "Verification code is incorrect"

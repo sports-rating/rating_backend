@@ -112,6 +112,7 @@ class VerifyCodeView(generics.GenericAPIView):
         #         )
         #         data["tokens"] = user.tokens()
         #     return success_response(message=_(message), data=data)
+        logger.info(f"Status code: {response_code}, Message: {message}")
         if response_code == 200:
             return success_response(
                 message=_(message),
