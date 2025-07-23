@@ -37,7 +37,7 @@ services:
     volumes:
       - /home/bekhruz/backend/.redis/redis.conf:/usr/local/etc/redis/redis.conf
       - redis-data:/data
-    command: [ "redis-server", "--save", "900", "1", "--loglevel", "notice", "/usr/local/etc/redis/redis.conf"]
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     restart: always
     networks:
       - backend
