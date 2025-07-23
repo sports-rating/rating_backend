@@ -160,7 +160,7 @@ class ResultCreateSerializer(serializers.ModelSerializer):
             "silver",
             "bronze",
         ]
-        extra_kwargs = {"id": {"read_only": True}}
+        extra_kwargs = {"id": {"read_only": True}, "country": {"required": False}}
 
     def create(self, validated_data):
         tournament = validated_data.pop('tournament')

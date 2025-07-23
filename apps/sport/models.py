@@ -68,7 +68,7 @@ class Tournament(BaseModel):
 
 
 class Result(BaseModel):
-    country = models.CharField(max_length=100)
+    country = models.CharField(max_length=100, null=True, blank=True)
     year = models.PositiveIntegerField(
         default=1800,
         null=True,
