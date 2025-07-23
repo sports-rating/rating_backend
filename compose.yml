@@ -35,7 +35,7 @@ services:
       - 6379
     image: redis:latest
     volumes:
-      - /home/bekhruz/backend/.redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - /home/mukhammad/backend/.redis/redis.conf:/usr/local/etc/redis/redis.conf
       - redis-data:/data
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     restart: always
