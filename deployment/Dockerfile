@@ -1,4 +1,4 @@
-FROM python:3.11.4-slim-buster AS builder
+FROM python:3.11-slim-bookworm AS builder
 
 WORKDIR /usr/src/app
 
