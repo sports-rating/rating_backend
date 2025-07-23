@@ -6,13 +6,13 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# RUN apt-get update && \
-#     apt-get install -y --no-install-recommends gcc
-
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends gcc
+
+# RUN apt-get update && \
+#     apt-get install -y --no-install-recommends gcc && \
+#     apt-get clean && \
+#     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip
 COPY . /usr/src/app/
@@ -20,7 +20,7 @@ COPY . /usr/src/app/
 COPY ./requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
 
-FROM python:3.11.4-slim-buster AS final
+FROM python:3.11-slim-bookworm AS final
 
 WORKDIR /app
 
