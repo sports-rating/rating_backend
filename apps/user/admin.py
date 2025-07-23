@@ -15,7 +15,8 @@ from .models import (
 class UserAdmin(admin.ModelAdmin):
     list_display = [
         "id",
-        "username",
+        "first_name",
+        "last_name",
         "phone_number",
         "user_role",
         "gender",

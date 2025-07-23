@@ -48,12 +48,14 @@ class UserListSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.user_role == "sportsman":
-            data["sport"] = instance.sportsman_profile.sport.name if instance.sportsman_profile else None
-            if instance.sportsman_profile and instance.sportsman_profile.trainer:
-                data["trainer_id"] = instance.sportsman_profile.trainer.user_id
-                data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
+            if instance.sportsman_profile:
+                data["sport"] = instance.sportsman_profile.sport.name if instance.sportsman_profile.sport else None
+                if instance.sportsman_profile.trainer:
+                    data["trainer_id"] = instance.sportsman_profile.trainer.user_id
+                    data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         if instance.user_role == "trainer":
-            data["sport"] = instance.trainer_profile.sport.name if instance.trainer_profile else None
+            if instance.trainer_profile:
+                data["sport"] = instance.trainer_profile.sport.name if instance.trainer_profile.sport else None
         return data
 
 
