@@ -9,7 +9,7 @@ services:
       - /var/www/static:/app/staticfiles
       - /var/www/media:/app/media
     ports:
-    - "8000:8000"
+    - "8000:8000" # Expose port for nginx
     depends_on:
       - redis
       - postgres

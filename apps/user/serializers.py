@@ -564,6 +564,14 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
 
             logger.info(f"User created -> {user}")
             return user
+    
+    def get_tokens(self, user): # noqa
+        return user.tokens()
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["tokens"] = self.get_tokens(instance)
+        return data
 
 
 class LogoutSerializer(serializers.Serializer):  # noqa
