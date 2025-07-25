@@ -4,7 +4,7 @@ import django.contrib.auth.models
 import django.contrib.auth.validators
 import django.db.models.deletion
 import django.utils.timezone
-import shared.addons.utils
+import apps.shared.utils.utils
 import uuid
 from django.conf import settings
 from django.db import migrations, models
@@ -68,7 +68,7 @@ class Migration(migrations.Migration):
                 ('created_time', models.DateTimeField(auto_now_add=True, null=True)),
                 ('updated_time', models.DateTimeField(auto_now=True, null=True)),
                 ('media_type', models.CharField(choices=[('image', 'IMAGE'), ('video', 'VIDEO'), ('pdf', 'PDF')], default='image', max_length=100)),
-                ('file', models.FileField(null=True, upload_to=shared.addons.utils.CorrectPath('media'))),
+                ('file', models.FileField(null=True, upload_to=apps.shared.utils.utils.CorrectPath('media'))),
                 ('size', models.PositiveIntegerField(blank=True, null=True)),
                 ('extension', models.CharField(blank=True, max_length=10)),
                 ('user', models.ManyToManyField(related_name='media', to=settings.AUTH_USER_MODEL)),

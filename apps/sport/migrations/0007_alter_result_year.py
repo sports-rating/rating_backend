@@ -3,7 +3,7 @@
 import django.core.validators
 import datetime
 from django.db import migrations, models
-from apps.shared.addons.custom_logging import logger
+from apps.shared.utils.logging import logger
 
 def store_original_values(apps, schema_editor):
     shared_data = {}

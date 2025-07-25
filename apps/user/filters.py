@@ -2,12 +2,13 @@ import uuid
 from django_filters import rest_framework as filters
 from datetime import datetime
 
-from user.models import (
+from apps.user.models import (
     Sportsman,
     UserNotification,
     User,
 )
 from apps.shared.utils.filters import BaseFilterSet
+
 
 class SportsmanFilter(BaseFilterSet):
     sport = filters.CharFilter(method='filter_sport')

@@ -1,8 +1,11 @@
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
-from user.models import Sportsman, Trainer
-from sport.models import Result
-from shared.addons.custom_logging import logger
+
+from apps.shared.utils.logging import logger
+
+from apps.user.models import Sportsman, Trainer
+from apps.sport.models import Result
+
 
 @receiver(post_save, sender=Result)
 def update_trainer_results(sender, instance, created, **kwargs):

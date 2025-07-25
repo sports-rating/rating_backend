@@ -1,9 +1,8 @@
 import json
 
 from redis import Redis
-
 from django.conf import settings
-from shared.addons.utils import logger
+
 
 redis_connection: Redis = None
 

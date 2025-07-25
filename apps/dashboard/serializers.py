@@ -6,13 +6,12 @@ from django.db import transaction
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
-from user.models import (
+from apps.user.models import (
     User,
     Sportsman,
     Trainer,
 )
-
-from .models import PrivacyPolicy, TermsOfCondition
+from apps.dashboard.models import PrivacyPolicy, TermsOfCondition
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error

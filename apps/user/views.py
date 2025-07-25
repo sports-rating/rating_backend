@@ -306,7 +306,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
         user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
         if not user_profile:
-            raise_validation_error(message=_("Sportsman Profile not found"), code=404)
+            raise_validation_error(message=_("Sportsman Profile not found"), code=status.HTTP_404_NOT_FOUND)
         return user_profile            
 
     def get_serializer_context(self):
@@ -580,3 +580,24 @@ class UserNotificationsListView(generics.ListAPIView):
         self.get_queryset().filter(is_read=False).update(is_read=True)
         return success_response(data=response.data, message=_("Bildirishnomalar ro'yxati"), code=status.HTTP_200_OK)
 
+
+class UserNotificationMarkAsReadView(generics.UpdateAPIView):
+    queryset = UserNotification.objects.all()
+    serializer_class = serializers.UserNotificationSerializer
+    permission_classes = [permissions.IsAuthenticated,]
+
+    def get_object(self):
+        notification = UserNotification.objects.filter(id=self.kwargs.get("notification_id"), user=self.request.user).first()
+        if not notification:
+            return raise_validation_error(message=_("Bildirishnoma topilmadi"), code=status.HTTP_404_NOT_FOUND)
+        return notification
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_read = True
+        instance.save(update_fields=["is_read"])
+        return success_response(
+            data=self.get_serializer(instance).data,
+            message=_("Bildirishnoma muvaffaqiyatli yangilandi"),
+            code=status.HTTP_200_OK
+        )

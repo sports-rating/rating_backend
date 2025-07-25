@@ -1,6 +1,6 @@
 from django.db.models import Count, Q, Sum, Value
 from django.db.models.functions import Coalesce
-from shared.addons.custom_logging import logger
+from apps.shared.utils.logging import logger
 
 def calculate_sportsman_statistics(sportsman):
     """

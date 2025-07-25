@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from dashboard.models import (
+from apps.dashboard.models import (
     PrivacyPolicy,
     TermsOfCondition
 )

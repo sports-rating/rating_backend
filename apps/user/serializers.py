@@ -26,7 +26,7 @@ from apps.shared.utils.send_verification import (
 )
 from .utils import calculate_sportsman_statistics, calculate_trainer_statistics
 
-from user.models import (
+from apps.user.models import (
     User,
     Sportsman,
     Trainer,
@@ -35,22 +35,22 @@ from user.models import (
     UserNotification
 )
 
-from sport.models import (
+from apps.sport.models import (
     Sport,
     Tournament,
     Result
 )
 
-from education.models import (
+from apps.education.models import (
     Education
 )
 
-from sport.serializers import (
+from apps.sport.serializers import (
     ResultCreateSerializer,
     SportSerializer
 )
 
-from education.serializers import (
+from apps.education.serializers import (
     EducationCreateSerializer
 )
 
@@ -299,6 +299,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             "user_metrics",
             "address",
             "social_media",
+            "is_sportsman_verified",
             "statistics"
         ]
     
@@ -405,6 +406,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "user_metrics",
             "address",
             "social_media",
+            "is_trainer_verified",
             "statistics",
         ]
     

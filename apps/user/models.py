@@ -24,7 +24,7 @@ from apps.shared.models import BaseModel, BaseMedia
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
 
-from sport.models import (
+from apps.sport.models import (
     Sport
 )
 
@@ -136,7 +136,7 @@ class Sportsman(models.Model):
             models.Index(fields=['user']),
             models.Index(fields=['sport']),
             models.Index(fields=['trainer']),
-            models.Index(fields=['is_verified'])
+            models.Index(fields=['is_sportsman_verified'])
         ]
         verbose_name = "Sportsman Profile"
         verbose_name_plural = "Sportsmen Profiles"
