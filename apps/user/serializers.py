@@ -15,6 +15,8 @@ import rest_framework_simplejwt.serializers as jwt_serializers
 
 from typing import List, Dict, Any
 
+from fcm_django.models import FCMDevice, DeviceType
+
 # custom
 from shared.addons.custom_logging import logger
 from shared.addons.exceptions import raise_validation_error
@@ -84,15 +86,27 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
     code = serializers.CharField()
     phone_number = serializers.CharField()
     action = serializers.ChoiceField(choices=SEND_VERIFICATION_ACTION, required=False)
+    fcm_token = serializers.CharField(required=False)
+    device_type = serializers.ChoiceField(choices=DeviceType.choices, required=False)
 
     def get_tokens(self):  # noqa
         action = self.validated_data.get("action", None)
         phone_number = self.validated_data.get("phone_number")
+        fcm_token = self.validated_data.get('fcm_token')
 
         if action == "login":
             user = User.objects.filter(phone_number=phone_number).first()
             if not user:
                 raise_validation_error(message=_("User not found"))
+            if fcm_token:
+                FCMDevice.objects.update_or_create(
+                    registration_id=fcm_token,
+                    defaults={
+                        'user': user,
+                        'type': self.validated_data.get("device_type"),
+                        'active': True,
+                    }
+                )
             return user.tokens()
         return None
 
@@ -521,6 +535,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 
 class SelfRegistrationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for self-registration of users.
+    """
+    tokens = serializers.SerializerMethodField()
+    fcm_token = serializers.CharField(required=False)
+    device_type = serializers.ChoiceField(choices=DeviceType.choices, required=False)
 
     class Meta:
         model = User
@@ -534,6 +554,9 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             "email",
             "user_role",
             "is_verified",
+            "fcm_token",
+            "device_type",
+            "tokens",
             "created_time"
         )
         read_only_fields = ["id", "is_verified", "created_time"]
@@ -544,6 +567,12 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             if User.objects.only("id").filter(phone_number=phone_number).exists() :
                 raise_validation_error(message=_("Phone number is already registered"))
         
+        # Ism va familiya faqat bitta so‘zdan iborat bo‘lishi kerakligini tekshirish
+        if len(first_name.split()) > 1:
+            raise_validation_error(message=_("Ism faqat bitta so'z bo'lishi kerak"))
+        if len(last_name.split()) > 1:
+            raise_validation_error(message=_("Familiya faqat bitta so'z bo'lishi kerak"))
+
         first_name = attrs.get("first_name")
         last_name = attrs.get("last_name")
         if User.objects.only("id").filter(
@@ -554,10 +583,19 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        fcm_token = validated_data.pop("fcm_token", None)
         with transaction.atomic():
             user = super().create(validated_data)
             user_role = validated_data.get("user_role")
-
+            if fcm_token:
+                FCMDevice.objects.update_or_create(
+                    registration_id=fcm_token,
+                    defaults={
+                        'user': user,
+                        'type': validated_data.get("device_type"),
+                        'active': True,
+                    }
+                )
             if user_role == "sportsman":
                 Sportsman.objects.create(user=user)
             elif user_role == "trainer":
@@ -567,16 +605,14 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             return user
     
     def get_tokens(self, user): # noqa
+        if not user:
+            return None
         return user.tokens()
-    
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["tokens"] = self.get_tokens(instance)
-        return data
 
 
 class LogoutSerializer(serializers.Serializer):  # noqa
-    refresh = serializers.CharField()
+    refresh = serializers.CharField(required=True)
+    fcm_token = serializers.CharField(required=False)
 
 
 class ChangePasswordSerializer(serializers.Serializer):

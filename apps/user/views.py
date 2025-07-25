@@ -12,6 +12,8 @@ from rest_framework import generics, permissions, status, filters
 import rest_framework_simplejwt.views as simplejwt_views
 from rest_framework_simplejwt.exceptions import TokenError
 
+from fcm_django.models import FCMDevice
+
 from user.filters import (
     SportsmanFilter,
     TrainerFilter
@@ -160,6 +162,10 @@ class LogoutView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
+            FCMDevice.objects.filter(
+                user=request.user,
+                registration_id=serializer.validated_data.get("fcm_token", ""),
+            ).update(active=False)
             refresh_token = self.request.data["refresh"]
             token = RefreshToken(refresh_token)
             token.blacklist()

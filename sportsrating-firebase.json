@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "sportsrating",
+  "private_key_id": "99e173c574afa42d321b5a103247cc8202908a09",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQCuaQ6BX3WK1Arz\n20k9ITuMvvyenI2EOGIJXzWBIUWLkNc7UmZ46Kur3xlQ7fh/UwBYoi/ctZlt3Ucz\nihfAF6wQdKlZJgFtrTPF+zlHLGwo0wsUWGKaI2tac+taPBcb1V1JOMzMzolsdqWv\nN+Fp5bSG3FZxP+28dqaHOzvqCd1L66bAml067Qw1lsjUYeRudNwNh6n4L3Y+m3bO\n7OSpSnsbOu2hlyzo3eFYcdAKJ8IiSYBJjNonS5dU5WzG3JKDYoVxISiPtFD0M7IJ\nQs4EuFnJkpx9SD1MuGyaS3G3nKm7v6k2HvlB/5actrAZA7iyrqTiliP84cOJHoSa\n/lHoebW/AgMBAAECggEAT/dyQ6YhjiAvz2RVPbZ9h8hPqmesSRnS9WoWbZj0OowT\n6yqaOkiv4ZNel6ksnTBQwdLHMCKBcQqaaUqhHh2cckUTGoFe+UsHKHjJ59S52LP+\n6fqmZvbjc2sf11Ui4UugRIDLAgKWpsj1qZNtAnFkJstixPUjSxx5uRpTG7kfIn3s\nYe3TfGpsQ3xMJbNCmaXkw7dLXWgDEzWRuWkh9f3yUaK+u5wLgDf//dxtUXOZjtBE\nxRS3CG1oddcKG/ziui7p0rJdHdlU8RH4leoP96/uRxIR+6JsdWg1Uo5LZOLCc4PW\nno3kpRGkTCdaiiKqltjP+U+22tGUTptPoHwk1HUidQKBgQDoqv4YQUBZGinL9Xwd\nwpbs/bemqmlG1qu9wC/NKW40jEz93OPqquEImjrXzL6fpyAJxRGWN1r4BRCMN65a\nGWJKw85BimzbM3ntPSweoXxsfl1si+PdiagAq3jINVQLbvHH8P4kXjCfFmYzRAql\nqCTKVg0pgiPXCO+nFXsxM309owKBgQC/5nypn5F5TpS2nlDaAd0JJ//DrHufRSvO\nwc7oRBVwcJUMg7x4wsTvbFwHOyhv4/vdlYvbM2pUVmz6McWqn1hM07hLmLKiMRLn\nPz3y0VzwxiV0mJfwGyaVUqvQOXp8F3X2Ekq7vY61kWa9M5kS9co5in9OrHmyuC91\nrr+0Er1xNQJ/U50fs5e/iEXev215LTjBBGoplbuoGc0L6yUmCJTbBgdlo9W+EpdW\nR8ElZGgwGS/2U4x+xX0fNAKd78YS4k49BKFZfjRA6oWVS6ywLlHaZSMEb/3V5ceS\nmKsGvOxtR66XNUNmEavHzWQ/Vi0dpmrGzfAeysv6FU0g0urlWskmOQKBgAhuGKXe\n86YPlKrdE5IwKMShNDQlXJznjgAcNXmwm/x/hZyyINJxQ/N8oCJVL/aSXlsima08\nefxQe6MWEqfnLhrZ5iuz/ozvePQdrBwBpIKTQcv4dBxBJRXENvYDwGS5Jx5zOUM8\nFYvWYlwHaz8Q+xxCAEu1efcm7jbOQW+orxfNAoGBAJqbEEqhWfeYRwqJvQ7/QsMP\nIzVLJ+4ErCQMXshXBLrT11RAvrNts1vIeH/k1Tyj/g9n4dEZA9sQItwhkxKYEfbs\ndJU7VQQ/zDLgbo4TZ4jX4raVN2Dkqe93Dv+WnyXkcyBpzAvYziSO/Ih1Vs95HXLD\nBOmEeMQ2poDIRbQLefoJ\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@sportsrating.iam.gserviceaccount.com",
+  "client_id": "113828248380065078832",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40sportsrating.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

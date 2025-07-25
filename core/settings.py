@@ -8,6 +8,8 @@ from decouple import config
 
 from django.utils.translation import gettext_lazy as _
 
+from firebase_admin import initialize_app, credentials
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(os.path.join(BASE_DIR, "apps"))
@@ -439,3 +441,12 @@ QUERYCOUNT = {
     'DISPLAY_DUPLICATES': 0,
     'RESPONSE_HEADER': 'X-DjangoQueryCount-Count'
 }
+
+FCM_DJANGO_SETTINGS = {
+    "ONE_DEVICE_PER_USER": False,
+    "DELETE_INACTIVE_DEVICES": True,
+}
+
+cred = credentials.Certificate(BASE_DIR / "sportsrating-firebase.json")
+
+FIREBASE_APP = initialize_app(cred, {"projectId": "sportsrating"})
