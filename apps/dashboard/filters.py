@@ -1,12 +1,13 @@
-import uuid
+from datetime import datetime
+
 from django_filters import rest_framework as filters
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
-from datetime import datetime
 
-from shared.addons.enums import GenderChoices, UserRoles
-from shared.addons.custom_logging import logger
-from user.models import (
+from apps.shared.utils.enums import GenderChoices, UserRoles
+from apps.shared.utils.custom_logging import logger
+
+from apps.user.models import (
     Sportsman,
     Trainer,
     User

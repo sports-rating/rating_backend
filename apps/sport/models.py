@@ -1,14 +1,15 @@
-from django.db import models
 import string 
 import os
 
+from django.db import models
 from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 
 from rest_framework.exceptions import ValidationError
 
-from shared.models import BaseModel
-from shared.addons.enums import LanguageTypes
-from shared.addons.utils import handle_file_update, handle_file_delete, CorrectPath
+from apps.shared.models import BaseModel
+from apps.shared.utils.enums import LanguageTypes
+from apps.shared.utils.utils import handle_file_update, handle_file_delete, CorrectPath
+
 
 class Sport(BaseModel):
     name = models.CharField(max_length=250)

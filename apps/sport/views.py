@@ -10,21 +10,21 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 
-from shared.addons.permissions import IsAdmin
-from shared.addons.pagination import CustomPagination
-from shared.addons.utils import (
+from apps.shared.utils.permissions import IsAdmin
+from apps.shared.utils.pagination import CustomPagination
+from apps.shared.utils.utils import (
     success_response,
     error_response
 )
 
-from sport.models import (
+from apps.sport.models import (
     Sport,
     Result,
     Tournament,
     Team
 )
 
-from sport.serializers import (
+from apps.sport.serializers import (
     SportCreateSerializer,
     SportSerializer,
     TournamentCreateSerializer,
@@ -36,7 +36,7 @@ from sport.serializers import (
     TeamSerializer
 )
 
-from sport.filters import (
+from apps.sport.filters import (
     TournamentFilter,
     TeamFilter
 )

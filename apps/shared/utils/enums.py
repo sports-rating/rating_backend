@@ -63,3 +63,13 @@ class LanguageTypes(BaseEnum):
     RU = "ru"
     UZ = "uz"
 
+
+class UserRequestTypes(BaseEnum):
+    TRAINER_REQUEST = "trainer_request"
+    FEDERATION_REQUEST = "federation_request"
+
+
+class UserRequestStatus(BaseEnum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"

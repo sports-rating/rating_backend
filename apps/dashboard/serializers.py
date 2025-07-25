@@ -14,9 +14,9 @@ from user.models import (
 
 from .models import PrivacyPolicy, TermsOfCondition
 
-from shared.addons.custom_logging import logger
-from shared.addons.exceptions import raise_validation_error
-from shared.addons.utils import CorrectPath
+from apps.shared.utils.custom_logging import logger
+from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.utils import CorrectPath
 
 
 # class InlineMediaSerializer(serializers.ModelSerializer):

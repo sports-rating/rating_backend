@@ -1,4 +1,5 @@
 import pandas
+from datetime import datetime
 
 from django.utils.translation import gettext as _, get_language
 from django_filters.rest_framework import DjangoFilterBackend
@@ -12,42 +13,40 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 
-from datetime import datetime
-
-from shared.addons.permissions import IsAdmin
-from shared.addons.pagination import CustomPagination
-from shared.addons.utils import (
+from apps.shared.utils.permissions import IsAdmin
+from apps.shared.utils.pagination import CustomPagination
+from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.utils import (
     success_response,
     error_response
 )
 
-from user.models import (
+from apps.user.models import (
     User,
     Sportsman,
     Trainer
 )
 
-from dashboard.models import (
+from apps.dashboard.models import (
     PrivacyPolicy,
     TermsOfCondition
 )
 
-from user.serializers import (
+from apps.user.serializers import (
     UsersMeSerializer
 )
 
-from dashboard.serializers import (
+from apps.dashboard.serializers import (
     UserListSerializer,
     UserExportSerializer,
     PrivacyPolicySerializer,
     TermsOfConditionSerializer
 )
 
-from .filters import (
+from apps.dashboard.filters import (
     UserFilter,
 )
 
-from shared.addons.exceptions import raise_validation_error
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()

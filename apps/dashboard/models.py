@@ -1,4 +1,3 @@
-from django.db import models
 import string 
 import os
 
@@ -6,9 +5,9 @@ from django.db import models
 from django.core.validators import FileExtensionValidator
 
 from rest_framework.exceptions import ValidationError
-from shared.models import BaseModel
-from shared.addons.enums import LanguageTypes
 
+from apps.shared.models import BaseModel
+from apps.shared.utils.enums import LanguageTypes
 
 
 class PrivacyPolicy(BaseModel):

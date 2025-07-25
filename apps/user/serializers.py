@@ -1,4 +1,6 @@
 from datetime import date
+from typing import List, Dict, Any
+
 from django.contrib.auth import authenticate
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
@@ -6,22 +8,18 @@ from django.contrib.auth.models import update_last_login
 from django.utils import timezone
 from django.db.models import Sum
 from django.conf import settings
+from fcm_django.models import FCMDevice, DeviceType
 
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
-
 import rest_framework_simplejwt.tokens as jwt_tokens
 import rest_framework_simplejwt.serializers as jwt_serializers
 
-from typing import List, Dict, Any
-
-from fcm_django.models import FCMDevice, DeviceType
-
 # custom
-from shared.addons.custom_logging import logger
-from shared.addons.exceptions import raise_validation_error
-from shared.addons.utils import CorrectPath
-from shared.addons.send_verification import (
+from apps.shared.utils.custom_logging import logger
+from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.utils import CorrectPath
+from apps.shared.utils.send_verification import (
     send_verification_code,
     verify_code,
     check_verification_status,
@@ -33,7 +31,8 @@ from user.models import (
     Sportsman,
     Trainer,
     ArchivedTrainer,
-    UserMedia
+    UserMedia,
+    UserNotification
 )
 
 from sport.models import (
@@ -811,3 +810,18 @@ class ArchivedTrainerSerializer(serializers.ModelSerializer):
                 raise_validation_error(message=_("Archived Trainer with this name already exists"))
         
         return attrs
+
+
+class UserNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserNotification
+        fields = [
+            "id",
+            "title",
+            "text",
+            "is_read",
+            "data",
+            "created_time",
+            "updated_time",
+        ]
+        read_only_fields = ["id", "created_time", "updated_time"]
