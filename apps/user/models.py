@@ -9,6 +9,7 @@ from PIL import Image
 from django.core.validators import FileExtensionValidator
 from django.core.files.base import ContentFile
 
+from django.utils.crypto import get_random_string
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -24,6 +25,9 @@ from shared.addons.utils import CorrectPath
 from sport.models import (
     Sport
 )
+
+from faker import Faker
+fake = Faker()
 
 
 class User(AbstractUser, BaseModel):
@@ -87,17 +91,16 @@ class User(AbstractUser, BaseModel):
     def check_username(self):
         print(f"checking username for {self.username}")
         if not self.username:
-            # Generate a fake username using random strings and phone number
-            random_str = "".join(
-                random.choices(string.ascii_lowercase + string.digits, k=6)
-            )
-            if self.phone_number:
-                temp_username = f"user_{self.phone_number[-4:]}_{random_str}"
+            if self.first_name and self.last_name and self.phone_number:
+                base_username = f"{self.first_name.lower()}_{self.last_name.lower()}_{self.phone_number[-4:]}"
             else:
-                temp_username = f"user_{self.first_name}_{random_str}"
-            while User.objects.filter(username=temp_username).exists():
-                temp_username = f"{temp_username}{random.randint(0, 9)}"
-            self.username = temp_username
+                base_username = fake.user_name()
+
+            username = base_username
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}_{get_random_string(4)}"
+
+            self.username = username
 
     def tokens(self) -> dict[str, str]:
         refresh = RefreshToken.for_user(self)

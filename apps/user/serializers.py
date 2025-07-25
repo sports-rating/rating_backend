@@ -162,6 +162,7 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             "media",
             "educations",
             "results",
+            "user_role",
         ]
 
     def to_representation(self, instance):
