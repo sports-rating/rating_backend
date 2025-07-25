@@ -11,7 +11,7 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
-from apps.shared.utils.custom_logging import logger
+from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
 
 from apps.sport.models import (

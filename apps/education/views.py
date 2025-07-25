@@ -10,19 +10,19 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 
-from shared.addons.permissions import IsAdmin
-from shared.addons.pagination import CustomPagination
-from shared.addons.utils import (
+from apps.shared.utils.permissions import IsAdmin
+from apps.shared.utils.pagination import CustomPagination
+from apps.shared.utils.utils import (
     success_response,
     error_response
 )
 
-from education.models import (
+from apps.education.models import (
     Education,
     School
 )
 
-from education.serializers import (
+from apps.education.serializers import (
     EducationCreateSerializer,
     EducationSerializer,
     SchoolCreateSerializer,
@@ -30,7 +30,7 @@ from education.serializers import (
     SchoolSerializer
 )
 
-from education.filters import (
+from apps.education.filters import (
     SchoolFilter
 )
 

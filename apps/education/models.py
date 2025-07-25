@@ -1,4 +1,3 @@
-from django.db import models
 import string 
 import os
 
@@ -8,13 +7,13 @@ from django.core.validators import FileExtensionValidator
 from rest_framework.exceptions import ValidationError
 
 from shared.models import BaseModel
-from shared.addons.enums import SchoolChoices
+from apps.shared.utils.enums import SchoolChoices
 
-from user.models import (
+from apps.user.models import (
     User
 )
 
-from sport.models import (
+from apps.sport.models import (
     Sport
 )
 

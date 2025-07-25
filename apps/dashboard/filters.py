@@ -5,7 +5,7 @@ from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
 
 from apps.shared.utils.enums import GenderChoices, UserRoles
-from apps.shared.utils.custom_logging import logger
+from apps.shared.utils.logging import logger
 
 from apps.user.models import (
     Sportsman,

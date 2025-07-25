@@ -16,7 +16,7 @@ import rest_framework_simplejwt.tokens as jwt_tokens
 import rest_framework_simplejwt.serializers as jwt_serializers
 
 # custom
-from apps.shared.utils.custom_logging import logger
+from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils.send_verification import (

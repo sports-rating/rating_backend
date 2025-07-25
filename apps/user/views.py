@@ -39,7 +39,7 @@ from apps.shared.utils.utils import (
 )
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.redis_utils import get_redis_connection
-from apps.shared.utils.custom_logging import logger
+from apps.shared.utils.logging import logger
 
 redis_connection = get_redis_connection()
 
