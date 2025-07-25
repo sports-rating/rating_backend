@@ -26,6 +26,8 @@ from apps.shared.utils.send_verification import (
 )
 from apps.shared.utils.general import get_file_full_url
 from apps.user.utils import calculate_sportsman_statistics, calculate_trainer_statistics
+from apps.shared.utils import enums
+from apps.shared.utils.notifications import send_notification_to_user
 
 from apps.user.models import (
     User,
@@ -33,7 +35,8 @@ from apps.user.models import (
     Trainer,
     ArchivedTrainer,
     UserMedia,
-    UserNotification
+    UserNotification,
+    UserRequest
 )
 
 from apps.sport.models import (
@@ -204,20 +207,18 @@ class SportsmanListSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        request = self.context.get("request")
         if instance.sportsman_profile.sport:
             data["sport"] = instance.sportsman_profile.sport.name
             if instance.sportsman_profile.sport.logo:
-                data["logo"] = request.build_absolute_uri(instance.sportsman_profile.sport.logo.url)
+                data["logo"] = get_file_full_url(instance.sportsman_profile.sport.logo.url) if instance.sportsman_profile.sport.logo else None
         if instance.sportsman_profile.trainer:
             data["trainer_id"] = instance.sportsman_profile.trainer.user_id
             data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         return data
-    
+
     def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_sportsman_statistics(sportsman=obj)
 
-    
 
 class SportsmanProfileSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
@@ -311,20 +312,18 @@ class TrainerListSerializer(serializers.ModelSerializer):
             "statistics",
             # "logo",
         ]
-    
+
     def to_representation(self, instance): 
         data = super().to_representation(instance)
-        request = self.context.get("request")
         if instance.trainer_profile.sport:
             data["sport"] = instance.trainer_profile.sport.name
             if instance.trainer_profile.sport.logo:
-                data["logo"] = request.build_absolute_uri(instance.trainer_profile.sport.logo.url)
+                data["logo"] = get_file_full_url(instance.trainer_profile.sport.logo.url) if instance.trainer_profile.sport.logo else None
         return data
     
     def get_statistics(self, obj) ->  List[Dict[str, Any]]:
         return calculate_trainer_statistics(trainer=obj)
 
-    
 
 class TrainerProfileCreateSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
@@ -344,10 +343,9 @@ class TrainerProfileCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         sport = validated_data.pop("sport", None)
         
-        
         profile = Trainer.objects.create(sport=sport, **validated_data)
         logger.info(f"Trainer Profile created -> {profile}")
-    
+
         return profile
 
     def to_representation(self, instance):
@@ -809,3 +807,116 @@ class UserNotificationSerializer(serializers.ModelSerializer):
             "updated_time",
         ]
         read_only_fields = ["id", "created_time", "updated_time"]
+
+
+class UserRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserRequest
+        fields = [
+            "id",
+            "sender",
+            "receiver",
+            "request_type",
+            "status",
+            "created_time",
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def validate(self, attrs):
+        return super().validate(attrs)
+    
+    def create(self, validated_data):
+        request_type = validated_data.get("request_type")
+        sender = validated_data.get("sender")
+        receiver = validated_data.get("receiver")
+        user_request = None
+
+        if request_type == "trainer_request":
+            old_trainer = sender.trainer_profile.trainer
+            if receiver and old_trainer != receiver:
+                user_request = UserRequest.objects.create(
+                    sender=sender,
+                    receiver=receiver,
+                    request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
+                    status=enums.UserRequestStatus.PENDING.value
+                )
+                send_notification_to_user(
+                    user=receiver,
+                    user_request=user_request,
+                    title=_("New Training Request"),
+                    body=_(f"{sender.full_name} has selected you as their trainer."),
+                    data={
+                        "request_type": "trainer_request",
+                        "sportsman_id": str(sender.id),
+                    }
+                )
+            else:
+                raise_validation_error(message=_("You can not choose existing trainer as a new trainer!"))
+        elif request_type == "federation_request":
+            # Implement logic federation request here!
+            None
+
+        return user_request
+
+    def update(self, instance, validated_data):
+        sender = validated_data.get("sender")
+        receiver = validated_data.get("receiver")
+        request_type = validated_data.get("request_type")
+        status = validated_data.get("status")
+
+        if request_type == "trainer_request":
+            if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+                # If the request is accepted, update the trainer for the sender
+                if receiver and hasattr(receiver, "trainer_profile"):
+                    sender.trainer_profile.trainer = receiver
+                    sender.trainer_profile.save()
+                    instance.status = enums.UserRequestStatus.ACCEPTED.value
+                    instance.save()
+                    send_notification_to_user(
+                        user=sender,
+                        user_request=instance,
+                        title=_("Trainer Request Accepted"),
+                        body=_(f"You have been assigned to {receiver.full_name} as your trainer."),
+                        data={
+                            "request_type": "trainer_request",
+                            "trainer_id": str(receiver.id),
+                        }
+                    )
+                else:
+                    raise_validation_error(message=_("Receiver must be a valid trainer!"))
+            else:
+                instance.status = status
+                instance.save()
+                send_notification_to_user(
+                    user=receiver,
+                    user_request=instance,
+                    title=_("Trainer Request Status Updated"),
+                    body=_(f"The trainer request from {sender.full_name} has been {status}."),
+                    data={
+                        "request_type": "trainer_request",
+                        "sportsman_id": str(sender.id),
+                    }
+                )
+        elif request_type == "federation_request":
+            # Implement logic for updating federation request here!
+            None
+        else:
+            raise_validation_error(message=_("Invalid request type!"))
+        
+        return instance
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sender"] = {
+            "id": instance.sender.id,
+            "full_name": instance.sender.full_name,
+            "user_role": instance.sender.user_role,
+            "phone_number": instance.sender.phone_number,
+        }
+        data["receiver"] = {
+            "id": instance.receiver.id,
+            "full_name": instance.receiver.full_name,
+            "user_role": instance.receiver.user_role,
+            "phone_number": instance.receiver.phone_number,
+        }
+        return data

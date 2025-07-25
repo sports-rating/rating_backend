@@ -21,7 +21,8 @@ from apps.user.models import (
     User,
     ArchivedTrainer,
     UserMedia,
-    UserNotification
+    UserNotification,
+    UserRequest
 )
 
 import apps.user.serializers as serializers
@@ -598,4 +599,70 @@ class UserNotificationMarkAsReadView(generics.UpdateAPIView):
             data=self.get_serializer(instance).data,
             message=_("Bildirishnoma muvaffaqiyatli yangilandi"),
             code=status.HTTP_200_OK
+        )
+
+
+class UserRequestListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = UserRequest.objects.all()
+    serializer_class = serializers.UserRequestSerializer
+    filter_backends = [DjangoFilterBackend]
+    pagination_class = CustomPagination
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("User Request successfully created"),
+            code=status.HTTP_201_CREATED
+        )
+    
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("User Request list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = UserRequest.objects.all()
+    serializer_class = serializers.UserRequestSerializer
+
+    def get_object(self):
+        user_request = self.queryset.filter(pk=self.kwargs.get("pk"), user=self.request.user).first()
+        if not user_request:
+            raise_validation_error(message=_("User Request not found"), code=status.HTTP_404_NOT_FOUND)
+        return user_request  
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data, 
+            message=_("User Request retrieved successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data, 
+            message=_("User Request updated successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("User Request deleted successfully"),
+            code=status.HTTP_204_NO_CONTENT
         )
