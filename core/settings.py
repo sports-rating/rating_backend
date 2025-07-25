@@ -137,8 +137,7 @@ ROOT_URLCONF = "core.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates']
-        ,
+        "DIRS": [BASE_DIR / 'templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -450,3 +449,6 @@ FCM_DJANGO_SETTINGS = {
 cred = credentials.Certificate(BASE_DIR / "sportsrating-firebase.json")
 
 FIREBASE_APP = initialize_app(cred, {"projectId": "sportsrating"})
+
+BACKEND_URL = os.environ.get("BACKEND_URL", default="http://localhost:8000")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", default="http://localhost:5173")

@@ -16,11 +16,9 @@ from apps.user.filters import (
     SportsmanFilter,
     TrainerFilter,
     UserNotificationFilter
-    )
+)
 from apps.user.models import (
     User,
-    Sportsman,
-    Trainer,
     ArchivedTrainer,
     UserMedia,
     UserNotification
@@ -183,7 +181,7 @@ class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         user = serializer.save()
         return success_response(
             message=_("User updated successfully"),
-            data=UsersMeSerializer(user, context={"request": request}).data,
+            data=serializers.UsersMeSerializer(user, context={"request": request}).data,
         )
 
 

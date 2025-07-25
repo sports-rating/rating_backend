@@ -24,7 +24,8 @@ from apps.shared.utils.send_verification import (
     verify_code,
     check_verification_status,
 )
-from .utils import calculate_sportsman_statistics, calculate_trainer_statistics
+from apps.shared.utils.general import get_file_full_url
+from apps.user.utils import calculate_sportsman_statistics, calculate_trainer_statistics
 
 from apps.user.models import (
     User,
@@ -218,9 +219,10 @@ class SportsmanListSerializer(serializers.ModelSerializer):
 
     
 
-class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
+class SportsmanProfileSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
+    statistics = serializers.SerializerMethodField()
 
     class Meta:
         model = Sportsman
@@ -233,7 +235,10 @@ class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
             "user_metrics",
             "address",
             "social_media",
+            "is_sportsman_verified",
+            "statistics"
         ]
+        read_only_fields = ["is_sportsman_verified", "statistics"]
 
     def validate(self, attrs):
         validated_data = super().validate(attrs)
@@ -241,6 +246,8 @@ class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
         trainer = validated_data.get("trainer", None)
         if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:
             trainer_profile = trainer.trainer_profile
+            if not sport:
+                raise_validation_error(message=_("Sport is required"))
             if trainer_profile.sport.id != sport.id:
                 raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
 
@@ -253,19 +260,6 @@ class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
         logger.info(f"Sportsman Profile created -> {profile}")
 
         return profile
-    
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["sport_id"] = instance.sport.id
-        data["sport_name"] = instance.sport.name
-        if instance.trainer:
-            logger.info(f"Trainer id: {instance.trainer.user}")
-            data["trainer_id"] = instance.trainer.user_id
-            data["trainer_name"] = f'{instance.trainer.user}'
-        return data
-
-
-class SportsmanProfileUpdateSerializer(SportsmanProfileCreateSerializer):
     
     def update(self, instance, validated_data):
         sport = validated_data.pop("sport", None)
@@ -283,35 +277,23 @@ class SportsmanProfileUpdateSerializer(SportsmanProfileCreateSerializer):
         instance.save()
         
         return instance
-    
 
-class SportsmanProfileSerializer(serializers.ModelSerializer):
-    sport = SportSerializer(many=False, read_only=True)
-    statistics = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Sportsman
-        fields = [
-            "sport",
-            "skill_level",
-            "bio",
-            "division",
-            "user_metrics",
-            "address",
-            "social_media",
-            "is_sportsman_verified",
-            "statistics"
-        ]
-    
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if instance.trainer:
-            data["trainer_id"] = instance.trainer.user_id
-            data["trainer_name"] = f'{instance.trainer.user}'
-        return data
-    
     def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_sportsman_statistics(sportsman=obj.user)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        }
+        data["trainer"] = {
+            "id": instance.trainer.user_id,
+            "name": f'{instance.trainer.user}',
+            "sport": instance.trainer.sport.name if instance.trainer.sport else None,
+        } if instance.trainer else None
+        return data
     
 
 class TrainerListSerializer(serializers.ModelSerializer):
@@ -417,7 +399,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 class RegistrationSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
-    sportsman_profile = SportsmanProfileCreateSerializer(required=False)
+    sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileCreateSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = BaseMediaSerializer(many=True, required=False, read_only=True)
@@ -682,7 +664,7 @@ class CustomTokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    sportsman_profile = SportsmanProfileUpdateSerializer(required=False)
+    sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileUpdateSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = BaseMediaSerializer(many=True, required=False)
@@ -789,7 +771,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             if sportsman_profile_data:
                 spotrsman_profile = getattr(instance, "sportsman_profile", None)
                 if spotrsman_profile:
-                    SportsmanProfileUpdateSerializer().update(spotrsman_profile, sportsman_profile_data)
+                    SportsmanProfileSerializer().update(spotrsman_profile, sportsman_profile_data)
 
             if trainer_profile_data:
                 trainer_profile = getattr(instance, "trainer_profile", None)

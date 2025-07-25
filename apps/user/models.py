@@ -116,7 +116,7 @@ class Sportsman(models.Model):
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True) # will likely changes
     trainer = models.ForeignKey("user.Trainer", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
 
-    skill_level = models.CharField(max_length=100)
+    skill_level = models.CharField(max_length=100, null=True, blank=True)
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
     user_metrics = models.JSONField(blank=True, null=True)
@@ -149,7 +149,7 @@ class Trainer(models.Model):
     user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='trainer_profile')
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
     
-    skill_level = models.CharField(max_length=100)
+    skill_level = models.CharField(max_length=100, null=True, blank=True)
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
     user_metrics = models.JSONField(blank=True, null=True)
