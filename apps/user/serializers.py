@@ -549,6 +549,8 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         phone_number = attrs.get("phone_number")
+        first_name = attrs.get("first_name")
+        last_name = attrs.get("last_name")
         if phone_number:
             if User.objects.only("id").filter(phone_number=phone_number).exists() :
                 raise_validation_error(message=_("Phone number is already registered"))
@@ -559,8 +561,6 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
         if len(last_name.split()) > 1:
             raise_validation_error(message=_("Familiya faqat bitta so'z bo'lishi kerak"))
 
-        first_name = attrs.get("first_name")
-        last_name = attrs.get("last_name")
         if User.objects.only("id").filter(
             first_name=first_name, last_name=last_name, phone_number=phone_number
         ).exists():
