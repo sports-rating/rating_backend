@@ -293,7 +293,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             "id": instance.sport.id,
             "name": instance.sport.name,
             "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
-        }
+        } if instance.sport else None
         data["trainer"] = {
             "id": instance.trainer.user_id,
             "name": f'{instance.trainer.user}',
