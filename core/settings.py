@@ -286,15 +286,15 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # Jazzmin settings for Django Admin
 JAZZMIN_SETTINGS = {
-    "site_title": "Receipt.ai - Admin Panel",
-    "site_header": "Receipt.ai management",
-    "site_brand": "Receipt.ai",
+    "site_title": "7srating.uz - Admin Panel",
+    "site_header": "7srating.uz management",
+    "site_brand": "7srating.uz",
     "site_icon": "images/favicon.png",
     # Add your own branding here
     "site_logo": None,
-    "welcome_sign": "Welcome to the Receipt.ai",
+    "welcome_sign": "Welcome to the 7srating.uz",
     # Copyright on the footer
-    "copyright": "receipt.ai",
+    "copyright": "7srating.uz",
     "user_avatar": None,
     ############
     # Top Menu #

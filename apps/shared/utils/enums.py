@@ -47,6 +47,7 @@ class MediaChoices(BaseEnum):
 
 
 class UserRoles(BaseEnum):
+    SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
     ORDINARY = "ordinary"
     SPORTSMAN = "sportsman"
