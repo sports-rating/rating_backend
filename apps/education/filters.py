@@ -1,10 +1,10 @@
 import uuid
 from django_filters import rest_framework as filters
 
-from shared.addons.enums import GenderChoices, UserRoles
-from shared.addons.custom_logging import logger
+from apps.shared.utils.enums import GenderChoices, UserRoles
+from apps.shared.utils.logging import logger
 
-from education.models import (
+from apps.education.models import (
     Education, 
     School
 )

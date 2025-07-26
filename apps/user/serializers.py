@@ -1,4 +1,6 @@
 from datetime import date
+from typing import List, Dict, Any
+
 from django.contrib.auth import authenticate
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
@@ -6,50 +8,53 @@ from django.contrib.auth.models import update_last_login
 from django.utils import timezone
 from django.db.models import Sum
 from django.conf import settings
+from fcm_django.models import FCMDevice, DeviceType
 
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
-
 import rest_framework_simplejwt.tokens as jwt_tokens
 import rest_framework_simplejwt.serializers as jwt_serializers
 
-from typing import List, Dict, Any
-
 # custom
-from shared.addons.custom_logging import logger
-from shared.addons.exceptions import raise_validation_error
-from shared.addons.utils import CorrectPath
-from shared.addons.send_verification import (
+from apps.shared.utils.logging import logger
+from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.utils import CorrectPath
+from apps.shared.utils.send_verification import (
     send_verification_code,
     verify_code,
     check_verification_status,
 )
-from .utils import calculate_sportsman_statistics, calculate_trainer_statistics
+from apps.shared.utils.general import get_file_full_url
+from apps.user.utils import calculate_sportsman_statistics, calculate_trainer_statistics
+from apps.shared.utils import enums
+from apps.shared.utils.notifications import send_notification_to_user
 
-from user.models import (
+from apps.user.models import (
     User,
     Sportsman,
     Trainer,
     ArchivedTrainer,
-    UserMedia
+    UserMedia,
+    UserNotification,
+    UserRequest
 )
 
-from sport.models import (
+from apps.sport.models import (
     Sport,
     Tournament,
     Result
 )
 
-from education.models import (
+from apps.education.models import (
     Education
 )
 
-from sport.serializers import (
+from apps.sport.serializers import (
     ResultCreateSerializer,
     SportSerializer
 )
 
-from education.serializers import (
+from apps.education.serializers import (
     EducationCreateSerializer
 )
 
@@ -84,15 +89,27 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
     code = serializers.CharField()
     phone_number = serializers.CharField()
     action = serializers.ChoiceField(choices=SEND_VERIFICATION_ACTION, required=False)
+    fcm_token = serializers.CharField(required=False)
+    device_type = serializers.ChoiceField(choices=DeviceType.choices, required=False)
 
     def get_tokens(self):  # noqa
         action = self.validated_data.get("action", None)
         phone_number = self.validated_data.get("phone_number")
+        fcm_token = self.validated_data.get('fcm_token')
 
         if action == "login":
             user = User.objects.filter(phone_number=phone_number).first()
             if not user:
                 raise_validation_error(message=_("User not found"))
+            if fcm_token:
+                FCMDevice.objects.update_or_create(
+                    registration_id=fcm_token,
+                    defaults={
+                        'user': user,
+                        'type': self.validated_data.get("device_type"),
+                        'active': True,
+                    }
+                )
             return user.tokens()
         return None
 
@@ -190,24 +207,23 @@ class SportsmanListSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        request = self.context.get("request")
         if instance.sportsman_profile.sport:
             data["sport"] = instance.sportsman_profile.sport.name
             if instance.sportsman_profile.sport.logo:
-                data["logo"] = request.build_absolute_uri(instance.sportsman_profile.sport.logo.url)
+                data["logo"] = get_file_full_url(instance.sportsman_profile.sport.logo.url) if instance.sportsman_profile.sport.logo else None
         if instance.sportsman_profile.trainer:
             data["trainer_id"] = instance.sportsman_profile.trainer.user_id
             data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         return data
-    
+
     def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_sportsman_statistics(sportsman=obj)
 
-    
 
-class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
+class SportsmanProfileSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
+    statistics = serializers.SerializerMethodField()
 
     class Meta:
         model = Sportsman
@@ -220,7 +236,10 @@ class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
             "user_metrics",
             "address",
             "social_media",
+            "is_sportsman_verified",
+            "statistics"
         ]
+        read_only_fields = ["is_sportsman_verified", "statistics"]
 
     def validate(self, attrs):
         validated_data = super().validate(attrs)
@@ -228,6 +247,8 @@ class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
         trainer = validated_data.get("trainer", None)
         if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:
             trainer_profile = trainer.trainer_profile
+            if not sport:
+                raise_validation_error(message=_("Sport is required"))
             if trainer_profile.sport.id != sport.id:
                 raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
 
@@ -240,19 +261,6 @@ class SportsmanProfileCreateSerializer(serializers.ModelSerializer):
         logger.info(f"Sportsman Profile created -> {profile}")
 
         return profile
-    
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["sport_id"] = instance.sport.id
-        data["sport_name"] = instance.sport.name
-        if instance.trainer:
-            logger.info(f"Trainer id: {instance.trainer.user}")
-            data["trainer_id"] = instance.trainer.user_id
-            data["trainer_name"] = f'{instance.trainer.user}'
-        return data
-
-
-class SportsmanProfileUpdateSerializer(SportsmanProfileCreateSerializer):
     
     def update(self, instance, validated_data):
         sport = validated_data.pop("sport", None)
@@ -270,34 +278,23 @@ class SportsmanProfileUpdateSerializer(SportsmanProfileCreateSerializer):
         instance.save()
         
         return instance
-    
 
-class SportsmanProfileSerializer(serializers.ModelSerializer):
-    sport = SportSerializer(many=False, read_only=True)
-    statistics = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Sportsman
-        fields = [
-            "sport",
-            "skill_level",
-            "bio",
-            "division",
-            "user_metrics",
-            "address",
-            "social_media",
-            "statistics"
-        ]
-    
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if instance.trainer:
-            data["trainer_id"] = instance.trainer.user_id
-            data["trainer_name"] = f'{instance.trainer.user}'
-        return data
-    
     def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_sportsman_statistics(sportsman=obj.user)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        }
+        data["trainer"] = {
+            "id": instance.trainer.user_id,
+            "name": f'{instance.trainer.user}',
+            "sport": instance.trainer.sport.name if instance.trainer.sport else None,
+        } if instance.trainer else None
+        return data
     
 
 class TrainerListSerializer(serializers.ModelSerializer):
@@ -315,20 +312,18 @@ class TrainerListSerializer(serializers.ModelSerializer):
             "statistics",
             # "logo",
         ]
-    
+
     def to_representation(self, instance): 
         data = super().to_representation(instance)
-        request = self.context.get("request")
         if instance.trainer_profile.sport:
             data["sport"] = instance.trainer_profile.sport.name
             if instance.trainer_profile.sport.logo:
-                data["logo"] = request.build_absolute_uri(instance.trainer_profile.sport.logo.url)
+                data["logo"] = get_file_full_url(instance.trainer_profile.sport.logo.url) if instance.trainer_profile.sport.logo else None
         return data
     
     def get_statistics(self, obj) ->  List[Dict[str, Any]]:
         return calculate_trainer_statistics(trainer=obj)
 
-    
 
 class TrainerProfileCreateSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
@@ -348,10 +343,9 @@ class TrainerProfileCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         sport = validated_data.pop("sport", None)
         
-        
         profile = Trainer.objects.create(sport=sport, **validated_data)
         logger.info(f"Trainer Profile created -> {profile}")
-    
+
         return profile
 
     def to_representation(self, instance):
@@ -392,6 +386,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "user_metrics",
             "address",
             "social_media",
+            "is_trainer_verified",
             "statistics",
         ]
     
@@ -402,7 +397,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 class RegistrationSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
-    sportsman_profile = SportsmanProfileCreateSerializer(required=False)
+    sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileCreateSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = BaseMediaSerializer(many=True, required=False, read_only=True)
@@ -521,6 +516,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 
 class SelfRegistrationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for self-registration of users.
+    """
+    tokens = serializers.SerializerMethodField()
+    fcm_token = serializers.CharField(required=False)
+    device_type = serializers.ChoiceField(choices=DeviceType.choices, required=False)
 
     class Meta:
         model = User
@@ -534,6 +535,9 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             "email",
             "user_role",
             "is_verified",
+            "fcm_token",
+            "device_type",
+            "tokens",
             "created_time"
         )
         read_only_fields = ["id", "is_verified", "created_time"]
@@ -544,6 +548,12 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             if User.objects.only("id").filter(phone_number=phone_number).exists() :
                 raise_validation_error(message=_("Phone number is already registered"))
         
+        # Ism va familiya faqat bitta so‘zdan iborat bo‘lishi kerakligini tekshirish
+        if len(first_name.split()) > 1:
+            raise_validation_error(message=_("Ism faqat bitta so'z bo'lishi kerak"))
+        if len(last_name.split()) > 1:
+            raise_validation_error(message=_("Familiya faqat bitta so'z bo'lishi kerak"))
+
         first_name = attrs.get("first_name")
         last_name = attrs.get("last_name")
         if User.objects.only("id").filter(
@@ -554,10 +564,19 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        fcm_token = validated_data.pop("fcm_token", None)
         with transaction.atomic():
             user = super().create(validated_data)
             user_role = validated_data.get("user_role")
-
+            if fcm_token:
+                FCMDevice.objects.update_or_create(
+                    registration_id=fcm_token,
+                    defaults={
+                        'user': user,
+                        'type': validated_data.get("device_type"),
+                        'active': True,
+                    }
+                )
             if user_role == "sportsman":
                 Sportsman.objects.create(user=user)
             elif user_role == "trainer":
@@ -567,16 +586,14 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             return user
     
     def get_tokens(self, user): # noqa
+        if not user:
+            return None
         return user.tokens()
-    
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["tokens"] = self.get_tokens(instance)
-        return data
 
 
 class LogoutSerializer(serializers.Serializer):  # noqa
-    refresh = serializers.CharField()
+    refresh = serializers.CharField(required=True)
+    fcm_token = serializers.CharField(required=False)
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -645,7 +662,7 @@ class CustomTokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    sportsman_profile = SportsmanProfileUpdateSerializer(required=False)
+    sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileUpdateSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = BaseMediaSerializer(many=True, required=False)
@@ -752,7 +769,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             if sportsman_profile_data:
                 spotrsman_profile = getattr(instance, "sportsman_profile", None)
                 if spotrsman_profile:
-                    SportsmanProfileUpdateSerializer().update(spotrsman_profile, sportsman_profile_data)
+                    SportsmanProfileSerializer().update(spotrsman_profile, sportsman_profile_data)
 
             if trainer_profile_data:
                 trainer_profile = getattr(instance, "trainer_profile", None)
@@ -775,3 +792,131 @@ class ArchivedTrainerSerializer(serializers.ModelSerializer):
                 raise_validation_error(message=_("Archived Trainer with this name already exists"))
         
         return attrs
+
+
+class UserNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserNotification
+        fields = [
+            "id",
+            "title",
+            "text",
+            "is_read",
+            "data",
+            "created_time",
+            "updated_time",
+        ]
+        read_only_fields = ["id", "created_time", "updated_time"]
+
+
+class UserRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserRequest
+        fields = [
+            "id",
+            "sender",
+            "receiver",
+            "request_type",
+            "status",
+            "created_time",
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def validate(self, attrs):
+        return super().validate(attrs)
+    
+    def create(self, validated_data):
+        request_type = validated_data.get("request_type")
+        sender = validated_data.get("sender")
+        receiver = validated_data.get("receiver")
+        user_request = None
+
+        if request_type == "trainer_request":
+            old_trainer = sender.trainer_profile.trainer
+            if receiver and old_trainer != receiver:
+                user_request = UserRequest.objects.create(
+                    sender=sender,
+                    receiver=receiver,
+                    request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
+                    status=enums.UserRequestStatus.PENDING.value
+                )
+                send_notification_to_user(
+                    user=receiver,
+                    user_request=user_request,
+                    title=_("New Training Request"),
+                    body=_(f"{sender.full_name} has selected you as their trainer."),
+                    data={
+                        "request_type": "trainer_request",
+                        "sportsman_id": str(sender.id),
+                    }
+                )
+            else:
+                raise_validation_error(message=_("You can not choose existing trainer as a new trainer!"))
+        elif request_type == "federation_request":
+            # Implement logic federation request here!
+            None
+
+        return user_request
+
+    def update(self, instance, validated_data):
+        sender = validated_data.get("sender")
+        receiver = validated_data.get("receiver")
+        request_type = validated_data.get("request_type")
+        status = validated_data.get("status")
+
+        if request_type == "trainer_request":
+            if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+                # If the request is accepted, update the trainer for the sender
+                if receiver and hasattr(receiver, "trainer_profile"):
+                    sender.trainer_profile.trainer = receiver
+                    sender.trainer_profile.save()
+                    instance.status = enums.UserRequestStatus.ACCEPTED.value
+                    instance.save()
+                    send_notification_to_user(
+                        user=sender,
+                        user_request=instance,
+                        title=_("Trainer Request Accepted"),
+                        body=_(f"You have been assigned to {receiver.full_name} as your trainer."),
+                        data={
+                            "request_type": "trainer_request",
+                            "trainer_id": str(receiver.id),
+                        }
+                    )
+                else:
+                    raise_validation_error(message=_("Receiver must be a valid trainer!"))
+            else:
+                instance.status = status
+                instance.save()
+                send_notification_to_user(
+                    user=receiver,
+                    user_request=instance,
+                    title=_("Trainer Request Status Updated"),
+                    body=_(f"The trainer request from {sender.full_name} has been {status}."),
+                    data={
+                        "request_type": "trainer_request",
+                        "sportsman_id": str(sender.id),
+                    }
+                )
+        elif request_type == "federation_request":
+            # Implement logic for updating federation request here!
+            None
+        else:
+            raise_validation_error(message=_("Invalid request type!"))
+        
+        return instance
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sender"] = {
+            "id": instance.sender.id,
+            "full_name": instance.sender.full_name,
+            "user_role": instance.sender.user_role,
+            "phone_number": instance.sender.phone_number,
+        }
+        data["receiver"] = {
+            "id": instance.receiver.id,
+            "full_name": instance.receiver.full_name,
+            "user_role": instance.receiver.user_role,
+            "phone_number": instance.receiver.phone_number,
+        }
+        return data

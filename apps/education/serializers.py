@@ -8,19 +8,19 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
-from shared.addons.custom_logging import logger
-from shared.addons.exceptions import raise_validation_error
+from apps.shared.utils.logging import logger
+from apps.shared.utils.exceptions import raise_validation_error
 
-from .models import (
+from apps.education.models import (
     Education,
     School
 )
 
-from sport.models import (
+from apps.sport.models import (
     Sport
 )
 
-from sport.serializers import (
+from apps.sport.serializers import (
     SportCreateSerializer,
     SportSerializer,
 )

@@ -1,75 +1,44 @@
 from django.utils.translation import gettext as _, get_language
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch
+from fcm_django.models import FCMDevice
 
+import rest_framework_simplejwt.views as simplejwt_views
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics, permissions, status, filters
-
-import rest_framework_simplejwt.views as simplejwt_views
 from rest_framework_simplejwt.exceptions import TokenError
 
-from user.filters import (
+from apps.user.filters import (
     SportsmanFilter,
-    TrainerFilter
-    )
-from shared.addons.pagination import CustomPagination
-from shared.addons.send_verification import (
+    TrainerFilter,
+    UserNotificationFilter
+)
+from apps.user.models import (
+    User,
+    ArchivedTrainer,
+    UserMedia,
+    UserNotification,
+    UserRequest
+)
+
+import apps.user.serializers as serializers
+from apps.shared.utils.pagination import CustomPagination
+from apps.shared.utils.send_verification import (
     send_verification_code,
     verify_code,
     check_verification_status,
 )
-from shared.addons.utils import (
+from apps.shared.utils.utils import (
     success_response,
     error_response,
 )
-
-from .models import (
-    User,
-    Sportsman,
-    Trainer,
-    ArchivedTrainer,
-    UserMedia,
-)
-
-from education.models import (
-    Education,
-    School
-)
-
-from sport.models import (
-    Result
-)
-
-from .serializers import (
-    SendVerificationCodeSerializer,
-    VerifyCodeSerializer,
-    RegistrationSerializer,
-    SelfRegistrationSerializer,
-    LogoutSerializer,
-    UsersMeSerializer,
-    ChangePasswordSerializer,
-    UpdatePhoneNumberSerializer,
-    CustomTokenRefreshSerializer,
-    UserUpdateSerializer,
-    SportsmanProfileSerializer,
-    TrainerProfileSerializer,
-    BaseMediaSerializer,
-    SportsmanListSerializer,
-    TrainerListSerializer,
-    ArchivedTrainerSerializer
-)
-
-from dashboard.serializers import (
-    UserListSerializer
-)
-
-from shared.addons.exceptions import raise_validation_error
-from shared.addons.redis_utils import get_redis_connection
-from shared.addons.custom_logging import logger
+from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.redis_utils import get_redis_connection
+from apps.shared.utils.logging import logger
 
 redis_connection = get_redis_connection()
 
@@ -77,7 +46,7 @@ redis_connection = get_redis_connection()
 class SendVerificationCodeView(generics.CreateAPIView):
     throttle_classes = (AnonRateThrottle,)
     permission_classes = (permissions.AllowAny,)
-    serializer_class = SendVerificationCodeSerializer
+    serializer_class = serializers.SendVerificationCodeSerializer
 
     def post(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -95,7 +64,7 @@ class SendVerificationCodeView(generics.CreateAPIView):
 
 class VerifyCodeView(generics.GenericAPIView):
     permission_classes = (permissions.AllowAny,)
-    serializer_class = VerifyCodeSerializer
+    serializer_class = serializers.VerifyCodeSerializer
 
     def post(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -125,7 +94,7 @@ class VerifyCodeView(generics.GenericAPIView):
 class RegistrationView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = User.objects.all()
-    serializer_class = SelfRegistrationSerializer
+    serializer_class = serializers.SelfRegistrationSerializer
 
     def create(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -143,7 +112,7 @@ class RegistrationView(generics.CreateAPIView):
 
 
 class LoginRefreshView(simplejwt_views.TokenRefreshView):
-    serializer_class = CustomTokenRefreshSerializer
+    serializer_class = serializers.CustomTokenRefreshSerializer
 
     def post(self, request: Request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -153,13 +122,17 @@ class LoginRefreshView(simplejwt_views.TokenRefreshView):
     
 
 class LogoutView(APIView):
-    serializer_class = LogoutSerializer
+    serializer_class = serializers.LogoutSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request: Request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
+            FCMDevice.objects.filter(
+                user=request.user,
+                registration_id=serializer.validated_data.get("fcm_token", ""),
+            ).update(active=False)
             refresh_token = self.request.data["refresh"]
             token = RefreshToken(refresh_token)
             token.blacklist()
@@ -182,14 +155,14 @@ class LogoutView(APIView):
 
 class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = UserUpdateSerializer
+    serializer_class = serializers.UserUpdateSerializer
     permission_classes = [
         permissions.IsAuthenticated,
     ]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return UsersMeSerializer
+            return serializers.UsersMeSerializer
         return self.serializer_class
 
     def get_object(self):
@@ -209,13 +182,13 @@ class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         user = serializer.save()
         return success_response(
             message=_("User updated successfully"),
-            data=UsersMeSerializer(user, context={"request": request}).data,
+            data=serializers.UsersMeSerializer(user, context={"request": request}).data,
         )
 
 
 class ChangePasswordView(generics.UpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = ChangePasswordSerializer
+    serializer_class = serializers.ChangePasswordSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
@@ -231,7 +204,7 @@ class ChangePasswordView(generics.UpdateAPIView):
 
 class UserPhoneUpdateView(generics.CreateAPIView):
     queryset = User.objects.all()
-    serializer_class = UpdatePhoneNumberSerializer
+    serializer_class = serializers.UpdatePhoneNumberSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self):
@@ -250,7 +223,7 @@ class UserPhoneUpdateView(generics.CreateAPIView):
 
 class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = VerifyCodeSerializer
+    serializer_class = serializers.VerifyCodeSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self):
@@ -276,14 +249,14 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
 
 class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
-    serializer_class = RegistrationSerializer
+    serializer_class = serializers.RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = SportsmanFilter
     pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return SportsmanListSerializer
+            return serializers.SportsmanListSerializer
         return super().get_serializer_class()
 
     def get_serializer_context(self):
@@ -322,17 +295,17 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all().select_related(
         "sportsman_profile", "sportsman_profile__sport", "sportsman_profile__trainer"
     ).prefetch_related("media", "educations", "results")
-    serializer_class = UserUpdateSerializer
+    serializer_class = serializers.UserUpdateSerializer
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
+            return serializers.UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
         return super().get_serializer_class()
 
     def get_object(self):
         user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
         if not user_profile:
-            raise_validation_error(message=_("Sportsman Profile not found"), code=404)
+            raise_validation_error(message=_("Sportsman Profile not found"), code=status.HTTP_404_NOT_FOUND)
         return user_profile            
 
     def get_serializer_context(self):
@@ -372,14 +345,14 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 class TrainerListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny, )
     queryset = User.objects.all()
-    serializer_class = RegistrationSerializer
+    serializer_class = serializers.RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = TrainerFilter
     pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return TrainerListSerializer
+            return serializers.TrainerListSerializer
         return super().get_serializer_class()
     
     def get_serializer_context(self):
@@ -418,14 +391,14 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all().select_related(
         "trainer_profile", "trainer_profile__sport"
     ).prefetch_related("media", "educations", "results")
-    serializer_class = UserUpdateSerializer
+    serializer_class = serializers.UserUpdateSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_Class = TrainerFilter
     pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
+            return serializers.UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
         return super().get_serializer_class()
 
     def get_object(self):
@@ -471,7 +444,7 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 class MediaUploadView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = UserMedia.objects.all()
-    serializer_class = BaseMediaSerializer
+    serializer_class = serializers.BaseMediaSerializer
     
     def get_queryset(self):
         model_type = self.request.data.get("type")
@@ -513,7 +486,7 @@ class MediaUploadView(generics.CreateAPIView):
 class MediaDeleteView(generics.DestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = UserMedia.objects.all()
-    serializer_class = BaseMediaSerializer
+    serializer_class = serializers.BaseMediaSerializer
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -527,7 +500,7 @@ class MediaDeleteView(generics.DestroyAPIView):
 class ArchivedTrainerCreateListView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = ArchivedTrainer.objects.all()
-    serializer_class = ArchivedTrainerSerializer
+    serializer_class = serializers.ArchivedTrainerSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -551,7 +524,7 @@ class ArchivedTrainerCreateListView(generics.ListCreateAPIView):
 class ArchivedTrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = ArchivedTrainer.objects.all()
-    serializer_class = ArchivedTrainerSerializer
+    serializer_class = serializers.ArchivedTrainerSerializer
 
     def get_object(self):
         archived_trainer = self.queryset.filter(pk=self.kwargs.get("pk")).first()
@@ -585,4 +558,111 @@ class ArchivedTrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIV
         return success_response(
             message=_("Archived Trainer deleted successfully"),
             code=204
+        )
+    
+
+class UserNotificationsListView(generics.ListAPIView):
+    queryset = UserNotification.objects.all()
+    serializer_class = serializers.UserNotificationSerializer
+    pagination_class = CustomPagination
+    permission_classes = [permissions.IsAuthenticated,]
+    filterset_class = UserNotificationFilter
+    search_fields = ["id", "title", "text",]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ["id", "created_time", "is_read", "title",]
+
+    def get_queryset(self):
+        return UserNotification.objects.filter(user=self.request.user).order_by("-created_time")
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        self.get_queryset().filter(is_read=False).update(is_read=True)
+        return success_response(data=response.data, message=_("Bildirishnomalar ro'yxati"), code=status.HTTP_200_OK)
+
+
+class UserNotificationMarkAsReadView(generics.UpdateAPIView):
+    queryset = UserNotification.objects.all()
+    serializer_class = serializers.UserNotificationSerializer
+    permission_classes = [permissions.IsAuthenticated,]
+
+    def get_object(self):
+        notification = UserNotification.objects.filter(id=self.kwargs.get("notification_id"), user=self.request.user).first()
+        if not notification:
+            return raise_validation_error(message=_("Bildirishnoma topilmadi"), code=status.HTTP_404_NOT_FOUND)
+        return notification
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_read = True
+        instance.save(update_fields=["is_read"])
+        return success_response(
+            data=self.get_serializer(instance).data,
+            message=_("Bildirishnoma muvaffaqiyatli yangilandi"),
+            code=status.HTTP_200_OK
+        )
+
+
+class UserRequestListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = UserRequest.objects.all()
+    serializer_class = serializers.UserRequestSerializer
+    filter_backends = [DjangoFilterBackend]
+    pagination_class = CustomPagination
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("User Request successfully created"),
+            code=status.HTTP_201_CREATED
+        )
+    
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("User Request list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = UserRequest.objects.all()
+    serializer_class = serializers.UserRequestSerializer
+
+    def get_object(self):
+        user_request = self.queryset.filter(pk=self.kwargs.get("pk"), user=self.request.user).first()
+        if not user_request:
+            raise_validation_error(message=_("User Request not found"), code=status.HTTP_404_NOT_FOUND)
+        return user_request  
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data, 
+            message=_("User Request retrieved successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data, 
+            message=_("User Request updated successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("User Request deleted successfully"),
+            code=status.HTTP_204_NO_CONTENT
         )

@@ -8,8 +8,8 @@ import requests
 from django.conf import settings
 
 # custom
-from shared.addons.custom_logging import logger
-from shared.addons.redis_utils import get_redis_connection
+from apps.shared.utils.logging import logger
+from apps.shared.utils.redis_utils import get_redis_connection
 
 redis_connection = get_redis_connection()
 

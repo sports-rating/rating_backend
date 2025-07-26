@@ -1,11 +1,10 @@
 import uuid
 import os
 import mimetypes
-import io
 
 from django.db import models
-from shared.addons.enums import MediaChoices 
-from shared.addons.utils import CorrectPath
+from apps.shared.utils.enums import MediaChoices 
+from apps.shared.utils.utils import CorrectPath
 
 
 
