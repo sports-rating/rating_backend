@@ -27,7 +27,7 @@ from apps.user.models import (
 
 import apps.user.serializers as serializers
 from apps.shared.utils.pagination import CustomPagination
-from apps.shared.utils.send_verification import (
+from apps.shared.utils.verification import (
     send_verification_code,
     verify_code,
     check_verification_status,

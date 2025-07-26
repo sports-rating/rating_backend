@@ -14,6 +14,14 @@ from apps.shared.utils.redis_utils import get_redis_connection
 redis_connection = get_redis_connection()
 
 
+STATIC_CODE = "171717"
+PHONE_NUMBER_WHITELIST = [
+    "+998935321377",
+    "+998990054321",
+    "+998998577232"
+]
+
+
 def generate_verification_code() -> str:
     # return "000000"
     return "".join(random.choices(string.digits, k=settings.VERIFICATION_CODE_LENGTH))
@@ -28,8 +36,8 @@ def send_verification_code(phone_number: str):
     if error_status:
         return error_status, error_text
 
-    if phone_number == "+998935321377":
-        verification_code = "000000"
+    if phone_number in PHONE_NUMBER_WHITELIST:
+        verification_code = STATIC_CODE
     else:
         verification_code = generate_verification_code()
         print(f"Generated verification code: {verification_code}")
