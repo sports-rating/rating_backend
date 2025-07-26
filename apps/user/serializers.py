@@ -110,13 +110,18 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
                         'active': True,
                     }
                 )
-            return user.tokens()
+            return {
+                'tokens': user.tokens(),
+                'user_role': user.user_role
+            }
         return None
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if self.validated_data.get('action') == 'login':
-            data["tokens"] = self.get_tokens()
+            user_data = self.get_tokens()
+            data["tokens"] = user_data.get('tokens')
+            data["user_role"] = user_data.get('user_role')
         return data
 
 
