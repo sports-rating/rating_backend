@@ -96,6 +96,7 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
         action = self.validated_data.get("action", None)
         phone_number = self.validated_data.get("phone_number")
         fcm_token = self.validated_data.get('fcm_token')
+        device_type = self.validated_data.get('device_type')
 
         if action == "login":
             user = User.objects.filter(phone_number=phone_number).first()
@@ -106,7 +107,7 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
                     registration_id=fcm_token,
                     defaults={
                         'user': user,
-                        'type': self.validated_data.get("device_type"),
+                        'type': device_type,
                         'active': True,
                     }
                 )
@@ -570,6 +571,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         fcm_token = validated_data.pop("fcm_token", None)
+        device_type = validated_data.pop("device_type", None)
         with transaction.atomic():
             user = super().create(validated_data)
             user_role = validated_data.get("user_role")
@@ -578,7 +580,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
                     registration_id=fcm_token,
                     defaults={
                         'user': user,
-                        'type': validated_data.get("device_type"),
+                        'type': device_type,
                         'active': True,
                     }
                 )
@@ -825,19 +827,27 @@ class UserRequestSerializer(serializers.ModelSerializer):
             "status",
             "created_time",
         ]
-        read_only_fields = ["id", "created_time"]
+        read_only_fields = ["id", "sender", "created_time"]
+        extra_kwargs = {
+            "status": {"required": False}
+        }
 
     def validate(self, attrs):
+        request_type = attrs.get("request_type")
+        sender = self.context.get("request").user
+        if request_type == "trainer_request" and sender.user_role == "trainer":
+            raise_validation_error(message=_("Trainers cannot send trainer requests!"))
         return super().validate(attrs)
     
     def create(self, validated_data):
+        sender = self.context.get("request").user
+        logger.info(f"Sender: {sender}")
         request_type = validated_data.get("request_type")
-        sender = validated_data.get("sender")
         receiver = validated_data.get("receiver")
         user_request = None
 
         if request_type == "trainer_request":
-            old_trainer = sender.trainer_profile.trainer
+            old_trainer = sender.sportsman_profile.trainer
             if receiver and old_trainer != receiver:
                 user_request = UserRequest.objects.create(
                     sender=sender,
@@ -849,7 +859,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
                     user=receiver,
                     user_request=user_request,
                     title=_("New Training Request"),
-                    body=_(f"{sender.full_name} has selected you as their trainer."),
+                    body=_(f"{sender.first_name} {sender.last_name} has selected you as their trainer."),
                     data={
                         "request_type": "trainer_request",
                         "sportsman_id": str(sender.id),
@@ -864,10 +874,11 @@ class UserRequestSerializer(serializers.ModelSerializer):
         return user_request
 
     def update(self, instance, validated_data):
-        sender = validated_data.get("sender")
-        receiver = validated_data.get("receiver")
-        request_type = validated_data.get("request_type")
+        sender = self.context.get("request").user
+        receiver = instance.receiver
+        request_type = instance.request_type
         status = validated_data.get("status")
+        logger.info(f"Status: {status}")
 
         if request_type == "trainer_request":
             if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:

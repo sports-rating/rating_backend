@@ -39,6 +39,8 @@ from apps.shared.utils.utils import (
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
+from apps.shared.utils import enums
+
 
 redis_connection = get_redis_connection()
 
@@ -609,7 +611,24 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
     filter_backends = [DjangoFilterBackend]
     pagination_class = CustomPagination
 
+    def _get_proper_message(self, request_type):
+        if request_type == "trainer_request":
+            return _("You cannot create a new request while you have a pending trainer request.")
+        elif request_type == "federation_request":
+            return _("You cannot create a new request while you have a pending federation request.")
+
+    def get_queryset(self):
+        req_type = self.request.query_params.get("type")
+        if req_type == "sent":
+            return UserRequest.objects.filter(sender=self.request.user)
+        elif req_type == "received":
+            return UserRequest.objects.filter(receiver=self.request.user)
+        return super().get_queryset()
+
     def create(self, request, *args, **kwargs):
+        request_type = request.data['request_type']
+        if self.get_queryset().filter(status=enums.UserRequestStatus.PENDING.value).exists():
+            raise_validation_error(message=self._get_proper_message(request_type))
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -634,10 +653,10 @@ class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView)
     serializer_class = serializers.UserRequestSerializer
 
     def get_object(self):
-        user_request = self.queryset.filter(pk=self.kwargs.get("pk"), user=self.request.user).first()
+        user_request = self.queryset.filter(pk=self.kwargs.get("pk"), sender=self.request.user).first()
         if not user_request:
             raise_validation_error(message=_("User Request not found"), code=status.HTTP_404_NOT_FOUND)
-        return user_request  
+        return user_request
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -648,7 +667,7 @@ class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView)
             code=status.HTTP_200_OK,
         )
 
-    def update(self, request, *args, **kwargs):
+    def update(self, request: Request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)

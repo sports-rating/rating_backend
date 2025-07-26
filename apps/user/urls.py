@@ -29,8 +29,8 @@ urlpatterns = [
     path("notifications/", views.UserNotificationsListView.as_view()),
     path("notifications/<str:notification_id>/mark-as-read/", views.UserNotificationMarkAsReadView.as_view()),
 
-    path("user-requests/", views.UserRequestListCreateView.as_view(), name='user-request-list-create'),
-    path("user-requests/<uuid:pk>/", views.UserRequestRetrieveUpdateDeleteView.as_view(), name='user-request-retrieve-update-delete'),
+    path("requests/", views.UserRequestListCreateView.as_view(), name='user-request-list-create'),
+    path("requests/<uuid:pk>/", views.UserRequestRetrieveUpdateDeleteView.as_view(), name='user-request-retrieve-update-delete'),
 ]
 
 if settings.DEBUG:

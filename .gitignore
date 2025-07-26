@@ -2,6 +2,9 @@
 logs/
 *.log
 celerybeat-schedule*
+fcm-test/
+fcm-test.html
+firebase-messaging-sw.js
 
 # Created by https://www.gitignore.io
 

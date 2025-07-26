@@ -7,7 +7,9 @@ from apps.user.models import (
     Sportsman, 
     Trainer,
     UserMedia,
-    ArchivedTrainer
+    ArchivedTrainer,
+    UserRequest,
+    UserNotification
 )
 
 
@@ -154,3 +156,41 @@ class UserMediaAdmin(admin.ModelAdmin):
 @admin.register(ArchivedTrainer)
 class ArchivedTrainerAdmin(admin.ModelAdmin):
     list_display = ["id", "name"]
+
+
+@admin.register(UserRequest)
+class UserRequestAdmin(admin.ModelAdmin):
+    list_display = ["id", "sender_obj", "receiver_obj", "request_type", "status"]
+    search_fields = ['sender__first_name', 'sender__last_name', 'receiver__first_name', 'receiver__last_name']
+    list_per_page = 10
+    odering = ['-created_time']
+    readonly_fields = ["sender_obj", "receiver_obj"]
+
+    def sender_obj(self, obj):
+        if obj.sender:
+            url = reverse("admin:user_user_change", args=[obj.sender.id])
+            return format_html('<a href="{}">{}</a>', url, obj.sender.username)
+        return "N/A"
+    sender_obj.short_description = "Sender"
+
+    def receiver_obj(self, obj):
+        if obj.receiver:
+            url = reverse("admin:user_user_change", args=[obj.receiver.id])
+            return format_html('<a href="{}">{}</a>', url, obj.receiver.username)
+        return "N/A"
+    receiver_obj.short_description = "Receiver"
+
+
+@admin.register(UserNotification)
+class UserNotificationAdmin(admin.ModelAdmin):
+    list_display = ["id", "user_obj", "title", "text", "created_time"]
+    search_fields = ["user__first_name", "user__last_name", "title"]
+    list_per_page = 10
+    ordering = ['-created_time']
+
+    def user_obj(self, obj):
+        if obj.user:
+            url = reverse("admin:user_user_change", args=[obj.user.id])
+            return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
+        return "N/A"
+    user_obj.short_description = "User"

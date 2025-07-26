@@ -20,30 +20,37 @@ def send_firebase_notification(
         data = {}
 
     # Get the devices for the specified users
-    device = FCMDevice.objects.filter(user_id=user_id)
+    device = FCMDevice.objects.filter(user_id=user_id).first()
     
-    if not device.exists():
+    # Ensure all data values are string
+    stringified_data = {str(k): str(v) for k, v in data.items()}
+
+    if not device:
+        logger.warning(f"No FCM device found for user {user_id}")
         return None
     
     # Create the notification message
     message = Message(
         notification=Notification(title=title, body=body),
-        data=data,
-        tokens=device.values_list("registration_id", flat=True),
+        data=stringified_data,
+        token=device.registration_id,
     )
 
     # Send the message
-    response = FCMDevice.send_message(message)
-    logger.info(f"Notification sent to user {user_id}: {response}")
+    try:
+        response = device.send_message(message)
+        logger.info(f"Notification sent to user {user_id}: {response}")
+    except Exception as e:
+        logger.error(f"Failed to send FCM notification to user {user_id}: {e}")
+        return
 
-    notification = UserNotification(
+    UserNotification.objects.create(
         user_id=user_id,
         title=title,
         text=body,
         request=user_request,
-        data=data
+        data=stringified_data,
     )
-    notification.save()
 
 
 def send_notification_to_user(
@@ -56,10 +63,11 @@ def send_notification_to_user(
     """
     Sends a notification to a specific user.
     """
+
     if not user:
         logger.info(f"User does not exists")
         return None
-    
+    logger.info("Sending notification")
     send_firebase_notification(
         user_request=user_request,
         title=title,

@@ -209,7 +209,6 @@ class UserRequest(BaseModel):
 
     class Meta:
         db_table = "user_request"
-        unique_together = ('sender', 'receiver')
         indexes = [
             models.Index(fields=['sender']),
             models.Index(fields=['receiver']),
