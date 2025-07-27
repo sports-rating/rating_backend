@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 
-from apps.shared.utils.permissions import IsAdmin
+from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.utils import (
     success_response,
@@ -25,9 +25,7 @@ from apps.education.models import (
 from apps.education.serializers import (
     EducationCreateSerializer,
     EducationSerializer,
-    SchoolCreateSerializer,
-    SchoolUpdateSerializer,
-    SchoolSerializer
+    SchoolSerializer,
 )
 
 from apps.education.filters import (
@@ -51,7 +49,7 @@ class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             data=serializer.data,
             message=_("Education retrieved successfully"),
-            code=200,
+            code=status.HTTP_200_OK,
         )
     
     def update(self, request, *args, **kwargs):
@@ -62,7 +60,7 @@ class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             data=serializer.data,
             message=_("Education updated successfully"),
-            code=200,
+            code=status.HTTP_200_OK,
         )
 
     def delete(self, request, *args, **kwargs):
@@ -70,22 +68,22 @@ class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
         return success_response(
             message=_("Education deleted successfully"),
-            code=204
+            code=status.HTTP_204_NO_CONTENT
         )
 
 
 class SchoolListCreateView(generics.ListCreateAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsAdminOrSuperAdmin,)
     queryset = School.objects.all()
-    serializer_class = SchoolCreateSerializer
+    serializer_class = SchoolSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = SchoolFilter
     pagination_class = CustomPagination
 
-    def get_serializer_class(self):
+    def get_permissions(self):
         if self.request.method == "GET":
-            return SchoolSerializer
-        return super().get_serializer_class()
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
 
     def get_queryset(self):
         return self.queryset.prefetch_related("sports")
@@ -97,29 +95,28 @@ class SchoolListCreateView(generics.ListCreateAPIView):
         return success_response(
             data=serializer.data,
             message=_("School created successfully"),
-            code=200
+            code=status.HTTP_201_CREATED
         )
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        response = super().list(request, *args, **kwargs)
         return success_response(
-            data=serializer.data,
+            data=response.data,
             message=_("School list retrieved successfully"),
-            code=200
+            code=status.HTTP_200_OK
         )
     
 
 class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = School.objects.all()
-    serializer_class = SchoolUpdateSerializer
-
-    def get_serializer_class(self):
-        if self.request.method == "GET":
-            return SchoolSerializer
-        return super().get_serializer_class()
+    serializer_class = SchoolSerializer
     
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
+
     def get_queryset(self):
         return self.queryset.prefetch_related("sports")
 
@@ -129,7 +126,7 @@ class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             data=serializer.data,
             message=_("School retrieved successfully"),
-            code=200,
+            code=status.HTTP_200_OK,
         )
 
     def update(self, request, *args, **kwargs):
@@ -140,7 +137,7 @@ class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             data=serializer.data, 
             message=_("School updated successfully"),
-            code=200,
+            code=status.HTTP_200_OK,
         )
 
     def delete(self, request, *args, **kwargs):
@@ -148,5 +145,5 @@ class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
         return success_response(
             message=_("School deleted successfully"),
-            code=204
+            code=status.HTTP_204_NO_CONTENT
         )

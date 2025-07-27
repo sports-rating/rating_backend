@@ -87,7 +87,7 @@ class EducationSerializer(serializers.ModelSerializer):
         return data
 
 
-class SchoolCreateSerializer(serializers.ModelSerializer):
+class SchoolSerializer(serializers.ModelSerializer):
     sport_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
     sports = SportSerializer(many=True, write_only=True, required=False)
 
@@ -126,25 +126,7 @@ class SchoolCreateSerializer(serializers.ModelSerializer):
                 school.sports.set(sport_objects)
             
         return school
-    
 
-class SchoolUpdateSerializer(SchoolCreateSerializer):
-    sport_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    
-    class Meta(SchoolCreateSerializer.Meta):
-        extra_kwargs = {
-            **SchoolCreateSerializer.Meta.extra_kwargs,
-        }
-    
-    def validate(self, attrs):
-        phone_number = attrs.get("phone_number")
-
-        if phone_number and self.instance.phone_number != phone_number:
-            if School.objects.filter(phone_number=phone_number).exists():
-                raise_validation_error(message=_("Phone number is already registered"))
-
-        return attrs
-    
     def update(self, instance, validated_data):
         sport_ids = validated_data.pop("sport_ids", None)
         for attr, value in validated_data.items():
@@ -158,20 +140,3 @@ class SchoolUpdateSerializer(SchoolCreateSerializer):
             instance.sports.set(sport_objects)
 
         return instance
-
-
-class SchoolSerializer(serializers.ModelSerializer):
-    sports = SportSerializer(many=True)
-
-    class Meta:
-        model = School
-        fields = [
-            "id",
-            "name",
-            "phone_number",
-            "director",
-            "type",
-            "address",
-            "sports",
-        ]
-
