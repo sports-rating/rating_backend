@@ -40,6 +40,7 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
 from apps.shared.utils import enums
+from apps.shared.utils.permissions import IsAdminOrSuperAdmin
 
 
 redis_connection = get_redis_connection()
@@ -250,7 +251,7 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
     
 
 class SportsmanListCreateView(generics.ListCreateAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsAdminOrSuperAdmin,)
     serializer_class = serializers.RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = SportsmanFilter
@@ -265,6 +266,17 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
         return context
+    
+    def get_queryset(self):
+        queryset = User.objects.filter(user_role='sportsman').select_related(
+            'sportsman_profile__sport', 'sportsman_profile__trainer', 
+        )
+        return queryset
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -273,22 +285,15 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         return success_response(
             data=serializer.data,
             message=_("Sportsman created successfully"),
-            code=200
+            code=status.HTTP_201_CREATED
         )
     
-    def get_queryset(self):
-        queryset = User.objects.filter(user_role='sportsman').select_related(
-            'sportsman_profile__sport', 'sportsman_profile__trainer', 
-        )
-        return queryset
-
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        response = super().list(request, *args, **kwargs)
         return success_response(
-            data=serializer.data,
-            message=_("Sportsman list"),
-            code=200
+            data=response.data,
+            message=_("Sportsman list retrieved successfully"),
+            code=status.HTTP_200_OK
         )
 
 
@@ -345,7 +350,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class TrainerListCreateView(generics.ListCreateAPIView):
-    permission_classes = (permissions.AllowAny, )
+    permission_classes = (IsAdminOrSuperAdmin, )
     queryset = User.objects.all()
     serializer_class = serializers.RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
@@ -362,6 +367,17 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         context["request"] = self.request  # Pass the request to the serializer
         return context
 
+    def get_queryset(self):
+        queryset = User.objects.filter(user_role='trainer').prefetch_related(
+            "trainer_profile__sport",
+        )
+        return queryset
+    
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return (permissions.AllowAny(), )
+        return super().get_permissions()
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -369,22 +385,15 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         return success_response(
             data=serializer.data,
             message=_("Trainer created successfully"),
-            code=200
+            code=status.HTTP_201_CREATED
         )
-
-    def get_queryset(self):
-        queryset = User.objects.filter(user_role='trainer').prefetch_related(
-            "trainer_profile__sport",
-        )
-        return queryset
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        response = super().list(request, *args, **kwargs)
         return success_response(
-            data=serializer.data,
-            message=_("Trainer list"),
-            code=200
+            data=response.data,
+            message=_("Trainer list retrieved successfully"),
+            code=status.HTTP_200_OK
         )
 
 
@@ -561,7 +570,7 @@ class ArchivedTrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIV
             message=_("Archived Trainer deleted successfully"),
             code=204
         )
-    
+
 
 class UserNotificationsListView(generics.ListAPIView):
     queryset = UserNotification.objects.all()

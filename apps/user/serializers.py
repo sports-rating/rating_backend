@@ -19,11 +19,6 @@ import rest_framework_simplejwt.serializers as jwt_serializers
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
-from apps.shared.utils.verification import (
-    send_verification_code,
-    verify_code,
-    check_verification_status,
-)
 from apps.shared.utils.general import get_file_full_url
 from apps.user.utils import calculate_sportsman_statistics, calculate_trainer_statistics
 from apps.shared.utils import enums
@@ -326,13 +321,14 @@ class TrainerListSerializer(serializers.ModelSerializer):
             if instance.trainer_profile.sport.logo:
                 data["logo"] = get_file_full_url(instance.trainer_profile.sport.logo.url) if instance.trainer_profile.sport.logo else None
         return data
-    
+
     def get_statistics(self, obj) ->  List[Dict[str, Any]]:
         return calculate_trainer_statistics(trainer=obj)
 
 
-class TrainerProfileCreateSerializer(serializers.ModelSerializer):
+class TrainerProfileSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
+    statistics = serializers.SerializerMethodField()
 
     class Meta:
         model = Trainer
@@ -344,8 +340,11 @@ class TrainerProfileCreateSerializer(serializers.ModelSerializer):
             "user_metrics",
             "address",
             "social_media",
+            "is_trainer_verified",
+            "statistics"
         ]
     
+
     def create(self, validated_data):
         sport = validated_data.pop("sport", None)
         
@@ -354,15 +353,6 @@ class TrainerProfileCreateSerializer(serializers.ModelSerializer):
 
         return profile
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["sport_id"] = instance.sport.id
-        data["sport_name"] = instance.sport.name
-        return data
-
-
-class TrainerProfileUpdateSerializer(TrainerProfileCreateSerializer):
-    
     def update(self, instance, validated_data):
         sport = validated_data.pop("sport", None)
 
@@ -377,34 +367,24 @@ class TrainerProfileUpdateSerializer(TrainerProfileCreateSerializer):
 
         return instance
     
-
-class TrainerProfileSerializer(serializers.ModelSerializer):
-    sport = SportSerializer(many=False, read_only=True)
-    statistics = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Trainer
-        fields = [
-            "sport",
-            "skill_level",
-            "bio",
-            "division",
-            "user_metrics",
-            "address",
-            "social_media",
-            "is_trainer_verified",
-            "statistics",
-        ]
-    
     def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_trainer_statistics(trainer=obj.user)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        return data
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
     educations = EducationCreateSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
     sportsman_profile = SportsmanProfileSerializer(required=False)
-    trainer_profile = TrainerProfileCreateSerializer(required=False)
+    trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = BaseMediaSerializer(many=True, required=False, read_only=True)
     
@@ -670,7 +650,7 @@ class CustomTokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     sportsman_profile = SportsmanProfileSerializer(required=False)
-    trainer_profile = TrainerProfileUpdateSerializer(required=False)
+    trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = BaseMediaSerializer(many=True, required=False)
     educations = EducationCreateSerializer(many=True, required=False)
@@ -781,9 +761,10 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             if trainer_profile_data:
                 trainer_profile = getattr(instance, "trainer_profile", None)
                 if trainer_profile:
-                    TrainerProfileUpdateSerializer().update(trainer_profile, trainer_profile_data)
+                    TrainerProfileSerializer().update(trainer_profile, trainer_profile_data)
 
         return instance
+
 
 class ArchivedTrainerSerializer(serializers.ModelSerializer):
     class Meta:

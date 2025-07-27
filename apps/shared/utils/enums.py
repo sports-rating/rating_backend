@@ -52,6 +52,7 @@ class UserRoles(BaseEnum):
     ORDINARY = "ordinary"
     SPORTSMAN = "sportsman"
     TRAINER = "trainer"
+    FEDERATION = "federation"
     
 
 class SchoolChoices(BaseEnum):
