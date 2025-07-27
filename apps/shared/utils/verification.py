@@ -16,6 +16,7 @@ redis_connection = get_redis_connection()
 
 STATIC_CODE = "171717"
 PHONE_NUMBER_WHITELIST = [
+    "+998771112233",
     "+998935321377",
     "+998990054321",
     "+998998577232"

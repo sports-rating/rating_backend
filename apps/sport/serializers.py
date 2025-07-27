@@ -13,6 +13,7 @@ from rest_framework.generics import get_object_or_404
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.general import get_file_full_url
 
 from apps.sport.models import (
     Sport,
@@ -32,45 +33,31 @@ from apps.dashboard.serializers import (
 )
 
 
-class SportCreateSerializer(serializers.ModelSerializer):
-    logo = serializers.ImageField(required=False)
-
+class SportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sport
         fields = (
             "id",
             "name",
             "logo",
+            "created_time"
         )
-        extra_kwargs = {"id": {"read_only": True}, "logo": {"required": False}}
+        read_only_fields = ("id", "created_time")
+        extra_kwargs = {"logo": {"required": False}}
 
     def validate(self, attrs):
         sport_name = attrs.get("name")
         if Sport.objects.filter(name=sport_name).exists():
             raise_validation_error(message=_(f"{sport_name} - sport is already created"))
         return attrs
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["logo"] = get_file_full_url(instance.logo.url) if instance.logo else None
+        return data
 
 
-class SportSerializer(serializers.ModelSerializer):
-    logo = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Sport
-        fields = (
-            "id",
-            "name",
-            "logo",
-        )
-
-    def get_logo(self, obj) -> Optional[str]:
-        """Ensure full URL for the logo file"""
-        request = self.context.get("request")  # Get the request context
-        if obj.logo:  # Make sure the file exists
-            return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
-        return None
-
-
-class TournamentCreateSerializer(serializers.ModelSerializer):
+class TournamentSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     logo = serializers.ImageField(required=False)
 
@@ -81,9 +68,10 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
             "name",
             "sport_id",
             "logo",
+            "created_time"
         )
+        read_only_fields = ("id", "created_time")
         extra_kwargs = {
-            "id": {"read_only": True}, 
             "logo": {"required": False},
         }
     
@@ -120,23 +108,13 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["sport_id"] = instance.sport.id
-        data["sport_name"] = instance.sport.name
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        data["logo"] = get_file_full_url(instance.logo.url) if instance.logo else None
         return data
-
-
-class TournamentSerializer(serializers.ModelSerializer):
-    sport = SportSerializer(many=False)
-    logo = serializers.ImageField(required=False)
-
-    class Meta:
-        model = Tournament
-        fields = (
-            "id",
-            "name",
-            "sport",
-            "logo",
-        )
 
 
 class ResultCreateSerializer(serializers.ModelSerializer):

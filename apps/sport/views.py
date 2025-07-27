@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 
-from apps.shared.utils.permissions import IsAdmin
+from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.utils import (
     success_response,
@@ -25,9 +25,7 @@ from apps.sport.models import (
 )
 
 from apps.sport.serializers import (
-    SportCreateSerializer,
     SportSerializer,
-    TournamentCreateSerializer,
     TournamentSerializer,
     ResultCreateSerializer,
     ResultSerializer,
@@ -82,18 +80,13 @@ class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     
 
 class TournamentListCreateView(generics.ListCreateAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsAdminOrSuperAdmin,)
     queryset = Tournament.objects.all()
-    serializer_class = TournamentCreateSerializer
+    serializer_class = TournamentSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = TournamentFilter
     search_fields = ["name",]
     pagination_class = CustomPagination
-
-    def get_serializer_class(self):
-        if self.request.method == "GET":
-            return TournamentSerializer
-        return super().get_serializer_class()
 
     def get_queryset(self):
         name = self.request.query_params.get("name")
@@ -101,6 +94,10 @@ class TournamentListCreateView(generics.ListCreateAPIView):
             return self.queryset.select_related("sport").filter(name__icontains=name)
         return self.queryset.select_related("sport")
 
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -109,7 +106,7 @@ class TournamentListCreateView(generics.ListCreateAPIView):
         return success_response(
             data=serializer.data,
             message=_("Tournament created successfully"),
-            code=200
+            code=status.HTTP_201_CREATED
         )
     
     def list(self, request, *args, **kwargs):
@@ -118,22 +115,22 @@ class TournamentListCreateView(generics.ListCreateAPIView):
         return success_response(
             data=serializer.data,
             message=_("Tournament list retrieved successfully"),
-            code=200
+            code=status.HTTP_200_OK
         )
 
 
 class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsAdminOrSuperAdmin,)
     queryset = Tournament.objects.all()
-    serializer_class = TournamentCreateSerializer
-
-    def get_serializer_class(self):
-        if self.request.method == "GET":
-            return TournamentSerializer
-        return super().get_serializer_class()
+    serializer_class = TournamentSerializer
 
     def get_queryset(self):
         return self.queryset.select_related("sport")
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -141,7 +138,7 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             data=serializer.data,
             message=_("Tournament retrieved successfully"),
-            code=200,
+            code=status.HTTP_200_OK,
         )
     
     def update(self, request, *args, **kwargs):
@@ -152,7 +149,7 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             message=_("Tournament is updated successfully"),
             data=serializer.data,
-            code=200,
+            code=status.HTTP_200_OK,
         )
 
     def delete(self, request, *args, **kwargs):
@@ -160,19 +157,19 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
         return success_response(
             message=_("Tournament is deleted successfully"),
-            code=204
+            code=status.HTTP_204_NO_CONTENT
         )
 
 
 class SportListCreateView(generics.ListCreateAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsAdminOrSuperAdmin,)
     queryset = Sport.objects.all()
-    serializer_class = SportCreateSerializer
-
-    def get_serializer_class(self):
+    serializer_class = SportSerializer
+    
+    def get_permissions(self):
         if self.request.method == "GET":
-            return SportSerializer
-        return super().get_serializer_class()
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -181,38 +178,37 @@ class SportListCreateView(generics.ListCreateAPIView):
         return success_response(
             data=serializer.data,
             message=_("Sport created successfully"),
-            code=200
+            code=status.HTTP_201_CREATED
         )
     
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
+        response = super().list(request, *args, **kwargs)
         return success_response(
-            data=serializer.data,
+            data=response.data,
             message=_("Sport list retrieved successfully"),
-            code=200
+            code=status.HTTP_200_OK
         )
     
 
 class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsAdminOrSuperAdmin,)
     queryset = Sport.objects.all()
-    serializer_class = SportCreateSerializer
+    serializer_class = SportSerializer
 
-    def get_serializer_class(self, *args, **kwargs):
+    def get_permissions(self):
         if self.request.method == "GET":
-            return SportSerializer
-        return super().get_serializer_class()   
-    
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
             data=serializer.data,
             message=_("Sport retrieved successfully"),
-            code=200,
+            code=status.HTTP_200_OK,
         )
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -221,15 +217,15 @@ class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             data=serializer.data,
             message=_("Sport is updated successfully"),
-            code=200,
+            code=status.HTTP_200_OK,
         )
-    
+
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.delete()
         return success_response(
             message=_("Sport is deleted successfully"),
-            code=204
+            code=status.HTTP_204_NO_CONTENT
         )
 
 
@@ -255,7 +251,7 @@ class TeamListCreateView(generics.ListCreateAPIView):
             message=_("Team created successfully"),
             code=200
         )
-    
+
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
@@ -263,7 +259,7 @@ class TeamListCreateView(generics.ListCreateAPIView):
             data=serializer.data,
             message=_("Team list retrieved successfully"),
             code=200
-        )  
+        )
 
 
 class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):

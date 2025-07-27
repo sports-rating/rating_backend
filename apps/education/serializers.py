@@ -21,7 +21,6 @@ from apps.sport.models import (
 )
 
 from apps.sport.serializers import (
-    SportCreateSerializer,
     SportSerializer,
 )
 
