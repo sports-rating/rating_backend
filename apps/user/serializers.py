@@ -343,11 +343,10 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "is_trainer_verified",
             "statistics"
         ]
-    
 
     def create(self, validated_data):
         sport = validated_data.pop("sport", None)
-        
+
         profile = Trainer.objects.create(sport=sport, **validated_data)
         logger.info(f"Trainer Profile created -> {profile}")
 
