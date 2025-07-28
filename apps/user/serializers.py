@@ -76,9 +76,9 @@ class SendVerificationCodeSerializer(serializers.Serializer): # noqa
 
         if action in ["forgot_password", "login"] and not user:
             raise_validation_error(message=_("Your phone number is not registered"))
-        
+
         return attrs
-    
+
 
 class VerifyCodeSerializer(serializers.Serializer):  # noqa
     code = serializers.CharField()
@@ -219,7 +219,7 @@ class SportsmanListSerializer(serializers.ModelSerializer):
             "user_role",
             "statistics"
         ]
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.sportsman_profile.sport:
@@ -279,13 +279,13 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
         logger.info(f"Sportsman Profile created -> {profile}")
 
         return profile
-    
+
     def update(self, instance, validated_data):
         sender = self.context.get("request").user
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
         send_request = validated_data.pop("send_request", False)
-        
+
         sportsman_profile = getattr(instance, "sportsman_profile", None)
         if sportsman_profile and sportsman_profile.trainer:
             old_trainer = sportsman_profile.trainer
@@ -344,7 +344,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
 
         instance.save()
-        
+
         return instance
 
     def get_statistics(self, obj) -> Dict[str, Any]:
@@ -363,7 +363,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             "sport": instance.trainer.sport.name if instance.trainer.sport else None,
         } if instance.trainer else None
         return data
-    
+
 
 class TrainerListSerializer(serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
@@ -453,7 +453,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
     trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = BaseMediaSerializer(many=True, required=False, read_only=True)
-    
+
     class Meta:
         model = User
         fields = (
@@ -486,12 +486,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         pinfl = attrs.get("pinfl", None)
         user_role = attrs.get("user_role")
-        
+
         phone_number = attrs.get("phone_number")
         if phone_number:
             if User.objects.only("id").filter(phone_number=phone_number).exists() :
                 raise_validation_error(message=_("Phone number is already registered"))
-            
+
         if user_role != "ordinary":
             if pinfl:
                 if User.objects.only("id").filter(pinfl=pinfl).exists():
@@ -502,7 +502,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                     raise_validation_error(message=_("PINFL must be exactly 14 digits."))
             else:
                 raise_validation_error(message=_("PINFL is required"))
-        
+
         return attrs
 
     def create(self, validated_data):
@@ -530,13 +530,13 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 for media in media_objects:
                     media.user = user
                 UserMedia.objects.bulk_update(media_objects, ["user"])
-            
+
             # Bulk create educations
             if educations_data:
                 Education.objects.bulk_create([
                     Education(user=user, **ed_data) for ed_data in educations_data
                 ])
-            
+
             # create() inside the loop, because has to trigger signal!
             for result_data in results_data:
                 if 'archived_trainer_name' in result_data:
@@ -552,7 +552,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 Sportsman.objects.create(user=user, **sportsman_profile_data)
             elif user_role == "trainer" and trainer_profile_data:
                 Trainer.objects.create(user=user, **trainer_profile_data)
-            
+
             logger.info(f"User created -> {user}")
             return user
 
@@ -601,7 +601,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
         if phone_number:
             if User.objects.only("id").filter(phone_number=phone_number).exists() :
                 raise_validation_error(message=_("Phone number is already registered"))
-        
+
         # Ism va familiya faqat bitta so‘zdan iborat bo‘lishi kerakligini tekshirish
         if len(first_name.split()) > 1:
             raise_validation_error(message=_("Ism faqat bitta so'z bo'lishi kerak"))
@@ -637,7 +637,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
 
             logger.info(f"User created -> {user}")
             return user
-    
+
     def get_tokens(self, user): # noqa
         if not user:
             return None
@@ -659,7 +659,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         confirm_password = attrs.get("confirm_password")
         if new_password != confirm_password:
             raise_validation_error(message=_("New password don't match"))
-        
+
         return attrs
 
     def update(self, instance, validated_data):
@@ -668,7 +668,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         instance.set_password(new_password)
         instance.save()
         return validated_data
-    
+
 
 class UpdatePhoneNumberSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15, required=True)
@@ -747,7 +747,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "is_verified",
         ]
         read_only_fields = ["id", "created_time", "is_verified", "profile_photo"]
-    
+
     def get_profile_photo(self, obj):
         """
         Returns the URL of the user's profile photo if it exists.
@@ -777,7 +777,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     raise_validation_error(message=_("PINFL must contain only numbers."))
                 if len(pinfl) != 14:
                     raise_validation_error(message=_("PINFL must be exactly 14 digits."))
-            
+
         return attrs
 
     def update(self, instance, validated_data):
@@ -795,7 +795,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
             if media_ids:
                 media_objects = UserMedia.objects.filter(id__in=media_ids)
-                
+
                 if not media_objects.exists():
                     raise_validation_error(message=_("At least one media must be uploaded"))
 
@@ -852,11 +852,11 @@ class ArchivedTrainerSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         name = attrs.get('name', None)
-        
+
         if name:
             if ArchivedTrainer.objects.filter(name=name).exists():
                 raise_validation_error(message=_("Archived Trainer with this name already exists"))
-        
+
         return attrs
 
 
@@ -897,7 +897,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
         if request_type == "trainer_request" and sender.user_role == "trainer":
             raise_validation_error(message=_("Trainers cannot send trainer requests!"))
         return super().validate(attrs)
-    
+
     def create(self, validated_data):
         sender = self.context.get("request").user
         logger.info(f"Sender: {sender}")
@@ -981,9 +981,9 @@ class UserRequestSerializer(serializers.ModelSerializer):
             None
         else:
             raise_validation_error(message=_("Invalid request type!"))
-        
+
         return instance
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["sender"] = {
