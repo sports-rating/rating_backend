@@ -285,7 +285,12 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
         send_request = validated_data.pop("send_request", False)
-        old_trainer = sender.sportsman_profile.trainer
+        
+        sportsman_profile = getattr(instance, "sportsman_profile", None)
+        if sportsman_profile and sportsman_profile.trainer:
+            old_trainer = sportsman_profile.trainer
+        else:
+            old_trainer = None
 
         if sport:
             instance.sport = sport
@@ -901,7 +906,11 @@ class UserRequestSerializer(serializers.ModelSerializer):
         user_request = None
 
         if request_type == "trainer_request":
-            old_trainer = sender.sportsman_profile.trainer
+            sportsman_profile = getattr(sender, "sportsman_profile", None)
+            if sportsman_profile and sportsman_profile.trainer:
+                old_trainer = sportsman_profile.trainer
+            else:
+                old_trainer = None
             if receiver and old_trainer != receiver:
                 user_request = UserRequest.objects.create(
                     sender=sender,
