@@ -298,7 +298,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
 
 class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsAdminOrSuperAdmin,)
     queryset = User.objects.all().select_related(
         "sportsman_profile", "sportsman_profile__sport", "sportsman_profile__trainer"
     ).prefetch_related("media", "educations", "results")
@@ -308,6 +308,11 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method == "GET":
             return serializers.UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
         return super().get_serializer_class()
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
 
     def get_object(self):
         user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
@@ -398,7 +403,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 
 
 class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (IsAdminOrSuperAdmin,)
     queryset = User.objects.all().select_related(
         "trainer_profile", "trainer_profile__sport"
     ).prefetch_related("media", "educations", "results")
@@ -422,6 +427,11 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
         return context
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return (permissions.AllowAny(),)
+        return super().get_permissions()
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()

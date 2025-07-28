@@ -225,6 +225,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
     statistics = serializers.SerializerMethodField()
+    send_request = serializers.BooleanField(required=True, write_only=True)
 
     class Meta:
         model = Sportsman
@@ -238,7 +239,8 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             "address",
             "social_media",
             "is_sportsman_verified",
-            "statistics"
+            "statistics",
+            "send_request"
         ]
         read_only_fields = ["is_sportsman_verified", "statistics"]
 
@@ -250,7 +252,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             trainer_profile = trainer.trainer_profile
             if not sport:
                 raise_validation_error(message=_("Sport is required"))
-            if trainer_profile.sport.id != sport.id:
+            if trainer_profile.sport and trainer_profile.sport.id != sport.id:
                 raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
 
         return validated_data
@@ -258,19 +260,65 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
+        send_request = validated_data.pop("send_request", False)
         profile = Sportsman.objects.create(sport=sport, trainer=trainer.trainer_profile, **validated_data)
         logger.info(f"Sportsman Profile created -> {profile}")
 
         return profile
     
     def update(self, instance, validated_data):
+        sender = self.context.get("request").user
         sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
+        send_request = validated_data.pop("send_request", False)
+        old_trainer = sender.sportsman_profile.trainer
 
         if sport:
             instance.sport = sport
-        if trainer:
+        if send_request:
+            if trainer and old_trainer != trainer:
+                if UserRequest.objects.filter(
+                    status= enums.UserRequestStatus.PENDING.value,
+                ).exists():
+                    raise_validation_error(message=_("You already have a pending trainer request!"))
+                user_request = UserRequest.objects.create(
+                    sender=sender,
+                    receiver=trainer,
+                    request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
+                    status=enums.UserRequestStatus.PENDING.value
+                )
+                send_notification_to_user(
+                    user=trainer,
+                    user_request=user_request,
+                    title=_("New Trainer Request"),
+                    body=_(f"{sender.first_name} {sender.last_name} has selected you as their trainer."),
+                    data={
+                        "request_type": "trainer_request",
+                        "sportsman_id": str(sender.id),
+                    }
+                )
+            else:
+                raise_validation_error(message=_("You can not choose existing trainer as a new trainer!"))
+        elif trainer:
             instance.trainer = trainer.trainer_profile
+            existing_request = UserRequest.objects.filter(
+                sender=sender,
+                receiver=trainer,
+                request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
+                status=enums.UserRequestStatus.PENDING.value
+            )
+            if existing_request.exists():
+                existing_request.update(status=enums.UserRequestStatus.ACCEPTED.value)
+                send_notification_to_user(
+                    user=sender,
+                    user_request=existing_request.first(),
+                    title=_("Trainer Request Accepted"),
+                    body=_(f"{trainer.first_name} {trainer.last_name} has accepted your trainer request."),
+                    data={
+                        "request_type": "trainer_request",
+                        "trainer_id": str(trainer.id),
+                    }
+                )
 
         # Update other fields
         for attr, value in validated_data.items():
@@ -753,14 +801,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     Result.objects.create(user=instance, **result_data)
 
             if sportsman_profile_data:
-                spotrsman_profile = getattr(instance, "sportsman_profile", None)
-                if spotrsman_profile:
-                    SportsmanProfileSerializer().update(spotrsman_profile, sportsman_profile_data)
+                sportsman_profile = getattr(instance, "sportsman_profile", None)
+                if sportsman_profile:
+                    SportsmanProfileSerializer(context={"request": self.context.get("request")}).update(sportsman_profile, sportsman_profile_data)
 
             if trainer_profile_data:
                 trainer_profile = getattr(instance, "trainer_profile", None)
                 if trainer_profile:
-                    TrainerProfileSerializer().update(trainer_profile, trainer_profile_data)
+                    TrainerProfileSerializer(context={"request": self.context.get("request")}).update(trainer_profile, trainer_profile_data)
 
         return instance
 

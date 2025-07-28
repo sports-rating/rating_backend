@@ -16,6 +16,9 @@ redis_connection = get_redis_connection()
 
 STATIC_CODE = "171717"
 PHONE_NUMBER_WHITELIST = [
+    "+998901234567", # Example Sportsman
+    "+998901234568", # Example Trainer
+    "+998901234569", # Example Federation
     "+998771112233",
     "+998935321377",
     "+998990054321",
