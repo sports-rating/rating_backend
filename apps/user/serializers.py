@@ -748,7 +748,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_time", "is_verified", "profile_photo"]
     
-    def get_profile_photo(self):
+    def get_profile_photo(self, obj):
         """
         Returns the URL of the user's profile photo if it exists.
         """
