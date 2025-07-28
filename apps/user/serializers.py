@@ -163,6 +163,7 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
     media = BaseMediaSerializer(many=True)
     educations = EducationCreateSerializer(many=True, required=False)
     results = ResultCreateSerializer(many=True, required=False)
+    profile_photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -181,7 +182,20 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             "educations",
             "results",
             "user_role",
+            "profile_photo",
+            "is_verified",
+            "created_time",
         ]
+        read_only_fields = ["id", "created_time", "is_verified", "profile_photo"]
+
+    def get_profile_photo(self, obj):
+        """
+        Returns the URL of the user's profile photo if it exists.
+        """
+        profile_photo = self.instance.media.filter(is_profile_photo=True).first()
+        if profile_photo:
+            return get_file_full_url(profile_photo.file.url)
+        return None
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -702,6 +716,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     media = BaseMediaSerializer(many=True, required=False)
     educations = EducationCreateSerializer(many=True, required=False)
     results = ResultCreateSerializer(many=True, required=False)
+    profile_photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -720,10 +735,22 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "user_role",
             "educations",
             "results",
+            "profile_photo",
             "sportsman_profile",
             "trainer_profile",
+            "created_time",
+            "is_verified",
         ]
-        extra_kwargs = {"id": {"read_only": True}}
+        read_only_fields = ["id", "created_time", "is_verified", "profile_photo"]
+    
+    def get_profile_photo(self):
+        """
+        Returns the URL of the user's profile photo if it exists.
+        """
+        profile_photo = self.instance.media.filter(is_profile_photo=True).first()
+        if profile_photo:
+            return get_file_full_url(profile_photo.file.url)
+        return None
 
     def validate(self, attrs):
         phone_number = attrs.get("phone_number")
@@ -767,7 +794,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 if not media_objects.exists():
                     raise_validation_error(message=_("At least one media must be uploaded"))
 
-                
                 current_media = instance.media.all() # Get current media 
                 media_to_delete = current_media.exclude(id__in=media_ids)
 
