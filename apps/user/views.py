@@ -12,6 +12,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics, permissions, status, filters
 from rest_framework_simplejwt.exceptions import TokenError
 
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
+
 from apps.user.filters import (
     SportsmanFilter,
     TrainerFilter,
@@ -466,7 +468,7 @@ class MediaUploadView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = UserMedia.objects.all()
     serializer_class = serializers.BaseMediaSerializer
-    
+
     def get_queryset(self):
         model_type = self.request.data.get("type")
         model = self.get_model(model_type=model_type)
@@ -656,7 +658,7 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
             message=_("User Request successfully created"),
             code=status.HTTP_201_CREATED
         )
-    
+
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
         return success_response(
