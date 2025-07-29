@@ -297,6 +297,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
         if send_request:
             if trainer and old_trainer != trainer:
                 if UserRequest.objects.filter(
+                    sender=sender,
                     status= enums.UserRequestStatus.PENDING.value,
                 ).exists():
                     raise_validation_error(message=_("You already have a pending trainer request!"))
