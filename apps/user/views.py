@@ -674,7 +674,7 @@ class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView)
     serializer_class = serializers.UserRequestSerializer
 
     def get_object(self):
-        user_request = self.queryset.filter(pk=self.kwargs.get("pk"), sender=self.request.user).first()
+        user_request = self.queryset.filter(pk=self.kwargs.get("pk")).first()
         if not user_request:
             raise_validation_error(message=_("User Request not found"), code=status.HTTP_404_NOT_FOUND)
         return user_request
