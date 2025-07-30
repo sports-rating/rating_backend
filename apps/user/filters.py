@@ -6,6 +6,10 @@ from apps.user.models import (
     Sportsman,
     UserNotification,
     User,
+    UserRequest
+)
+from apps.shared.utils.enums import (
+    UserRequestStatus
 )
 from apps.shared.utils.filters import BaseFilterSet
 
@@ -38,3 +42,15 @@ class UserNotificationFilter(BaseFilterSet):
     class Meta:
         model = UserNotification
         fields = ["is_read", "start_created_time", "end_created_time", "start_updated_time", "end_updated_time"]
+
+
+class UserRequestFilter(BaseFilterSet):
+    status = filters.ChoiceFilter(choices=UserRequestStatus.choices())
+    date = filters.DateFilter(field_name="created_time", lookup_expr="date")
+
+    class Meta:
+        model = UserRequest
+        fields = [
+            "status",
+            "date"
+        ]

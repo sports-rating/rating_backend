@@ -9,15 +9,17 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import generics, permissions, status, filters
+from rest_framework import generics, permissions, status
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 
 from apps.user.filters import (
     SportsmanFilter,
     TrainerFilter,
-    UserNotificationFilter
+    UserNotificationFilter,
+    UserRequestFilter
 )
 from apps.user.models import (
     User,
@@ -591,7 +593,7 @@ class UserNotificationsListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated,]
     filterset_class = UserNotificationFilter
     search_fields = ["id", "title", "text",]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     ordering_fields = ["id", "created_time", "is_read", "title",]
 
     def get_queryset(self):
@@ -631,6 +633,16 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
     serializer_class = serializers.UserRequestSerializer
     filter_backends = [DjangoFilterBackend]
     pagination_class = CustomPagination
+    filterset_class = UserRequestFilter
+    filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
+    search_fields = [
+        "sender__first_name",
+        "sender__last_name",
+        "receiver__first_name",
+        "receiver__last_name",
+        "request_type",
+        "message",
+    ]
 
     def _get_proper_message(self, request_type):
         if request_type == "trainer_request":
