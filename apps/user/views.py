@@ -19,7 +19,9 @@ from apps.user.filters import (
     SportsmanFilter,
     TrainerFilter,
     UserNotificationFilter,
-    UserRequestFilter
+    UserRequestFilter,
+    DistrictFilter,
+    NeighborhoodFilter
 )
 from apps.user.models import (
     User,
@@ -27,6 +29,11 @@ from apps.user.models import (
     UserMedia,
     UserNotification,
     UserRequest
+)
+from apps.shared.models import (
+    Region,
+    District,
+    Neighborhood
 )
 
 import apps.user.serializers as serializers
@@ -717,4 +724,56 @@ class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView)
         return success_response(
             message=_("User Request deleted successfully"),
             code=status.HTTP_204_NO_CONTENT
+        )
+
+
+class RegionListView(generics.ListAPIView):
+    queryset = Region.objects.all()
+    serializer_class = serializers.RegionSerializer
+    permission_classes = [permissions.AllowAny, ]
+    pagination_class = CustomPagination
+    search_fields = ["id", "name"]
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Region list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+    
+
+class DistrictListView(generics.ListAPIView):
+    queryset = District.objects.all()
+    serializer_class = serializers.DistrictSerializer
+    permission_classes = [permissions.AllowAny, ]
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ["id", "name", "region__name"]
+    filterset_class = DistrictFilter
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("District list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+    
+
+class NeighborhoodListView(generics.ListAPIView):
+    queryset = Neighborhood.objects.all()
+    serializer_class = serializers.NeighborhoodSerializer
+    permission_classes = [permissions.AllowAny, ]
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ["id", "name", "district__name"]
+    filterset_class = NeighborhoodFilter
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Neighborhood list retrieved successfully"),
+            code=status.HTTP_200_OK
         )

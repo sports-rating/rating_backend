@@ -12,6 +12,10 @@ from apps.shared.utils.enums import (
     UserRequestStatus
 )
 from apps.shared.utils.filters import BaseFilterSet
+from apps.shared.models import (
+    District,
+    Neighborhood
+)
 
 
 class SportsmanFilter(BaseFilterSet):
@@ -54,3 +58,19 @@ class UserRequestFilter(BaseFilterSet):
             "status",
             "date"
         ]
+
+
+class DistrictFilter(BaseFilterSet):
+    region = filters.CharFilter(field_name="region__id")
+
+    class Meta:
+        model = District
+        fields = ["region", "start_created_time", "end_created_time", "start_updated_time", "end_updated_time"]
+    
+
+class NeighborhoodFilter(BaseFilterSet):
+    district = filters.CharFilter(field_name="district__id")
+
+    class Meta:
+        model = Neighborhood
+        fields = ["district", "start_created_time", "end_created_time", "start_updated_time", "end_updated_time"]

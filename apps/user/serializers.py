@@ -33,24 +33,25 @@ from apps.user.models import (
     UserNotification,
     UserRequest
 )
-
 from apps.sport.models import (
     Sport,
     Tournament,
     Result
 )
-
 from apps.education.models import (
     Education
 )
-
 from apps.sport.serializers import (
     ResultCreateSerializer,
     SportSerializer
 )
-
 from apps.education.serializers import (
     EducationCreateSerializer
+)
+from apps.shared.models import (
+    Region,
+    District,
+    Neighborhood
 )
 
 
@@ -1002,3 +1003,32 @@ class UserRequestSerializer(serializers.ModelSerializer):
             "phone_number": instance.receiver.phone_number,
         }
         return data
+
+
+class RegionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Region
+        fields = [
+            "id",
+            "name"
+        ]
+
+
+class DistrictSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = District
+        fields = [
+            "id",
+            "name",
+            "region"
+        ]
+
+
+class NeighborhoodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Neighborhood
+        fields = [
+            "id",
+            "name",
+            "district"
+        ]

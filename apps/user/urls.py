@@ -28,6 +28,10 @@ urlpatterns = [
 
     path("requests/", views.UserRequestListCreateView.as_view(), name='user-request-list-create'),
     path("requests/<uuid:pk>/", views.UserRequestRetrieveUpdateDeleteView.as_view(), name='user-request-retrieve-update-delete'),
+
+    path("regions/", views.RegionListView.as_view(), name='region-list'),
+    path("districts/", views.DistrictListView.as_view(), name='district-list'),
+    path("neighborhoods/", views.NeighborhoodListView.as_view(), name='neighborhood-list'),
 ]
 
 if settings.DEBUG:
