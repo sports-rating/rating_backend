@@ -949,6 +949,8 @@ class UserRequestSerializer(serializers.ModelSerializer):
                 # If the request is accepted, update the trainer for the sender
                 if receiver and hasattr(receiver, "trainer_profile"):
                     sender.trainer_profile.trainer = receiver
+                    sender.sportsman_profile.is_sportsman_verified = True
+                    sender.sportsman_profile.save()
                     sender.trainer_profile.save()
                     instance.status = enums.UserRequestStatus.ACCEPTED.value
                     instance.save()
