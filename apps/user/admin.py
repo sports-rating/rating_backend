@@ -11,6 +11,12 @@ from apps.user.models import (
     UserRequest,
     UserNotification
 )
+from apps.shared.models import (
+    Country,
+    Region,
+    District,
+    Neighborhood
+)
 
 
 @admin.register(User)
@@ -194,3 +200,23 @@ class UserNotificationAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name())
         return "N/A"
     user_obj.short_description = "User"
+
+
+@admin.register(Region)
+class RegionAdmin(admin.ModelAdmin):
+    list_display = ["id", "name",]
+    search_fields = ["id", "name",]
+
+
+@admin.register(District)
+class DistrictAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "region"]
+    search_fields = ["id", "name", "region__name"]
+    list_filter = ["region"]
+
+
+@admin.register(Neighborhood)
+class NeighborhoodAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "district"]
+    search_fields = ["id", "name", "district__name"]
+    list_filter = ["district"]
