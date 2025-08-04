@@ -6,7 +6,7 @@ from django.core.validators import FileExtensionValidator, MinValueValidator, Ma
 
 from rest_framework.exceptions import ValidationError
 
-from apps.shared.models import BaseModel
+from apps.shared.models import BaseModel, Region, District
 from apps.shared.utils.enums import LanguageTypes
 from apps.shared.utils.utils import handle_file_update, handle_file_delete, CorrectPath
 
@@ -138,3 +138,72 @@ class Team(BaseModel):
 
     class Meta:
         db_table = "team"
+
+
+class Federation(BaseModel):
+    name = models.CharField(max_length=250)
+    is_national = models.BooleanField(default=False)
+    user = models.ForeignKey(
+        "user.User",
+        on_delete=models.CASCADE,
+        related_name="federation_profile",
+        blank=True,
+        null=True
+    )
+    parent_federation = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        related_name="child_federations",
+        blank=True,
+        null=True
+    )
+    region = models.ForeignKey(
+        Region,
+        on_delete=models.CASCADE,
+        related_name="federations",
+    )
+    address = models.TextField(null=True, blank=True)
+    phone_number = models.CharField(max_length=15, unique=True)
+    email = models.EmailField(null=True, blank=True)
+    logo = models.ImageField(
+        upload_to=CorrectPath('media'), 
+        validators=[
+            FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
+        ],
+        null=True, 
+        blank=True                         
+    )
+    website = models.URLField(null=True, blank=True)
+    document = models.FileField(
+        upload_to=CorrectPath('media'),
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf', 'docx', 'txt'])
+        ],
+        null=True, 
+        blank=True
+    )
+    social_media = models.JSONField(blank=True, null=True)
+
+    class Meta:
+        db_table = "federation"
+        verbose_name = "Federation"
+        verbose_name_plural = "Federations"
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['region']),
+            models.Index(fields=['is_national']),
+            models.Index(fields=['user']),
+        ]
+
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        handle_file_update(self, 'logo')
+        handle_file_update(self, 'document')
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        handle_file_delete(self, 'logo')
+        handle_file_delete(self, 'document')
+        super().delete(*args, **kwargs)
