@@ -76,3 +76,13 @@ class UserRequestStatus(BaseEnum):
     ACCEPTED = "accepted"
     REJECTED = "rejected"
     CANCELLED = "cancelled"
+
+
+class SportGradeEnum(BaseEnum):
+    YOUTH_3 = "Youth Third Rank"
+    YOUTH_2 = "Youth Second Rank"
+    YOUTH_1 = "Youth First Rank"
+    ADULT_3 = "Adult Third Rank"
+    ADULT_2 = "Adult Second Rank"
+    ADULT_1 = "Adult First Rank"
+    CANDIDATE = "Candidate for Master of Sport"

@@ -250,6 +250,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             "skill_level",
             "bio",
             "division",
+            "sport_grade",
             "user_metrics",
             "address",
             "social_media",

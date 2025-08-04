@@ -119,6 +119,7 @@ class Sportsman(models.Model):
     skill_level = models.CharField(max_length=100, null=True, blank=True)
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
+    sport_grade = models.CharField(max_length=30, choices=enums.SportGradeEnum.choices(), default=enums.SportGradeEnum.YOUTH_3.value, blank=True, null=True)
     user_metrics = models.JSONField(blank=True, null=True)
     # Address
     address = models.JSONField(blank=True, null=True)
