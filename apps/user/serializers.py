@@ -940,20 +940,20 @@ class UserRequestSerializer(serializers.ModelSerializer):
         return user_request
 
     def update(self, instance, validated_data):
-        sender = self.context.get("request").user
+        sender = instance.sender
+        logger.info(f"Sender: {sender}")  # LOGGING
         receiver = instance.receiver
         request_type = instance.request_type
         status = validated_data.get("status")
-        logger.info(f"Status: {status}")
+        logger.info(f"Status: {status}")  # LOGGING
 
         if request_type == "trainer_request":
             if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
                 # If the request is accepted, update the trainer for the sender
                 if receiver and hasattr(receiver, "trainer_profile"):
-                    sender.trainer_profile.trainer = receiver
+                    sender.sportsman_profile.trainer = receiver
                     sender.sportsman_profile.is_sportsman_verified = True
                     sender.sportsman_profile.save()
-                    sender.trainer_profile.save()
                     instance.status = enums.UserRequestStatus.ACCEPTED.value
                     instance.save()
                     send_notification_to_user(
