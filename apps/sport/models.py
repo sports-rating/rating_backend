@@ -7,7 +7,7 @@ from django.core.validators import FileExtensionValidator, MinValueValidator, Ma
 from rest_framework.exceptions import ValidationError
 
 from apps.shared.models import BaseModel, Region, District
-from apps.shared.utils.enums import LanguageTypes
+from apps.shared.utils.enums import LanguageTypes, GenderChoices
 from apps.shared.utils.utils import handle_file_update, handle_file_delete, CorrectPath
 
 
@@ -143,12 +143,10 @@ class Team(BaseModel):
 class Federation(BaseModel):
     name = models.CharField(max_length=250)
     is_national = models.BooleanField(default=False)
-    user = models.ForeignKey(
+    users = models.ManyToManyField(
         "user.User",
-        on_delete=models.CASCADE,
-        related_name="federation_profile",
-        blank=True,
-        null=True
+        related_name='federations',
+        help_text="Users associated with this federation",
     )
     parent_federation = models.ForeignKey(
         "self",
@@ -161,6 +159,12 @@ class Federation(BaseModel):
         Region,
         on_delete=models.CASCADE,
         related_name="federations",
+    )
+    sports = models.ManyToManyField(
+        Sport,
+        related_name="federations",
+        blank=True,
+        help_text="Sports associated with this federation"
     )
     address = models.TextField(null=True, blank=True)
     phone_number = models.CharField(max_length=15, unique=True)
@@ -192,7 +196,6 @@ class Federation(BaseModel):
             models.Index(fields=['name']),
             models.Index(fields=['region']),
             models.Index(fields=['is_national']),
-            models.Index(fields=['user']),
         ]
 
     def __str__(self):
@@ -207,3 +210,77 @@ class Federation(BaseModel):
         handle_file_delete(self, 'logo')
         handle_file_delete(self, 'document')
         super().delete(*args, **kwargs)
+
+
+class AgeGroup(BaseModel):
+    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='age_groups')
+    federation = models.ForeignKey(Federation, on_delete=models.CASCADE, related_name='age_groups', blank=True, null=True)
+    name = models.CharField(max_length=255)
+    min_age = models.PositiveIntegerField(
+        validators=[MinValueValidator(0)],
+        help_text="Minimum age for this age group"
+    )
+    max_age = models.PositiveIntegerField(
+        validators=[MinValueValidator(0)],
+        help_text="Maximum age for this age group"
+    )
+    gender = models.CharField(
+        max_length=20,
+        choices=GenderChoices.choices(),
+        default=GenderChoices.MALE.value,
+    )
+
+    class Meta:
+        db_table = "age_group"
+        indexes = [
+            models.Index(fields=['sport']),
+            models.Index(fields=['federation']),
+            models.Index(fields=['name']),
+            models.Index(fields=['gender'])
+        ]
+        verbose_name = "Age Group"
+        verbose_name_plural = "Age Groups"
+
+    def __str__(self):
+        return f"{self.name} ({self.min_age}-{self.max_age}) - {self.sport.name}"
+
+
+class WeightCategoryType(BaseModel):
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = "weight_category_type"
+        verbose_name = "Weight Category Type"
+        verbose_name_plural = "Weight Category Types"
+
+    def __str__(self):
+        return self.name
+
+
+class WeightCategory(BaseModel):
+    type = models.ForeignKey(WeightCategoryType, on_delete=models.CASCADE, related_name='weight_categories')
+    age_group = models.ForeignKey(AgeGroup, on_delete=models.CASCADE, related_name='weight_categories')
+    min_weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        help_text="Minimum weight for this category"
+    )
+    max_weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum weight for this category"
+    )
+
+    class Meta:
+        db_table = "weight_category"
+        indexes = [
+            models.Index(fields=['age_group']),
+        ]
+        unique_together = [('age_group', 'min_weight', 'max_weight')]
+        verbose_name = "Weight Category"
+        verbose_name_plural = "Weight Categories"
+
+    def __str__(self):
+        return f"{self.age_group.name} - {self.min_weight}kg to {self.max_weight}kg"

@@ -20,6 +20,10 @@ from apps.sport.models import (
     Tournament,
     Result,
     Team,
+    Federation,
+    AgeGroup,
+    WeightCategory,
+    WeightCategoryType
 )
 
 from apps.user.models import (
@@ -295,3 +299,79 @@ class TeamSerializer(serializers.ModelSerializer):
             "losses",
             "draws",
         ]
+
+
+class AgeGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AgeGroup
+        fields = (
+            "id",
+            "name",
+            "sport",
+            "min_age",
+            "max_age",
+            "gender",
+            "created_time"
+        )
+        read_only_fields = ("id", "created_time")
+
+
+class FederationSerializer(serializers.ModelSerializer):
+    age_groups = AgeGroupSerializer(many=True, required=False)
+
+    class Meta:
+        model = Federation
+        fields = (
+            "id",
+            "name",
+            "is_national",
+            "users",
+            "parent_federation",
+            "region",
+            "sports",
+            "address",
+            "phone_number",
+            "email",
+            "website",
+            "logo",
+            "document",
+            "social_media",
+            "created_time",
+        )
+        read_only_fields = ("id", "created_time")
+        extra_kwargs = {
+            "logo": {"required": False},
+            "document": {"required": False},
+            "parent_federation": {"required": False},
+        }
+    
+    def validate(self, attrs):
+        name = attrs.get("name", None)
+        instance = self.instance
+        if instance:
+            current_name = instance.name
+
+            is_name_updated = name is not None and name != current_name
+
+            if is_name_updated:
+                queryset = Federation.objects.filter(name=name)
+                queryset = queryset.exclude(id=instance.id)
+
+                if queryset.exists():
+                    raise_validation_error(message=_("Federation with this name already exists!"))
+        else:
+            if name:
+                queryset = Federation.objects.filter(name=name)
+                if queryset.exists():
+                    raise_validation_error(message=_("Federation with this name already exists!"))
+        
+        return attrs
+    
+    def create(self, validated_data):
+        age_groups_data = validated_data.pop("age_groups", [])
+        federation = Federation.objects.create(**validated_data)
+
+        for age_group_data in age_groups_data:
+            AgeGroup.objects.create(federation=federation, **age_group_data)
+
+        return federation
