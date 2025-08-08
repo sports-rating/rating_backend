@@ -214,7 +214,6 @@ class Federation(BaseModel):
 
 class AgeGroup(BaseModel):
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='age_groups')
-    federation = models.ForeignKey(Federation, on_delete=models.CASCADE, related_name='age_groups', blank=True, null=True)
     name = models.CharField(max_length=255)
     min_age = models.PositiveIntegerField(
         validators=[MinValueValidator(0)],
@@ -224,42 +223,6 @@ class AgeGroup(BaseModel):
         validators=[MinValueValidator(0)],
         help_text="Maximum age for this age group"
     )
-    gender = models.CharField(
-        max_length=20,
-        choices=GenderChoices.choices(),
-        default=GenderChoices.MALE.value,
-    )
-
-    class Meta:
-        db_table = "age_group"
-        indexes = [
-            models.Index(fields=['sport']),
-            models.Index(fields=['federation']),
-            models.Index(fields=['name']),
-            models.Index(fields=['gender'])
-        ]
-        verbose_name = "Age Group"
-        verbose_name_plural = "Age Groups"
-
-    def __str__(self):
-        return f"{self.name} ({self.min_age}-{self.max_age}) - {self.sport.name}"
-
-
-class WeightCategoryType(BaseModel):
-    name = models.CharField(max_length=255)
-
-    class Meta:
-        db_table = "weight_category_type"
-        verbose_name = "Weight Category Type"
-        verbose_name_plural = "Weight Category Types"
-
-    def __str__(self):
-        return self.name
-
-
-class WeightCategory(BaseModel):
-    type = models.ForeignKey(WeightCategoryType, on_delete=models.CASCADE, related_name='weight_categories')
-    age_group = models.ForeignKey(AgeGroup, on_delete=models.CASCADE, related_name='weight_categories')
     min_weight = models.DecimalField(
         max_digits=5,
         decimal_places=2,
@@ -272,15 +235,56 @@ class WeightCategory(BaseModel):
         validators=[MinValueValidator(0)],
         help_text="Maximum weight for this category"
     )
+    gender = models.CharField(
+        max_length=20,
+        choices=GenderChoices.choices(),
+        default=GenderChoices.MALE.value,
+    )
 
     class Meta:
-        db_table = "weight_category"
+        db_table = "age_group"
         indexes = [
-            models.Index(fields=['age_group']),
+            models.Index(fields=['sport']),
+            models.Index(fields=['name']),
+            models.Index(fields=['gender'])
         ]
-        unique_together = [('age_group', 'min_weight', 'max_weight')]
-        verbose_name = "Weight Category"
-        verbose_name_plural = "Weight Categories"
+        verbose_name = "Age Group"
+        verbose_name_plural = "Age Groups"
 
     def __str__(self):
-        return f"{self.age_group.name} - {self.min_weight}kg to {self.max_weight}kg"
+        return f"{self.name} ({self.min_age}-{self.max_age}) - {self.sport.name}"
+
+
+class FederationAgeGroup(BaseModel):
+    age_group = models.ForeignKey(AgeGroup, on_delete=models.CASCADE, related_name='federation_age_groups')
+    federation = models.ForeignKey(Federation, on_delete=models.CASCADE, related_name='age_groups')
+    custom_min_weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Custom minimum weight for this age group"
+    )
+    custom_max_weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Custom maximum weight for this age group"
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "federation_age_group"
+        indexes = [
+            models.Index(fields=['age_group']),
+            models.Index(fields=['federation']),
+            models.Index(fields=['is_active']),
+        ]
+        verbose_name = "Federation Age Group"
+        verbose_name_plural = "Federation Age Groups"
+
+    def __str__(self):
+        return f"{self.age_group.name} - {self.federation.name}"

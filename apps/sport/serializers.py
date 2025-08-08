@@ -22,8 +22,7 @@ from apps.sport.models import (
     Team,
     Federation,
     AgeGroup,
-    WeightCategory,
-    WeightCategoryType
+    FederationAgeGroup
 )
 
 from apps.user.models import (
@@ -317,7 +316,7 @@ class AgeGroupSerializer(serializers.ModelSerializer):
 
 
 class FederationSerializer(serializers.ModelSerializer):
-    age_groups = AgeGroupSerializer(many=True, required=False)
+    age_groups = serializers.SerializerMethodField()
 
     class Meta:
         model = Federation
@@ -335,6 +334,7 @@ class FederationSerializer(serializers.ModelSerializer):
             "website",
             "logo",
             "document",
+            "age_groups",
             "social_media",
             "created_time",
         )
@@ -369,9 +369,22 @@ class FederationSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         age_groups_data = validated_data.pop("age_groups", [])
-        federation = Federation.objects.create(**validated_data)
+        with transaction.atomic():
+            federation = Federation.objects.create(**validated_data)
 
-        for age_group_data in age_groups_data:
-            AgeGroup.objects.create(federation=federation, **age_group_data)
-
+            for age_group_data in age_groups_data:
+                age_group = AgeGroup.objects.create(**age_group_data)
+                FederationAgeGroup.objects.create(federation=federation, age_group=age_group)
         return federation
+
+    def get_age_groups(self, obj):
+        return AgeGroupSerializer(
+            AgeGroup.objects.filter(federation_age_groups__federation=obj),
+            many=True
+        ).data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['logo'] = get_file_full_url(instance.logo.url) if instance.logo else None
+        data['document'] = get_file_full_url(instance.document.url) if instance.document else None
+        return data

@@ -21,18 +21,13 @@ from apps.sport.models import (
     Sport,
     Result,
     Tournament,
-    Team
+    Team,
+    FederationAgeGroup,
+    Federation,
+    AgeGroup
 )
 
-from apps.sport.serializers import (
-    SportSerializer,
-    TournamentSerializer,
-    ResultCreateSerializer,
-    ResultSerializer,
-    TeamCreateSerializer,
-    TeamUpdateSerializer,
-    TeamSerializer
-)
+import apps.sport.serializers as serializer
 
 from apps.sport.filters import (
     TournamentFilter,
@@ -43,11 +38,11 @@ from apps.sport.filters import (
 class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny, )
     queryset = Result.objects.all().select_related('trainer', 'archived_trainer', 'tournament')
-    serializer_class = ResultCreateSerializer
+    serializer_class = serializer.ResultCreateSerializer
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return ResultSerializer
+            return serializer.ResultSerializer
         return super().get_serializer_class()
 
     def retrieve(self, request, *args, **kwargs):
@@ -82,7 +77,7 @@ class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 class TournamentListCreateView(generics.ListCreateAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     queryset = Tournament.objects.all()
-    serializer_class = TournamentSerializer
+    serializer_class = serializer.TournamentSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = TournamentFilter
     search_fields = ["name",]
@@ -122,7 +117,7 @@ class TournamentListCreateView(generics.ListCreateAPIView):
 class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     queryset = Tournament.objects.all()
-    serializer_class = TournamentSerializer
+    serializer_class = serializer.TournamentSerializer
 
     def get_queryset(self):
         return self.queryset.select_related("sport")
@@ -164,8 +159,8 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 class SportListCreateView(generics.ListCreateAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     queryset = Sport.objects.all()
-    serializer_class = SportSerializer
-    
+    serializer_class = serializer.SportSerializer
+
     def get_permissions(self):
         if self.request.method == "GET":
             return (permissions.AllowAny(),)
@@ -193,7 +188,7 @@ class SportListCreateView(generics.ListCreateAPIView):
 class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     queryset = Sport.objects.all()
-    serializer_class = SportSerializer
+    serializer_class = serializer.SportSerializer
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -232,14 +227,14 @@ class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 class TeamListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Team.objects.all()
-    serializer_class = TeamCreateSerializer
+    serializer_class = serializer.TeamCreateSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = TeamFilter
     pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return TeamSerializer
+            return serializer.TeamSerializer
         return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
@@ -265,11 +260,11 @@ class TeamListCreateView(generics.ListCreateAPIView):
 class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = Team.objects.all()
-    serializer_class = TeamUpdateSerializer
+    serializer_class = serializer.TeamUpdateSerializer
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return TeamSerializer
+            return serializer.TeamSerializer
         return super().get_serializer_class()
 
     def retrieve(self, request, *args, **kwargs):
@@ -278,7 +273,7 @@ class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             data=serializer.data,
             message=_("Team retrieved successfully"),
-            code=200,
+            code=status.HTTP_200_OK,
         )
     
     def update(self, request, *args, **kwargs):
@@ -289,7 +284,7 @@ class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             message=_("Team updated successfully"),
             data=serializer.data,
-            code=200,
+            code=status.HTTP_200_OK,
         )
 
     def delete(self, request, *args, **kwargs):
@@ -297,5 +292,64 @@ class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
         return success_response(
             message=_("Team deleted successfully"),
-            code=204
+            code=status.HTTP_204_NO_CONTENT
+        )
+    
+
+class FederationListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = (IsAdminOrSuperAdmin,)
+    serializer_class = serializer.FederationSerializer
+    queryset = Federation.objects.all()
+    pagination_class = CustomPagination
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Federation created successfully"),
+            code=status.HTTP_201_CREATED
+        )
+    
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Federation list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsAdminOrSuperAdmin,)
+    serializer_class = serializer.FederationSerializer
+    queryset = Federation.objects.all()
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Federation retrieved successfully"),
+            code=status.HTTP_200_OK,
+        )
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Federation updated successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Federation deleted successfully"),
+            code=status.HTTP_204_NO_CONTENT
         )
