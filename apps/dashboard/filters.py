@@ -32,6 +32,8 @@ class UserFilter(filters.FilterSet):
             return queryset.filter(trainer_profile__isnull=False)
         elif value == "ordinary":
             return queryset.filter(sportsman_profile__isnull=True, trainer_profile__isnull=True)
+        elif value == "federation":
+            return queryset.filter(user_role=UserRoles.FEDERATION.value)
         return queryset
     
     def filter_start_time(self, queryset, name, value):

@@ -759,7 +759,7 @@ class DistrictListView(generics.ListAPIView):
             message=_("District list retrieved successfully"),
             code=status.HTTP_200_OK
         )
-    
+
 
 class NeighborhoodListView(generics.ListAPIView):
     queryset = Neighborhood.objects.all()
