@@ -34,7 +34,7 @@ class BaseMedia(BaseModel):
             
             _, ext = os.path.splitext(self.file.name)
             self.extension = ext.lower().lstrip('.')
-           
+            
             guessed_type, _ = mimetypes.guess_type(self.file.name)
             if guessed_type:
                 if guessed_type.startswith("image/"):

@@ -6,7 +6,7 @@ from django.core.validators import FileExtensionValidator, MinValueValidator, Ma
 
 from rest_framework.exceptions import ValidationError
 
-from apps.shared.models import BaseModel, Region, District
+from apps.shared.models import BaseModel, Region, District, BaseMedia
 from apps.shared.utils.enums import LanguageTypes, GenderChoices
 from apps.shared.utils.utils import handle_file_update, handle_file_delete, CorrectPath
 
@@ -159,6 +159,8 @@ class Federation(BaseModel):
         Region,
         on_delete=models.CASCADE,
         related_name="federations",
+        null=True,
+        blank=True,
     )
     sports = models.ManyToManyField(
         Sport,
@@ -167,7 +169,7 @@ class Federation(BaseModel):
         help_text="Sports associated with this federation"
     )
     address = models.TextField(null=True, blank=True)
-    phone_number = models.CharField(max_length=15, unique=True)
+    phone_number = models.CharField(max_length=15)
     email = models.EmailField(null=True, blank=True)
     logo = models.ImageField(
         upload_to=CorrectPath('media'), 
@@ -178,14 +180,6 @@ class Federation(BaseModel):
         blank=True                         
     )
     website = models.URLField(null=True, blank=True)
-    document = models.FileField(
-        upload_to=CorrectPath('media'),
-        validators=[
-            FileExtensionValidator(allowed_extensions=['pdf', 'docx', 'txt'])
-        ],
-        null=True, 
-        blank=True
-    )
     social_media = models.JSONField(blank=True, null=True)
 
     class Meta:
@@ -194,7 +188,6 @@ class Federation(BaseModel):
         verbose_name_plural = "Federations"
         indexes = [
             models.Index(fields=['name']),
-            models.Index(fields=['region']),
             models.Index(fields=['is_national']),
         ]
 
@@ -203,37 +196,33 @@ class Federation(BaseModel):
     
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
-        handle_file_update(self, 'document')
         super().save(*args, **kwargs)
     
     def delete(self, *args, **kwargs):
         handle_file_delete(self, 'logo')
-        handle_file_delete(self, 'document')
         super().delete(*args, **kwargs)
+
+
+class FederationDocument(BaseMedia):
+    federation = models.ForeignKey(Federation, on_delete=models.CASCADE, related_name='documents')
+
+    class Meta:
+        db_table = "federation_document"
+        verbose_name = "Federation Document"
+        verbose_name_plural = "Federation Documents"
 
 
 class AgeGroup(BaseModel):
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='age_groups')
     name = models.CharField(max_length=255)
-    min_age = models.PositiveIntegerField(
+    age = models.PositiveIntegerField(
         validators=[MinValueValidator(0)],
-        help_text="Minimum age for this age group"
+        default=0,
+        help_text="Exact age for this age group"
     )
-    max_age = models.PositiveIntegerField(
-        validators=[MinValueValidator(0)],
-        help_text="Maximum age for this age group"
-    )
-    min_weight = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        validators=[MinValueValidator(0)],
-        help_text="Minimum weight for this category"
-    )
-    max_weight = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        validators=[MinValueValidator(0)],
-        help_text="Maximum weight for this category"
+    weights = models.JSONField(
+        default=list,
+        help_text="List of allowed weights for this age group"
     )
     gender = models.CharField(
         max_length=20,
@@ -244,43 +233,25 @@ class AgeGroup(BaseModel):
     class Meta:
         db_table = "age_group"
         indexes = [
-            models.Index(fields=['sport']),
             models.Index(fields=['name']),
             models.Index(fields=['gender'])
         ]
+        unique_together = ('name', 'sport')
         verbose_name = "Age Group"
         verbose_name_plural = "Age Groups"
 
     def __str__(self):
-        return f"{self.name} ({self.min_age}-{self.max_age}) - {self.sport.name}"
+        return f"{self.name} {self.age} - {self.sport.name}"
 
 
 class FederationAgeGroup(BaseModel):
-    age_group = models.ForeignKey(AgeGroup, on_delete=models.CASCADE, related_name='federation_age_groups')
-    federation = models.ForeignKey(Federation, on_delete=models.CASCADE, related_name='age_groups')
-    custom_min_weight = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0)],
-        help_text="Custom minimum weight for this age group"
-    )
-    custom_max_weight = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(0)],
-        help_text="Custom maximum weight for this age group"
-    )
+    age_group = models.ForeignKey(AgeGroup, on_delete=models.CASCADE, related_name='federation_links')
+    federation = models.ForeignKey(Federation, on_delete=models.CASCADE, related_name='age_group_links')
     is_active = models.BooleanField(default=True)
 
     class Meta:
         db_table = "federation_age_group"
         indexes = [
-            models.Index(fields=['age_group']),
-            models.Index(fields=['federation']),
             models.Index(fields=['is_active']),
         ]
         verbose_name = "Federation Age Group"

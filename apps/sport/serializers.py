@@ -13,7 +13,7 @@ from rest_framework.generics import get_object_or_404
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
-from apps.shared.utils.general import get_file_full_url
+from apps.shared.utils.general import get_file_full_url, calculate_file_size
 
 from apps.sport.models import (
     Sport,
@@ -22,7 +22,8 @@ from apps.sport.models import (
     Team,
     Federation,
     AgeGroup,
-    FederationAgeGroup
+    FederationAgeGroup,
+    FederationDocument
 )
 
 from apps.user.models import (
@@ -307,16 +308,35 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "sport",
-            "min_age",
-            "max_age",
+            "age",
+            "weights",
             "gender",
             "created_time"
         )
         read_only_fields = ("id", "created_time")
 
 
+class FederationDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FederationDocument
+        fields = [
+            "id",
+            "file",
+            "media_type",
+            "size"
+        ]
+        read_only_fields = ("id", "media_type", "size")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['file'] = get_file_full_url(instance.file.url) if instance.file else None
+        data["size"] = calculate_file_size(instance.size) if instance.size else None
+        return data
+
+
 class FederationSerializer(serializers.ModelSerializer):
-    age_groups = serializers.SerializerMethodField()
+    documents = FederationDocumentSerializer(many=True, required=False)
+    age_groups = AgeGroupSerializer(many=True, required=False)
 
     class Meta:
         model = Federation
@@ -333,7 +353,7 @@ class FederationSerializer(serializers.ModelSerializer):
             "email",
             "website",
             "logo",
-            "document",
+            "documents",
             "age_groups",
             "social_media",
             "created_time",
@@ -341,50 +361,63 @@ class FederationSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_time")
         extra_kwargs = {
             "logo": {"required": False},
-            "document": {"required": False},
             "parent_federation": {"required": False},
+            "region": {"required": False},
         }
     
     def validate(self, attrs):
-        name = attrs.get("name", None)
-        instance = self.instance
-        if instance:
-            current_name = instance.name
-
-            is_name_updated = name is not None and name != current_name
-
-            if is_name_updated:
-                queryset = Federation.objects.filter(name=name)
-                queryset = queryset.exclude(id=instance.id)
-
-                if queryset.exists():
-                    raise_validation_error(message=_("Federation with this name already exists!"))
-        else:
-            if name:
-                queryset = Federation.objects.filter(name=name)
-                if queryset.exists():
-                    raise_validation_error(message=_("Federation with this name already exists!"))
-        
+        name = attrs.get("name")
+        documents = attrs.get('documents', [])
+        qs = Federation.objects.filter(name=name)
+        is_national = attrs.get("is_national", False)
+        region = attrs.get("region", None)
+        phone_number = attrs.get("phone_number", None)
+        if phone_number and Federation.objects.filter(phone_number=phone_number).exists():
+            raise_validation_error(message=_("Federation with this phone number already exists!"))
+        if is_national and region:
+            raise_validation_error(message=_("National federations cannot have a region."))
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise_validation_error(message=_("Federation with this name already exists!"))
+        if not isinstance(documents, list):
+            raise_validation_error(message=_("Documents must be a list of files."))
         return attrs
     
     def create(self, validated_data):
         age_groups_data = validated_data.pop("age_groups", [])
+        users = validated_data.pop("users", [])
+        sports = validated_data.pop("sports", [])
+        documents = validated_data.pop("documents", [])
         with transaction.atomic():
             federation = Federation.objects.create(**validated_data)
-
+            for doc in documents:
+                FederationDocument.objects.create(federation=federation, **doc).save()
+            federation.users.set(users)
+            federation.sports.set(sports)
             for age_group_data in age_groups_data:
                 age_group = AgeGroup.objects.create(**age_group_data)
                 FederationAgeGroup.objects.create(federation=federation, age_group=age_group)
         return federation
 
-    def get_age_groups(self, obj):
-        return AgeGroupSerializer(
-            AgeGroup.objects.filter(federation_age_groups__federation=obj),
-            many=True
-        ).data
-
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data['logo'] = get_file_full_url(instance.logo.url) if instance.logo else None
-        data['document'] = get_file_full_url(instance.document.url) if instance.document else None
+        data['age_groups'] = AgeGroupSerializer(
+            [fa.age_group for fa in instance.age_group_links.all()],
+            many=True,
+        ).data
+        data['documents'] = FederationDocumentSerializer(instance.documents.all(), many=True).data
+        data['region'] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data['users'] = UserListSerializer(
+            instance.users.all(),
+            many=True
+        ).data
+        data['sports'] = SportSerializer(
+            instance.sports.all(),
+            many=True,
+        ).data
         return data

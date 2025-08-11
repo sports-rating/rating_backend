@@ -22,3 +22,13 @@ def get_file_full_url(url):
     if not url.startswith("media"):
         url = "media/" + url
     return f"{settings.BACKEND_URL.rstrip('/')}/{url}"
+
+def calculate_file_size(size):
+    """
+    Calculate the file size in a human-readable format.
+    """
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{size:.2f} TB" 

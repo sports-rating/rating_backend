@@ -3,12 +3,14 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
 from django.http import HttpResponse
+from django.db.models import Q, Prefetch
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
 from apps.shared.utils.pagination import CustomPagination
@@ -24,7 +26,8 @@ from apps.sport.models import (
     Team,
     FederationAgeGroup,
     Federation,
-    AgeGroup
+    AgeGroup,
+    FederationDocument
 )
 
 import apps.sport.serializers as serializer
@@ -301,6 +304,19 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = serializer.FederationSerializer
     queryset = Federation.objects.all()
     pagination_class = CustomPagination
+    parser_classes = (FormParser, MultiPartParser)
+
+    def get_queryset(self):
+        return Federation.objects.prefetch_related(
+            Prefetch(
+                'age_group_links__age_group',
+                queryset=AgeGroup.objects.select_related('sport')
+            ),
+            Prefetch(
+                'documents',
+                queryset=FederationDocument.objects.all()
+            )
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -348,6 +364,11 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
+        
+        # Deleting related AgeGroups first
+        for link in instance.age_group_links.all():
+            link.age_group.delete()
+        
         instance.delete()
         return success_response(
             message=_("Federation deleted successfully"),
