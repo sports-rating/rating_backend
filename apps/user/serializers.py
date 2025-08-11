@@ -300,7 +300,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             if trainer and old_trainer != trainer:
                 if UserRequest.objects.filter(
                     sender=sender,
-                    status= enums.UserRequestStatus.PENDING.value,
+                    status=enums.UserRequestStatus.PENDING.value,
                 ).exists():
                     raise_validation_error(message=_("You already have a pending trainer request!"))
                 user_request = UserRequest.objects.create(
@@ -399,11 +399,13 @@ class TrainerListSerializer(serializers.ModelSerializer):
 class TrainerProfileSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     statistics = serializers.SerializerMethodField()
+    send_request = serializers.BooleanField(required=True, write_only=True)
 
     class Meta:
         model = Trainer
         fields = [
             "sport_id",
+            "federation",
             "skill_level",
             "bio",
             "division",
@@ -411,8 +413,10 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "address",
             "social_media",
             "is_trainer_verified",
-            "statistics"
+            "statistics",
+            "send_request"
         ]
+        read_only_fields = ["is_trainer_verified", "statistics"]
 
     def create(self, validated_data):
         sport = validated_data.pop("sport", None)
@@ -423,10 +427,65 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         return profile
 
     def update(self, instance, validated_data):
+        sender = self.context.get("request").user
         sport = validated_data.pop("sport", None)
+        federation = validated_data.pop("federation", None)
+        send_request = validated_data.pop("send_request", None)
+        
+        if instance.federation:
+            old_federation = instance.federation
+        else:
+            old_federation = None
 
         if sport:
             instance.sport = sport
+
+        if send_request:
+            if federation and old_federation != federation:
+                federation_user = federation.users.filter(user_role="federation").first()
+                if UserRequest.objects.filter(
+                    sender=sender,
+                    status=enums.UserRequestStatus.PENDING.value,
+                ).exists():
+                    raise_validation_error(message=_("You already have a pending federation request!"))
+                user_request = UserRequest.objects.create(
+                    sender=sender,
+                    receiver=federation_user,
+                    request_type=enums.UserRequestTypes.FEDERATION_REQUEST.value,
+                    status=enums.UserRequestStatus.PENDING.value
+                )
+                send_notification_to_user(
+                    user=federation_user,
+                    user_request=user_request,
+                    title=_("New Federation Request"),
+                    body=_(f"{sender.first_name} {sender.last_name} has sent you a new federation request."),
+                    data={
+                        "request_type": enums.UserRequestTypes.FEDERATION_REQUEST.value,
+                        "trainer_id": str(sender.id)
+                    }
+                )
+            else:
+                raise_validation_error(message=_("You can not choose existing federation as a new federation!"))
+        elif federation:
+            instance.federation = federation
+            existing_request = UserRequest.objects.filter(
+                sender=sender,
+                receiver=federation_user,
+                request_type=enums.UserRequestTypes.FEDERATION_REQUEST.value,
+                status=enums.UserRequestStatus.PENDING.value
+            )
+            if existing_request.exists():
+                existing_request.update(status=enums.UserRequestStatus.ACCEPTED.value)
+                send_notification_to_user(
+                    user=sender,
+                    user_request=existing_request.first(),
+                    title=_("Federation Request Accepted"),
+                    body=_(f"{federation_user.first_name} {federation_user.last_name} has accepted your federation request."),
+                    data={
+                        "request_type": "federation_request",
+                        "federation_id": str(federation_user.id),
+                    }
+                )
 
         # Update other fields
         for attr, value in validated_data.items():
@@ -446,6 +505,11 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "name": instance.sport.name,
             "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
         } if instance.sport else None
+        data["federation"] = {
+            "id": instance.federation.id,
+            "name": instance.federation.name,
+            "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
+        } if instance.federation else None
         return data
 
 
@@ -948,15 +1012,27 @@ class UserRequestSerializer(serializers.ModelSerializer):
         logger.info(f"Status: {status}")  # LOGGING
 
         if request_type == "trainer_request":
-            if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-                # If the request is accepted, update the trainer for the sender
-                if receiver and hasattr(receiver, "trainer_profile"):
-                    sender.sportsman_profile.trainer = receiver.trainer_profile
-                    sender.sportsman_profile.is_sportsman_verified = True
-                    sender.sportsman_profile.save()
-                    instance.status = enums.UserRequestStatus.ACCEPTED.value
-                    instance.save()
-                    send_notification_to_user(
+            self._handle_trainer_request(instance, validated_data)
+        elif request_type == "federation_request":
+            self._handle_federation_request(instance, validated_data)
+        else:
+            raise_validation_error(message=_("Invalid request type!"))
+
+        return instance
+
+    def _handle_trainer_request(self, instance, validated_data):
+        status = validated_data.get("status")
+        sender = instance.sender
+        receiver = instance.receiver
+        if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+            # If the request is accepted, update the trainer for the sender
+            if receiver and hasattr(receiver, "trainer_profile"):
+                sender.sportsman_profile.trainer = receiver.trainer_profile
+                sender.sportsman_profile.is_sportsman_verified = True
+                sender.sportsman_profile.save()
+                instance.status = enums.UserRequestStatus.ACCEPTED.value
+                instance.save()
+                send_notification_to_user(
                         user=sender,
                         user_request=instance,
                         title=_("Trainer Request Accepted"),
@@ -966,28 +1042,59 @@ class UserRequestSerializer(serializers.ModelSerializer):
                             "trainer_id": str(receiver.id),
                         }
                     )
-                else:
-                    raise_validation_error(message=_("Receiver must be a valid trainer!"))
             else:
-                instance.status = status
+                raise_validation_error(message=_("Receiver must be a valid trainer!"))
+        else:
+            instance.status = status
+            instance.save()
+            send_notification_to_user(
+                user=receiver,
+                user_request=instance,
+                title=_("Trainer Request Status Updated"),
+                body=_(f"The trainer request from {sender.full_name} has been {status}."),
+                data={
+                    "request_type": "trainer_request",
+                    "sportsman_id": str(sender.id),
+                }
+            )
+
+    def _handle_federation_request(self, instance, validated_data):
+        status = validated_data.get("status")
+        sender = instance.sender
+        receiver = instance.receiver
+        if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+            # If the request is accepted, update the federation for the sender
+            if receiver:
+                sender.trainer_profile.federation = receiver.federation
+                sender.trainer_profile.is_trainer_verified = True
+                sender.trainer_profile.save()
+                instance.status = enums.UserRequestStatus.ACCEPTED.value
                 instance.save()
                 send_notification_to_user(
-                    user=receiver,
+                    user=sender,
                     user_request=instance,
-                    title=_("Trainer Request Status Updated"),
-                    body=_(f"The trainer request from {sender.full_name} has been {status}."),
+                    title=_("Federation Request Accepted"),
+                    body=_(f"You have been assigned to {receiver.federation.name} as your federation."),
                     data={
-                        "request_type": "trainer_request",
-                        "sportsman_id": str(sender.id),
+                        "request_type": "federation_request",
+                        "federation_id": str(receiver.federation.id),
                     }
                 )
-        elif request_type == "federation_request":
-            # Implement logic for updating federation request here!
-            None
+            else:
+                raise_validation_error(message=_("Receiver must be a valid federation!"))
         else:
-            raise_validation_error(message=_("Invalid request type!"))
-
-        return instance
+            instance.status = status
+            instance.save()
+            send_notification_to_user(
+                user=receiver,
+                user_request=instance,
+                title=_("Federation Request Status Updated"),
+                body=_(f"The federation request from {sender.full_name} has been {status}."),
+                data={
+                    "request_type": "federation_request",
+                    "trainer_id": str(sender.id),
+                }
+            )
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

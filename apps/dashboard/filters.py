@@ -14,7 +14,6 @@ from apps.user.models import (
 )
 
 
-
 class UserFilter(filters.FilterSet):
     user_role = filters.CharFilter(method="filter_user_role")
     start_time = filters.CharFilter(method="filter_start_time")

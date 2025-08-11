@@ -25,7 +25,8 @@ from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
 
 from apps.sport.models import (
-    Sport
+    Sport,
+    Federation
 )
 
 fake = Faker()
@@ -56,6 +57,10 @@ class User(AbstractUser, BaseModel):
     @property
     def full_name(self):
         return f"{self.last_name} {self.first_name} {self.middle_name}"
+
+    @property
+    def federation(self):
+        return self.federations.first()
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -149,7 +154,8 @@ class Sportsman(models.Model):
 class Trainer(models.Model):
     user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='trainer_profile')
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
-    
+    federation = models.ForeignKey(Federation, on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
+
     skill_level = models.CharField(max_length=100, null=True, blank=True)
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
