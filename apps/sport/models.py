@@ -172,14 +172,13 @@ class Federation(BaseModel):
     phone_number = models.CharField(max_length=15)
     email = models.EmailField(null=True, blank=True)
     logo = models.ImageField(
-        upload_to=CorrectPath('media'), 
+        upload_to=CorrectPath('media'),
         validators=[
             FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
         ],
         null=True, 
-        blank=True                         
+        blank=True                       
     )
-    website = models.URLField(null=True, blank=True)
     social_media = models.JSONField(blank=True, null=True)
 
     class Meta:

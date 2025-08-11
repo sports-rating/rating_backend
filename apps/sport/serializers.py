@@ -351,7 +351,6 @@ class FederationSerializer(serializers.ModelSerializer):
             "address",
             "phone_number",
             "email",
-            "website",
             "logo",
             "documents",
             "age_groups",
