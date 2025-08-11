@@ -354,7 +354,9 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
+        print('here')
         serializer.is_valid(raise_exception=True)
+        print('passed')
         serializer.save()
         return success_response(
             data=serializer.data,

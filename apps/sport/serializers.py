@@ -314,6 +314,20 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "created_time"
         )
         read_only_fields = ("id", "created_time")
+    
+    def validate(self, attrs):
+        # TODO: not worked, reimplement
+        request = self.context.get('request')
+        parent_instance = self.parent.instance
+        if parent_instance and request and request.method in ("PUT", "PATCH"):
+            existing_qs = AgeGroup.objects.filter(
+                name=attrs.get("name"),
+                sport=attrs.get("sport"),
+            )
+            if existing_qs.exists():
+                # Just skip raising ValidationError here
+                return attrs
+        return super().validate(attrs)
 
 
 class FederationDocumentSerializer(serializers.ModelSerializer):
@@ -398,6 +412,42 @@ class FederationSerializer(serializers.ModelSerializer):
                 age_group = AgeGroup.objects.create(**age_group_data)
                 FederationAgeGroup.objects.create(federation=federation, age_group=age_group)
         return federation
+
+    def update(self, instance, validated_data):
+        age_groups_data = validated_data.pop("age_groups", [])
+        users = validated_data.pop("users", [])
+        sports = validated_data.pop("sports", [])
+        documents = validated_data.pop("documents", [])
+        print(validated_data)
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            if users:
+                # instance.users.clear()
+                instance.users.set(users)
+
+            if sports:
+                # instance.sports.clear()
+                instance.sports.set(sports)
+
+            if documents:
+                instance.documents.all().delete()
+                for doc in documents:
+                    FederationDocument.objects.create(federation=instance, **doc).save()
+
+            if age_groups_data:
+                instance.age_group_links.all().delete()
+                for age_group_data in age_groups_data:
+                    age_group, _ = AgeGroup.objects.update_or_create(
+                        name=age_group_data.get("name"),
+                        sport=age_group_data.get("sport"),
+                        defaults=age_group_data
+                    )
+                    FederationAgeGroup.objects.update_or_create(federation=instance, age_group=age_group)
+        
+        return instance
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
