@@ -204,6 +204,12 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             data["sportsman_profile"] = SportsmanProfileSerializer(instance.sportsman_profile, context=self.context).data
         elif instance.user_role == "trainer":
             data["trainer_profile"] = TrainerProfileSerializer(instance.trainer_profile, context=self.context).data
+        elif instance.user_role == "federation":
+            data["federation"] = {
+                "id": instance.federation.id,
+                "name": instance.federation.name,
+                "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
+            } if instance.federation else None
         return data
 
 
