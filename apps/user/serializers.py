@@ -537,6 +537,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "last_name",
             "pinfl",
             "gender",
+            "region",
+            "district",
             "user_role",
             "email",
             "media_ids",
@@ -599,7 +601,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 media_objects = list(UserMedia.objects.filter(id__in=media_ids))  # Convert to list to avoid multiple queries
                 if not media_objects:
                     raise_validation_error(message=_("At least one media must be uploaded"))
-                
+
                 for media in media_objects:
                     media.user = user
                 UserMedia.objects.bulk_update(media_objects, ["user"])
@@ -621,9 +623,11 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 Result.objects.create(user=user, **result_data)
 
             if user_role == "sportsman" and sportsman_profile_data:
+                sportsman_profile_data.pop("send_request", None)
                 sportsman_profile_data['trainer'] = sportsman_profile_data.get('trainer').trainer_profile
                 Sportsman.objects.create(user=user, **sportsman_profile_data)
             elif user_role == "trainer" and trainer_profile_data:
+                trainer_profile_data.pop("send_request", None)
                 Trainer.objects.create(user=user, **trainer_profile_data)
 
             logger.info(f"User created -> {user}")
@@ -634,9 +638,23 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # data["photo"] = [photo.file.url for photo in instance.photo.all()]
         if data["user_role"] == "ordinary":
             data["tokens"] = self.get_tokens(instance)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        
+        # Remove empty profiles
+        if getattr(instance, "sportsman_profile", None) is None:
+            data.pop("sportsman_profile")
+        if getattr(instance, "trainer_profile", None) is None:
+            data.pop("trainer_profile")
+       
         return data
 
 
@@ -806,6 +824,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "pinfl",
             "phone_number",
             "gender",
+            "region",
+            "district",
             "email",
             "birth_date",
             "media_ids",
@@ -915,6 +935,23 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     TrainerProfileSerializer(context={"request": self.context.get("request")}).update(trainer_profile, trainer_profile_data)
 
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name,
+        } if instance.region.id else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name,
+        } if instance.district.id else None
+        # Remove empty profiles
+        if getattr(instance, "sportsman_profile", None) is None:
+            data.pop("sportsman_profile", None)
+        if getattr(instance, "trainer_profile", None) is None:
+            data.pop("trainer_profile", None)
+        return data
 
 
 class ArchivedTrainerSerializer(serializers.ModelSerializer):

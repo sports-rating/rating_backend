@@ -28,6 +28,7 @@ def get_file_full_url(url):
         url = "media/" + url
     return f"{settings.BACKEND_URL.rstrip('/')}/{url}"
 
+
 def calculate_file_size(size):
     """
     Calculate the file size in a human-readable format.

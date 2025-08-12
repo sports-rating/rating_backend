@@ -447,7 +447,10 @@ class FederationSerializer(serializers.ModelSerializer):
             [fa.age_group for fa in instance.age_group_links.all()],
             many=True,
         ).data
-        data['documents'] = FederationDocumentSerializer(instance.documents.all(), many=True).data
+        data['documents'] = FederationDocumentSerializer(
+            instance.documents.all(),
+            many=True
+        ).data
         data['region'] = {
             "id": instance.region.id,
             "name": instance.region.name

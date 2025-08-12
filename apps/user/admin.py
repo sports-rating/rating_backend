@@ -34,7 +34,7 @@ class UserAdmin(admin.ModelAdmin):
     search_fields = ["username", "phone_number"]
     list_filter = ["is_verified",]
     readonly_fields = ["created_time", "educations", "results", "profile"]
-
+    list_filter = ["user_role", "gender", "region", "district"]
     fieldsets = (
         (
             None,
@@ -49,6 +49,8 @@ class UserAdmin(admin.ModelAdmin):
                     "phone_number",
                     "is_verified",
                     "user_role",
+                    "region",
+                    "district",
                     "educations",
                     "results",
                     "profile",

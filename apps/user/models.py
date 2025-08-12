@@ -42,6 +42,8 @@ class User(AbstractUser, BaseModel):
         blank=True, 
         null=True
     )
+    region = models.ForeignKey("shared.Region", on_delete=models.SET_NULL, related_name="users", null=True, blank=True)
+    district = models.ForeignKey("shared.District", on_delete=models.SET_NULL, related_name="users", null=True, blank=True)
     gender = models.CharField(max_length=30, choices=enums.GenderChoices.choices(), default=enums.GenderChoices.MALE.value, null=True, blank=True)
     user_role = models.CharField(max_length=50, choices=enums.UserRoles.choices(), default=enums.UserRoles.ORDINARY.value)
     phone_number = models.CharField(max_length=13, null=True, blank=True)
