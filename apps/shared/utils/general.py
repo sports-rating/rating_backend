@@ -1,3 +1,4 @@
+from attrs import field
 import openpyxl
 
 import logging
@@ -11,6 +12,10 @@ import tempfile
 from dateutil import relativedelta
 
 from django.conf import settings
+from django.utils.translation import gettext as _
+
+from apps.shared.utils.logging import logger
+from apps.shared.utils.exceptions import raise_validation_error
 
 
 def get_file_full_url(url):
@@ -32,3 +37,14 @@ def calculate_file_size(size):
             return f"{size:.2f} {unit}"
         size /= 1024
     return f"{size:.2f} TB" 
+
+
+def check_uniqueness(field_name, data, model, instance=None):
+    """
+    Related to Models!
+    Check the uniqueness of a field in a model.
+    """
+    if field_name in data:
+        value = data[field_name]
+        if value and model.objects.exclude(pk=getattr(instance, 'pk', None)).filter(**{field_name: value}).exists():
+            raise_validation_error(message=_(f"{(model.__name__).capitalize()} with this {field_name.replace('_', ' ')} already exists!"))

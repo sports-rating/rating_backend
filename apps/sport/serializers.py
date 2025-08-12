@@ -13,7 +13,11 @@ from rest_framework.generics import get_object_or_404
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
-from apps.shared.utils.general import get_file_full_url, calculate_file_size
+from apps.shared.utils.general import (
+    get_file_full_url, 
+    calculate_file_size,
+    check_uniqueness
+)
 
 from apps.sport.models import (
     Sport,
@@ -368,19 +372,12 @@ class FederationSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         instance = getattr(self, 'instance', None)
-
-        def check_uniqueness(field):
-            if field in attrs:
-                value = attrs[field]
-                if value and Federation.objects.exclude(pk=getattr(instance, 'pk', None)).filter(**{field: value}).exists():
-                    raise_validation_error(message=_(f"Federation with this {field.replace('_', ' ')} already exists!"))
-
-        check_uniqueness("name")
-        check_uniqueness("phone_number")
-
         documents = attrs.get('documents', [])
         is_national = attrs.get("is_national", False)
         region = attrs.get("region", None)
+
+        check_uniqueness("name", attrs, Federation, instance)
+        check_uniqueness("phone_number", attrs, Federation, instance)
 
         if is_national and region:
             raise_validation_error(message=_("National federations cannot have a region."))
@@ -416,11 +413,9 @@ class FederationSerializer(serializers.ModelSerializer):
             instance.save()
 
             if users:
-                # instance.users.clear()
                 instance.users.set(users)
 
             if sports:
-                # instance.sports.clear()
                 instance.sports.set(sports)
 
             if documents:
