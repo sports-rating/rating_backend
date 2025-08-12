@@ -302,6 +302,8 @@ class TeamSerializer(serializers.ModelSerializer):
 
 
 class AgeGroupSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+
     class Meta:
         model = AgeGroup
         fields = (
@@ -313,21 +315,7 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "gender",
             "created_time"
         )
-        read_only_fields = ("id", "created_time")
-    
-    def validate(self, attrs):
-        # TODO: not worked, reimplement
-        request = self.context.get('request')
-        parent_instance = self.parent.instance
-        if parent_instance and request and request.method in ("PUT", "PATCH"):
-            existing_qs = AgeGroup.objects.filter(
-                name=attrs.get("name"),
-                sport=attrs.get("sport"),
-            )
-            if existing_qs.exists():
-                # Just skip raising ValidationError here
-                return attrs
-        return super().validate(attrs)
+        validators = []
 
 
 class FederationDocumentSerializer(serializers.ModelSerializer):
@@ -377,26 +365,29 @@ class FederationSerializer(serializers.ModelSerializer):
             "parent_federation": {"required": False},
             "region": {"required": False},
         }
-    
+
     def validate(self, attrs):
-        name = attrs.get("name")
+        instance = getattr(self, 'instance', None)
+
+        def check_uniqueness(field):
+            if field in attrs:
+                value = attrs[field]
+                if value and Federation.objects.exclude(pk=getattr(instance, 'pk', None)).filter(**{field: value}).exists():
+                    raise_validation_error(message=_(f"Federation with this {field.replace('_', ' ')} already exists!"))
+
+        check_uniqueness("name")
+        check_uniqueness("phone_number")
+
         documents = attrs.get('documents', [])
-        qs = Federation.objects.filter(name=name)
         is_national = attrs.get("is_national", False)
         region = attrs.get("region", None)
-        phone_number = attrs.get("phone_number", None)
-        if phone_number and Federation.objects.filter(phone_number=phone_number).exists():
-            raise_validation_error(message=_("Federation with this phone number already exists!"))
+
         if is_national and region:
             raise_validation_error(message=_("National federations cannot have a region."))
-        if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise_validation_error(message=_("Federation with this name already exists!"))
         if not isinstance(documents, list):
             raise_validation_error(message=_("Documents must be a list of files."))
         return attrs
-    
+
     def create(self, validated_data):
         age_groups_data = validated_data.pop("age_groups", [])
         users = validated_data.pop("users", [])
@@ -414,11 +405,11 @@ class FederationSerializer(serializers.ModelSerializer):
         return federation
 
     def update(self, instance, validated_data):
-        age_groups_data = validated_data.pop("age_groups", [])
+        age_groups = validated_data.pop("age_groups", [])
         users = validated_data.pop("users", [])
         sports = validated_data.pop("sports", [])
         documents = validated_data.pop("documents", [])
-        print(validated_data)
+
         with transaction.atomic():
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
@@ -437,16 +428,21 @@ class FederationSerializer(serializers.ModelSerializer):
                 for doc in documents:
                     FederationDocument.objects.create(federation=instance, **doc).save()
 
-            if age_groups_data:
-                instance.age_group_links.all().delete()
-                for age_group_data in age_groups_data:
-                    age_group, _ = AgeGroup.objects.update_or_create(
-                        name=age_group_data.get("name"),
-                        sport=age_group_data.get("sport"),
-                        defaults=age_group_data
-                    )
-                    FederationAgeGroup.objects.update_or_create(federation=instance, age_group=age_group)
-        
+            if age_groups:
+                left_age_groups_id = []
+
+                for age_group in age_groups:
+                    age_group_id = age_group.get("id", None)
+                    if age_group_id:
+                        AgeGroup.objects.filter(id=age_group_id).update(**age_group)
+                        left_age_groups_id.append(age_group_id)
+                    else:
+                        new_age_group = AgeGroup.objects.create(**age_group)
+                        FederationAgeGroup.objects.create(federation=instance, age_group=new_age_group)
+                        left_age_groups_id.append(new_age_group.id)
+                
+                FederationAgeGroup.objects.filter(federation=instance).exclude(age_group__id__in=left_age_groups_id).delete()
+                AgeGroup.objects.exclude(id__in=left_age_groups_id).delete()
         return instance
 
     def to_representation(self, instance):
