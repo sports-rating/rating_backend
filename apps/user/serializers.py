@@ -1,59 +1,35 @@
 from datetime import date
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from django.contrib.auth import authenticate
-from django.db import transaction, IntegrityError
-from django.utils.translation import gettext as _
-from django.contrib.auth.models import update_last_login
-from django.utils import timezone
-from django.db.models import Sum
+import rest_framework_simplejwt.serializers as jwt_serializers
+import rest_framework_simplejwt.tokens as jwt_tokens
 from django.conf import settings
-from fcm_django.models import FCMDevice, DeviceType
-
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import update_last_login
+from django.db import IntegrityError, transaction
+from django.db.models import Sum
+from django.utils import timezone
+from django.utils.translation import gettext as _
+from fcm_django.models import DeviceType, FCMDevice
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
-import rest_framework_simplejwt.tokens as jwt_tokens
-import rest_framework_simplejwt.serializers as jwt_serializers
 
+from apps.education.models import Education
+from apps.education.serializers import EducationCreateSerializer
+from apps.shared.models import District, Neighborhood, Region
+from apps.shared.utils import enums
+from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.general import get_file_full_url
 # custom
 from apps.shared.utils.logging import logger
-from apps.shared.utils.exceptions import raise_validation_error
-from apps.shared.utils.utils import CorrectPath
-from apps.shared.utils.general import get_file_full_url
-from apps.user.utils import calculate_sportsman_statistics, calculate_trainer_statistics
-from apps.shared.utils import enums
 from apps.shared.utils.notifications import send_notification_to_user
-
-from apps.user.models import (
-    User,
-    Sportsman,
-    Trainer,
-    ArchivedTrainer,
-    UserMedia,
-    UserNotification,
-    UserRequest
-)
-from apps.sport.models import (
-    Sport,
-    Tournament,
-    Result
-)
-from apps.education.models import (
-    Education
-)
-from apps.sport.serializers import (
-    ResultCreateSerializer,
-    SportSerializer
-)
-from apps.education.serializers import (
-    EducationCreateSerializer
-)
-from apps.shared.models import (
-    Region,
-    District,
-    Neighborhood
-)
-
+from apps.shared.utils.utils import CorrectPath
+from apps.sport.models import Result, Sport, Tournament
+from apps.sport.serializers import ResultCreateSerializer, SportSerializer
+from apps.user.models import (ArchivedTrainer, Sportsman, Trainer, User,
+                              UserMedia, UserNotification, UserRequest)
+from apps.user.utils import (calculate_sportsman_statistics,
+                             calculate_trainer_statistics)
 
 SEND_VERIFICATION_ACTION = (
     ("signup", "signup"),
@@ -128,13 +104,13 @@ class BaseMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserMedia
         fields = (
-            "id", 
-            "media_type", 
-            "size", 
-            "extension", 
-            "created_time", 
+            "id",
+            "media_type",
+            "size",
+            "extension",
+            "created_time",
             "file",
-            "type", 
+            "type",
             "is_profile_photo",
         )
         read_only_fields = ["created_time", "size", "extension", "media_type"]
@@ -177,6 +153,8 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             "phone_number",
             "email",
             "gender",
+            "region",
+            "district",
             "birth_date",
             "is_superuser",
             "media",
@@ -210,6 +188,14 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
                 "name": instance.federation.name,
                 "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
             } if instance.federation else None
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
         return data
 
 
@@ -390,7 +376,7 @@ class TrainerListSerializer(serializers.ModelSerializer):
             # "logo",
         ]
 
-    def to_representation(self, instance): 
+    def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.trainer_profile.sport:
             data["sport"] = instance.trainer_profile.sport.name
@@ -437,7 +423,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         sport = validated_data.pop("sport", None)
         federation = validated_data.pop("federation", None)
         send_request = validated_data.pop("send_request", None)
-        
+
         if instance.federation:
             old_federation = instance.federation
         else:
@@ -500,7 +486,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
-    
+
     def get_statistics(self, obj) -> Dict[str, Any]:
         return calculate_trainer_statistics(trainer=obj.user)
 
@@ -553,8 +539,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "created_time",
         )
         extra_kwargs = {
-            "id": {"read_only": True}, 
-            "is_verified": {"read_only": True}, 
+            "id": {"read_only": True},
+            "is_verified": {"read_only": True},
             "media_ids": {"required": False},
             }
 
@@ -592,11 +578,11 @@ class RegistrationSerializer(serializers.ModelSerializer):
             user = User.objects.create(**validated_data)
             # if media_ids:
             #     media_objects = UserMedia.objects.filter(id__in=media_ids)
-                
+
             #     if not media_objects.exists():
             #         raise_validation_error(message=_(f"At least one media must be uploaded"))
-                
-            #     media_objects.update(user=user) # view in sql 
+
+            #     media_objects.update(user=user) # view in sql
             if media_ids:
                 media_objects = list(UserMedia.objects.filter(id__in=media_ids))  # Convert to list to avoid multiple queries
                 if not media_objects:
@@ -648,13 +634,13 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "id": instance.district.id,
             "name": instance.district.name
         } if instance.district else None
-        
+
         # Remove empty profiles
         if getattr(instance, "sportsman_profile", None) is None:
             data.pop("sportsman_profile")
         if getattr(instance, "trainer_profile", None) is None:
             data.pop("trainer_profile")
-       
+
         return data
 
 
@@ -892,7 +878,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 if not media_objects.exists():
                     raise_validation_error(message=_("At least one media must be uploaded"))
 
-                current_media = instance.media.all() # Get current media 
+                current_media = instance.media.all() # Get current media
                 media_to_delete = current_media.exclude(id__in=media_ids)
 
                 for media in media_to_delete:
