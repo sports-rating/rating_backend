@@ -1,32 +1,4 @@
 repos:
-  # Check Python syntax errors and undefined names
-  # - repo: https://github.com/pre-commit/pygrep-hooks
-  #   rev: v1.10.0
-  #   hooks:
-  #     - id: python-check-blanket-noqa
-  #     - id: python-check-blanket-type-ignore
-  #     - id: python-no-eval
-  #     - id: python-no-log-warn
-  #     - id: python-use-type-annotations
-
-  # # Black for code formatting
-  # - repo: https://github.com/psf/black
-  #   rev: 24.4.2
-  #   hooks:
-  #     - id: black
-
-  # isort for import sorting
-  # - repo: https://github.com/PyCQA/isort
-  #   rev: 5.12.0
-  #   hooks:
-  #     - id: isort
-
-  # # Flake8 for linting
-  # - repo: https://github.com/pycqa/flake8
-  #   rev: 6.1.0
-  #   hooks:
-  #     - id: flake8
-
   # Check JSON, YAML, TOML validity
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
