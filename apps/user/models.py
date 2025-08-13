@@ -122,7 +122,7 @@ class Sportsman(models.Model):
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True) # will likely changes
     trainer = models.ForeignKey("user.Trainer", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
 
-    skill_level = models.CharField(max_length=100, null=True, blank=True)
+    skill_level = models.CharField(max_length=100, null=True, blank=True) # will be removed?
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
     sport_rank = models.CharField(max_length=30, choices=enums.SportRankEnum.choices(), default=enums.SportRankEnum.YOUTH_3.value, blank=True, null=True)

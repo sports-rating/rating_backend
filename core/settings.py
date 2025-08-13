@@ -442,6 +442,7 @@ QUERYCOUNT = {
     'RESPONSE_HEADER': 'X-DjangoQueryCount-Count'
 }
 
+# Firebase
 FCM_DJANGO_SETTINGS = {
     "ONE_DEVICE_PER_USER": False,
     "DELETE_INACTIVE_DEVICES": True,
@@ -451,5 +452,6 @@ cred = credentials.Certificate(BASE_DIR / "sportsrating-firebase.json")
 
 FIREBASE_APP = initialize_app(cred, {"projectId": "sportsrating"})
 
+# URLs
 BACKEND_URL = os.environ.get("BACKEND_URL", default="http://localhost:8000")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", default="http://localhost:5173")
