@@ -13,7 +13,4 @@ urlpatterns = [
 
     path("", views.SportListCreateView.as_view(), name='sport-create-list'),
     path("<uuid:pk>/", views.SportRetrieveUpdateDeleteView.as_view(), name='sport-retrieve-update-delete'),
-
-    path("federations/", views.FederationListCreateAPIView.as_view(), name='federation-create-list'),
-    path("federation/<uuid:pk>/", views.FederationRetrieveUpdateDeleteAPIView.as_view(), name='federation-retrieve-update-delete')
 ]

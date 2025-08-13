@@ -24,10 +24,6 @@ from apps.sport.models import (
     Result,
     Tournament,
     Team,
-    FederationAgeGroup,
-    Federation,
-    AgeGroup,
-    FederationDocument
 )
 
 import apps.sport.serializers as serializer
@@ -295,84 +291,5 @@ class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
         return success_response(
             message=_("Team deleted successfully"),
-            code=status.HTTP_204_NO_CONTENT
-        )
-    
-
-class FederationListCreateAPIView(generics.ListCreateAPIView):
-    permission_classes = (IsAdminOrSuperAdmin,)
-    serializer_class = serializer.FederationSerializer
-    queryset = Federation.objects.all()
-    pagination_class = CustomPagination
-    parser_classes = (FormParser, MultiPartParser)
-
-    def get_queryset(self):
-        return Federation.objects.prefetch_related(
-            Prefetch(
-                'age_group_links__age_group',
-                queryset=AgeGroup.objects.select_related('sport')
-            ),
-            Prefetch(
-                'documents',
-                queryset=FederationDocument.objects.all()
-            )
-        )
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return success_response(
-            data=serializer.data,
-            message=_("Federation created successfully"),
-            code=status.HTTP_201_CREATED
-        )
-    
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
-        return success_response(
-            data=response.data,
-            message=_("Federation list retrieved successfully"),
-            code=status.HTTP_200_OK
-        )
-
-
-class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAdminOrSuperAdmin,)
-    serializer_class = serializer.FederationSerializer
-    queryset = Federation.objects.all()
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return success_response(
-            data=serializer.data,
-            message=_("Federation retrieved successfully"),
-            code=status.HTTP_200_OK,
-        )
-    
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        print('here')
-        serializer.is_valid(raise_exception=True)
-        print('passed')
-        serializer.save()
-        return success_response(
-            data=serializer.data,
-            message=_("Federation updated successfully"),
-            code=status.HTTP_200_OK,
-        )
-
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
-        
-        # Deleting related AgeGroups first
-        for link in instance.age_group_links.all():
-            link.age_group.delete()
-        
-        instance.delete()
-        return success_response(
-            message=_("Federation deleted successfully"),
             code=status.HTTP_204_NO_CONTENT
         )

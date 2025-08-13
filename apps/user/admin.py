@@ -143,6 +143,7 @@ class TrainerAdmin(admin.ModelAdmin):
                     "skill_level",
                     "division",
                     "bio",
+                    "federation",
                 )
             },
         ),

@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
 from django.http import HttpResponse
+from django.db.models import Q, Prefetch
 
 from rest_framework.views import APIView
 from rest_framework.request import Request

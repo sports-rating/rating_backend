@@ -43,6 +43,7 @@ BACKEND_APPS = [
     "sport",
     "education",
     "payment",
+    "federation"
 ]
 
 INTERNAL_APPS = [
