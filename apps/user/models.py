@@ -35,10 +35,10 @@ class User(AbstractUser, BaseModel):
     first_name = models.CharField(max_length=100, null=True, blank=True)
     middle_name = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
-    
+
     pinfl = models.CharField(
         max_length=14,
-        blank=True, 
+        blank=True,
         null=True
     )
     region = models.ForeignKey("shared.Region", on_delete=models.SET_NULL, related_name="users", null=True, blank=True)
@@ -47,7 +47,7 @@ class User(AbstractUser, BaseModel):
     user_role = models.CharField(max_length=50, choices=enums.UserRoles.choices(), default=enums.UserRoles.ORDINARY.value)
     phone_number = models.CharField(max_length=13, null=True, blank=True)
     email = models.CharField(null=True, blank=True)
-    
+
     birth_date = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
 
@@ -69,14 +69,14 @@ class User(AbstractUser, BaseModel):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
-       
+
     def delete(self, *args, **kwargs):
         if hasattr(self, 'sportsman_profile'):
             self.sportsman_profile.delete() # triggers delete method in Sportsman
         elif hasattr(self, 'trainer_profile'):
             self.trainer_profile.delete() # triggers delete method in Trainer
         super().delete(*args, **kwargs)
-    
+
     def clean(self):
         self.check_username()
         self.check_phone_valid()
@@ -90,7 +90,7 @@ class User(AbstractUser, BaseModel):
                     raise ValidationError("Please enter a valid phone number.")
             except NumberParseException:
                 raise ValidationError("Please enter a valid phone number.")
-    
+
     def check_pinfl(self):
         if self.pinfl and not self.pinfl.isdigit():
             raise ValidationError("PINFL must contain only numbers.")
@@ -125,7 +125,7 @@ class Sportsman(models.Model):
     skill_level = models.CharField(max_length=100, null=True, blank=True)
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
-    sport_grade = models.CharField(max_length=30, choices=enums.SportGradeEnum.choices(), default=enums.SportGradeEnum.YOUTH_3.value, blank=True, null=True)
+    sport_rank = models.CharField(max_length=30, choices=enums.SportRankEnum.choices(), default=enums.SportRankEnum.YOUTH_3.value, blank=True, null=True)
     user_metrics = models.JSONField(blank=True, null=True)
     # Address
     address = models.JSONField(blank=True, null=True)
@@ -247,6 +247,6 @@ class UserNotification(BaseModel):
         ]
         verbose_name = "User Notification"
         verbose_name_plural = "User Notifications"
-    
+
     def __str__(self):
         return f"Notification for {self.user.username}: {self.title or 'No Title'} - {'Read' if self.is_read else 'Unread'}"

@@ -3,8 +3,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from apps.user.models import (
-    User, 
-    Sportsman, 
+    User,
+    Sportsman,
     Trainer,
     UserMedia,
     ArchivedTrainer,
@@ -117,6 +117,7 @@ class SportsmanAdmin(admin.ModelAdmin):
                     "trainer",
                     "skill_level",
                     "division",
+                    "sport_rank",
                     "bio",
                 )
             },
@@ -125,7 +126,7 @@ class SportsmanAdmin(admin.ModelAdmin):
         ("Adress", {"fields": ("address",)}),
         ("Social media", {"fields": ("social_media",)}),
         # ("Media", {"fields": ("media",)}),
-        
+
     )
     list_filter = ["skill_level",]
 
@@ -151,7 +152,7 @@ class TrainerAdmin(admin.ModelAdmin):
         ("Adress", {"fields": ("address",)}),
         ("Social media", {"fields": ("social_media",)}),
         # ("Media", {"fields": ("media",)}),
-        
+
     )
     list_filter = ["skill_level",]
 

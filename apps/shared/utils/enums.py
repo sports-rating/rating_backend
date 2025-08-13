@@ -28,7 +28,7 @@ class SportsChoices(BaseEnum):
     SWIMMING = "swimming"
     GYMNASTICS = "gymnastics"
     CYCLING = "cycling"
-    # COMBAT 
+    # COMBAT
     MMA = "MMA"
     KICKBOXING = "kickboxing"
     MUAY_THAI = "Muay Thai"
@@ -53,7 +53,7 @@ class UserRoles(BaseEnum):
     SPORTSMAN = "sportsman"
     TRAINER = "trainer"
     FEDERATION = "federation"
-    
+
 
 class SchoolChoices(BaseEnum):
     ORDINARY = "ordinary"
@@ -78,7 +78,7 @@ class UserRequestStatus(BaseEnum):
     CANCELLED = "cancelled"
 
 
-class SportGradeEnum(BaseEnum):
+class SportRankEnum(BaseEnum):
     YOUTH_3 = "Youth Third Rank"
     YOUTH_2 = "Youth Second Rank"
     YOUTH_1 = "Youth First Rank"

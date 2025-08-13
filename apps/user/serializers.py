@@ -28,8 +28,11 @@ from apps.sport.models import Result, Sport, Tournament
 from apps.sport.serializers import ResultCreateSerializer, SportSerializer
 from apps.user.models import (ArchivedTrainer, Sportsman, Trainer, User,
                               UserMedia, UserNotification, UserRequest)
-from apps.user.utils import (calculate_sportsman_statistics,
-                             calculate_trainer_statistics)
+from apps.user.utils import (
+    calculate_sportsman_statistics,
+    calculate_trainer_statistics
+)
+
 
 SEND_VERIFICATION_ACTION = (
     ("signup", "signup"),
@@ -242,7 +245,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             "skill_level",
             "bio",
             "division",
-            "sport_grade",
+            "sport_rank",
             "user_metrics",
             "address",
             "social_media",
