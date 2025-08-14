@@ -206,7 +206,12 @@ class UserMedia(BaseMedia):
 
 class UserRequest(BaseModel):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
+    # receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
+    receivers = models.ManyToManyField(
+        User,
+        related_name='received_requests',
+        help_text="Users who will receive this request",
+    )
 
     request_type = models.CharField(max_length=100, choices=enums.UserRequestTypes.choices(), default=enums.UserRequestTypes.TRAINER_REQUEST.value)
     status = models.CharField(max_length=50, choices=enums.UserRequestStatus.choices(), default=enums.UserRequestStatus.PENDING.value)
@@ -218,7 +223,6 @@ class UserRequest(BaseModel):
         db_table = "user_request"
         indexes = [
             models.Index(fields=['sender']),
-            models.Index(fields=['receiver']),
             models.Index(fields=['request_type']),
             models.Index(fields=['status'])
         ]
@@ -226,7 +230,7 @@ class UserRequest(BaseModel):
         verbose_name_plural = "User Requests"
 
     def __str__(self):
-        return f"{self.sender.username} -> {self.receiver.username} ({self.request_type}) - {self.status}"
+        return f"{self.sender.username} -> {self.receivers.all().values_list('username', flat=True)} ({self.request_type}) - {self.status}"
 
 
 class UserNotification(BaseModel):

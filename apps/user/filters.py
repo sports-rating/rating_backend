@@ -24,10 +24,10 @@ class SportsmanFilter(BaseFilterSet):
     class Meta:
         model = User
         fields = ["sport"]
-    
+
     def filter_sport(self, queryset, name, value): # noqa
         return queryset.filter(sportsman_profile__sport__name=value)
-    
+
 
 class TrainerFilter(BaseFilterSet):
     sport = filters.CharFilter(method='filter_sport')
@@ -66,7 +66,7 @@ class DistrictFilter(BaseFilterSet):
     class Meta:
         model = District
         fields = ["region", "start_created_time", "end_created_time", "start_updated_time", "end_updated_time"]
-    
+
 
 class NeighborhoodFilter(BaseFilterSet):
     district = filters.CharFilter(field_name="district__id")

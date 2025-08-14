@@ -58,7 +58,7 @@ class CorrectPath:
     def __init__(self, base_path, owner=None):
         self.base_path = base_path
         self.owner = owner
-    
+
     def __call__(self, instance, filename): # images, videos, pdfs
         guessed_type, _ = mimetypes.guess_type(filename)
 
@@ -71,10 +71,10 @@ class CorrectPath:
                 subfolder = "files"
         else:
             subfolder = "files"
-        
+
         return os.path.join(subfolder, filename)
 
-        # if self.owner == "sportsman":   
+        # if self.owner == "sportsman":
         #     return os.path.join("sportsman/profile", filename)
         # elif self.owner == "trainer":
         #     return os.path.join("trainer/profile", filename)
@@ -132,4 +132,3 @@ def handle_file_delete(instance, field_name):
     file = getattr(instance, field_name, None)
     if file and os.path.isfile(file.path):
         os.remove(file.path)
-        

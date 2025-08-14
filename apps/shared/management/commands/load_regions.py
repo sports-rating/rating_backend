@@ -51,13 +51,13 @@ class Command(BaseCommand):
                 if response.status_code != 200:
                     logger.error(f"Failed to fetch data for region {region.name}")
                     break
-                
+
                 response_json = response.json()
                 data = response_json.get("result", {}).get("data", [])
 
                 if not data:
                     break  # Stop pagination if there's no more data
-                
+
                 for item in data:
                     if not isinstance(item, dict):
                         continue

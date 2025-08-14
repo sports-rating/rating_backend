@@ -19,12 +19,12 @@ def store_original_values(apps, schema_editor):
             obj.save(update_fields=["year"])
             logger.info(f"Year: {obj.year}")
             logger.info(f"Stored and cleared ID {obj.id} year.")
-        
+
         except Exception as e:
             logger.error(f"Error processing Id {obj.id}: {original_value}, setting to None (Error: {str(e)})")
             obj.year = None
             obj.save(update_fields=["year"])
-    
+
     schema_editor.shared_data = shared_data
 
 def restore_value_to_integer(apps, schema_editor):
@@ -39,12 +39,12 @@ def restore_value_to_integer(apps, schema_editor):
                 obj.year = original_value.year
                 obj.save(update_fields=["year"])
                 logger.info(f"Restored and saved ID {obj.id} year.")
-        
+
         except Exception as e:
             logger.error(f"Error restoring ID: {obj.id} year (Error: {str(e)})")
 
 def reverse_restore_value_to_integer(apps, schema_editor):
-    
+
     Result = apps.get_model("sport", "Result")
 
     for obj in Result.objects.all():
@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
             model_name='result',
             name='year',
             field=models.PositiveIntegerField(
-                default=1800, 
+                default=1800,
                 null=True,
                 validators=[django.core.validators.MinValueValidator(1800)]
                 ),

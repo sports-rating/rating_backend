@@ -79,10 +79,10 @@ uritemplate==4.1.1
 urllib3==2.2.3
 vine==5.1.0
 wcwidth==0.2.13
-pandas==2.2.3  
+pandas==2.2.3
 openpyxl==3.1.5
 pytest-django==4.9.0
 factory-boy==3.3.3
 pytest-factoryboy==2.7.0
 locust==2.32.8
-django-querycount==0.8.3 
+django-querycount==0.8.3

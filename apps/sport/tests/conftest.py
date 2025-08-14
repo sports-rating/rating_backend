@@ -5,7 +5,7 @@ from typing import Generator
 from rest_framework.test import APIClient
 
 from sport.models import (
-    Sport, 
+    Sport,
     Tournament
 )
 
@@ -81,4 +81,3 @@ def tournament_response() -> dict:
         },
         "logo": None,
     }
-

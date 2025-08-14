@@ -1,4 +1,4 @@
-import string 
+import string
 import os
 
 from django.db import models
@@ -14,22 +14,22 @@ from apps.shared.utils.utils import handle_file_update, handle_file_delete, Corr
 class Sport(BaseModel):
     name = models.CharField(max_length=250)
     logo = models.ImageField(
-        upload_to=CorrectPath('media'), 
+        upload_to=CorrectPath('media'),
         validators=[
             FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
         ],
-        null=True, 
-        blank=True                         
+        null=True,
+        blank=True
     )
 
     class Meta:
         db_table = "sport"
         verbose_name = "Sport"
         verbose_name_plural = "Sports"
-    
+
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
         super().save(*args, **kwargs)
@@ -43,22 +43,22 @@ class Tournament(BaseModel):
     name = models.CharField(max_length=450)
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="tournaments", blank=True, null=True)
     logo = models.ImageField(
-        upload_to=CorrectPath('media'), 
+        upload_to=CorrectPath('media'),
         validators=[
             FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
         ],
-        null=True, 
-        blank=True                         
+        null=True,
+        blank=True
     )
 
     class Meta:
         db_table = "tournament"
         verbose_name = "Tournament"
         verbose_name_plural = "Tournaments"
-    
+
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
         super().save(*args, **kwargs)
@@ -78,7 +78,7 @@ class Result(BaseModel):
         ]
         )
     currently_participating = models.BooleanField(default=False)
-    
+
     user = models.ForeignKey("user.User", on_delete=models.CASCADE, related_name="results", blank=True, null=True)
     trainer = models.ForeignKey("user.Trainer", on_delete=models.SET_NULL, related_name='assisted_results', blank=True, null=True)
     archived_trainer = models.ForeignKey("user.ArchivedTrainer", on_delete=models.SET_NULL, related_name='archived_assisted_results', blank=True, null=True)
@@ -91,9 +91,9 @@ class Result(BaseModel):
     silver = models.PositiveIntegerField(default=0)
     bronze = models.PositiveIntegerField(default=0)
 
-    class Meta: 
+    class Meta:
         db_table = "result"
-    
+
     def __str__(self):
         return f"{self.tournament.name} - {self.year}"
 
@@ -104,12 +104,12 @@ class Team(BaseModel):
 
     founded_year = models.IntegerField(blank=True, null=True)
     logo = models.ImageField(
-        upload_to=CorrectPath('media'), 
+        upload_to=CorrectPath('media'),
         validators=[
             FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
         ],
-        null=True, 
-        blank=True                         
+        null=True,
+        blank=True
     )
 
     members = models.ManyToManyField(

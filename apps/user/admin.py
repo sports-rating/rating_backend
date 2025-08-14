@@ -169,11 +169,11 @@ class ArchivedTrainerAdmin(admin.ModelAdmin):
 
 @admin.register(UserRequest)
 class UserRequestAdmin(admin.ModelAdmin):
-    list_display = ["id", "sender_obj", "receiver_obj", "request_type", "status"]
-    search_fields = ['sender__first_name', 'sender__last_name', 'receiver__first_name', 'receiver__last_name']
+    list_display = ["id", "sender_obj", "receivers_obj", "request_type", "status"]
+    search_fields = ['sender__first_name', 'sender__last_name']
     list_per_page = 10
-    odering = ['-created_time']
-    readonly_fields = ["sender_obj", "receiver_obj"]
+    ordering = ['-created_time']
+    readonly_fields = ["sender_obj", "receivers_obj"]
 
     def sender_obj(self, obj):
         if obj.sender:
@@ -182,12 +182,15 @@ class UserRequestAdmin(admin.ModelAdmin):
         return "N/A"
     sender_obj.short_description = "Sender"
 
-    def receiver_obj(self, obj):
-        if obj.receiver:
-            url = reverse("admin:user_user_change", args=[obj.receiver.id])
-            return format_html('<a href="{}">{}</a>', url, obj.receiver.username)
+    def receivers_obj(self, obj):
+        if obj.receivers.exists():
+            urls = [
+                reverse("admin:user_user_change", args=[receiver.id])
+                for receiver in obj.receivers.all()
+            ]
+            return format_html('<br>'.join(f'<a href="{url}">{receiver.username}</a>' for url, receiver in zip(urls, obj.receivers.all())))
         return "N/A"
-    receiver_obj.short_description = "Receiver"
+    receivers_obj.short_description = "Receivers"
 
 
 @admin.register(UserNotification)

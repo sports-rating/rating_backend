@@ -16,7 +16,7 @@ def update_trainer_results(sender, instance, created, **kwargs):
     if created and instance.trainer and instance.user:
         logger.info(f"Signal triggered")
         trainer_profile = instance.trainer
-        
+
         tournament = instance.tournament
         rating = instance.rating
 
@@ -46,7 +46,7 @@ def update_trainer_results(sender, instance, created, **kwargs):
                 tournament=tournament,
                 country=instance.country,
                 year=instance.year,
-                currently_participating=False, 
+                currently_participating=False,
                 rating=0,
                 gold=(1 if rating == 1 else 0),
                 silver=(1 if rating == 2 else 0),
@@ -59,7 +59,7 @@ def update_trainer_results(sender, instance, created, **kwargs):
 def update_or_delete_trainer_result(sender, instance, **kwargs):
     """
     This signal runs before deleting a sportsman's result.
-    It checks whether the trainer has results from other sportsmen in the 
+    It checks whether the trainer has results from other sportsmen in the
     same tournament and updates or deletes them accordingly.
     """
     if instance.trainer:
@@ -75,7 +75,7 @@ def update_or_delete_trainer_result(sender, instance, **kwargs):
             decrement_field = 'silver'
         elif rating == 3:
             decrement_field = 'bronze'
-        
+
         logger.info(f"Rating: {rating}")
         logger.info(f"Decrement field: {decrement_field}")
         logger.info(f"Tournament: {instance.tournament}")
@@ -94,4 +94,3 @@ def update_or_delete_trainer_result(sender, instance, **kwargs):
             logger.info(f"(pre_delete) No other sportsmans exists in trainer's result, deleting it...")
             # If no other sportsman exist in trainer's result, delete the result entirely
             Result.objects.filter(user=trainer_profile.user, tournament=tournament, currently_participating=False).delete()
-            

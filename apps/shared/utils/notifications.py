@@ -21,14 +21,14 @@ def send_firebase_notification(
 
     # Get the devices for the specified users
     device = FCMDevice.objects.filter(user_id=user_id).first()
-    
+
     # Ensure all data values are string
     stringified_data = {str(k): str(v) for k, v in data.items()}
 
     if not device:
         logger.warning(f"No FCM device found for user {user_id}")
         return None
-    
+
     # Create the notification message
     message = Message(
         notification=Notification(title=title, body=body),
@@ -54,10 +54,10 @@ def send_firebase_notification(
 
 
 def send_notification_to_user(
-        user: User, 
+        user: User,
         user_request: UserRequest,
-        title: str, 
-        body: str, 
+        title: str,
+        body: str,
         **extra
     ) -> None:
     """
@@ -77,4 +77,3 @@ def send_notification_to_user(
     )
 
     # implement logic of sending telegram message also
-

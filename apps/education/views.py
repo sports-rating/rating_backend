@@ -51,7 +51,7 @@ class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             message=_("Education retrieved successfully"),
             code=status.HTTP_200_OK,
         )
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -105,13 +105,13 @@ class SchoolListCreateView(generics.ListCreateAPIView):
             message=_("School list retrieved successfully"),
             code=status.HTTP_200_OK
         )
-    
+
 
 class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = School.objects.all()
     serializer_class = SchoolSerializer
-    
+
     def get_permissions(self):
         if self.request.method == "GET":
             return (permissions.AllowAny(),)
@@ -135,7 +135,7 @@ class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("School updated successfully"),
             code=status.HTTP_200_OK,
         )

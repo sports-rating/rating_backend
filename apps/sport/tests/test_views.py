@@ -12,7 +12,7 @@ class TestTournamentView:
 
     def test_create(self, api_client, tournament_payload) -> None:
         """
-        Testing create method 
+        Testing create method
         """
         # create a new tournament
         response_create = api_client.post('/api/sport/tournament/', data=tournament_payload, format='json')
@@ -24,7 +24,7 @@ class TestTournamentView:
         response_read = api_client.get('/api/sport/tournament/', format='json')
         assert response_read.status_code == 200
         assert response_read.data['data'][0]['name'] == tournament_payload['name']
-    
+
     def test_get(self, api_client, tournament_response, tournament_payload) -> None:
         """
         Testing the expected response payload
@@ -33,7 +33,7 @@ class TestTournamentView:
         response_create = api_client.post('/api/sport/tournament/', data=tournament_payload, format='json')
         assert response_create.status_code == 200
 
-        # get a tournament 
+        # get a tournament
         tournament_id = response_create.data['data']['id']
         response_get = api_client.get(f'/api/sport/tournament/{tournament_id}/', format='json')
         assert response_get.status_code == 200
@@ -44,7 +44,7 @@ class TestTournamentView:
 
     def test_update(self, api_client, tournament_payload) -> None:
         """
-        Testing update method 
+        Testing update method
         """
         # create a tournament
         response_create = api_client.post('/api/sport/tournament/', data=tournament_payload, format='json')
@@ -73,12 +73,9 @@ class TestTournamentView:
 
         # delete the tournament
         tournament_id = response_create.data['data']['id']
-        response_delete = api_client.delete(f'/api/sport/tournament/{tournament_id}/')  
+        response_delete = api_client.delete(f'/api/sport/tournament/{tournament_id}/')
         assert response_delete.status_code == 204
 
         # read the tournament to ensure it was deleted
         response_read = api_client.get(f'/api/sport/tournament/{tournament_id}/', format='json')
         assert response_read.status_code == 404
-    
-
-

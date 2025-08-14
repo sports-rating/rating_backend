@@ -40,10 +40,10 @@ class UserRequestService:
                 data={"request_type": request_type}
             )
 
-        return request_type
+        return request_type, _("Request created successfully."), True
 
     @staticmethod
-    def accept_request(user_request, actor):
+    def accept_request(user_request, notification_body, notification_data):
         user_request.status = enums.UserRequestStatus.ACCEPTED.value
         user_request.save()
 
@@ -51,12 +51,12 @@ class UserRequestService:
             user=user_request.sender,
             user_request=user_request,
             title=_("Request Accepted"),
-            body=f"{actor.first_name} {actor.last_name} has accepted your request.",
-            data={"request_type": user_request.request_type}
+            body=notification_body,
+            data=notification_data
         )
 
     @staticmethod
-    def decline_request(user_request, actor):
+    def decline_request(user_request, notification_body, notification_data):
         user_request.status = enums.UserRequestStatus.REJECTED.value
         user_request.save()
 
@@ -64,6 +64,6 @@ class UserRequestService:
             user=user_request.sender,
             user_request=user_request,
             title=_("Request Rejected"),
-            body=f"{actor.first_name} {actor.last_name} has declined your request.",
-            data={"request_type": user_request.request_type}
+            body=notification_body,
+            data=notification_data
         )

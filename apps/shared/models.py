@@ -3,7 +3,7 @@ import os
 import mimetypes
 
 from django.db import models
-from apps.shared.utils.enums import MediaChoices 
+from apps.shared.utils.enums import MediaChoices
 from apps.shared.utils.utils import CorrectPath
 
 
@@ -31,10 +31,10 @@ class BaseMedia(BaseModel):
     def save(self, *args, **kwargs):
         if self.file and hasattr(self.file, 'file'):
             self.size = self.file.size
-            
+
             _, ext = os.path.splitext(self.file.name)
             self.extension = ext.lower().lstrip('.')
-            
+
             guessed_type, _ = mimetypes.guess_type(self.file.name)
             if guessed_type:
                 if guessed_type.startswith("image/"):
@@ -42,7 +42,7 @@ class BaseMedia(BaseModel):
                 elif guessed_type.startswith("video/"):
                     self.media_type = MediaChoices.VIDEO.value
                 else:
-                    self.media_type = MediaChoices.PDF.value        
+                    self.media_type = MediaChoices.PDF.value
         super().save(*args, **kwargs)  # Final save to ensure the object is saved
 
     def delete(self, *args, **kwargs):
@@ -64,14 +64,14 @@ class Country(BaseModel):
         ]
         verbose_name = "Country"
         verbose_name_plural = "Countries"
-    
+
     def __str__(self):
         return self.name
-    
+
 
 class Region(BaseModel):
     name = models.CharField(max_length=100)
-    
+
     class Meta:
         db_table = "region"
         indexes = [
@@ -82,7 +82,7 @@ class Region(BaseModel):
 
     def __str__(self):
         return self.name
-    
+
 
 class District(BaseModel):
     name = models.CharField(max_length=100)
@@ -97,7 +97,7 @@ class District(BaseModel):
         ]
         verbose_name = "District"
         verbose_name_plural = "Districts"
-    
+
     def __str__(self):
         return f"{self.name}, {self.region.name}"
 
@@ -115,6 +115,6 @@ class Neighborhood(BaseModel):
         ]
         verbose_name = "Neighborhood"
         verbose_name_plural = "Neighborhoods"
-    
+
     def __str__(self):
         return f"{self.name}, {self.district.name} ({self.district.region.name})"

@@ -17,4 +17,3 @@ register(ResultFactory)
 register(SportFactory)
 register(SchoolFactory)
 register(TournamentFactory)
-

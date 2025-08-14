@@ -428,10 +428,10 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         federation = validated_data.pop("federation", None)
         send_request = validated_data.pop("send_request", None)
 
-        if instance.federation:
-            old_federation = instance.federation
-        else:
-            old_federation = None
+        # if instance.federation:
+        #     old_federation = instance.federation
+        # else:
+        #     old_federation = None
 
         # test this case two? will sport be updated?
         # if sport:
@@ -440,11 +440,13 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         if send_request and federation:
             # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
             receivers = federation.users.filter(user_role="federation")
-            UserRequestService.create_request(
+            user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=receivers,
                 request_type=enums.UserRequestTypes.FEDERATION_REQUEST.value
             )
+            if not success:
+                raise_validation_error(message=message)
 
         elif federation:
             instance.federation = federation
@@ -963,7 +965,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "sender",
-            "receiver",
+            "receivers",
             "request_type",
             "status",
             "created_time",
@@ -1021,7 +1023,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         sender = instance.sender
         logger.info(f"Sender: {sender}")  # LOGGING
-        receiver = instance.receiver
+        receivers = instance.receivers.all()
         request_type = instance.request_type
         status = validated_data.get("status")
         logger.info(f"Status: {status}")  # LOGGING
@@ -1076,40 +1078,30 @@ class UserRequestSerializer(serializers.ModelSerializer):
     def _handle_federation_request(self, instance, validated_data):
         status = validated_data.get("status")
         sender = instance.sender
-        receiver = instance.receiver
+        # receiver = instance.receivers.first() if instance.receivers.exists() else None
+        receiver = self.context.get("request").user
+        logger.info(f"Receiver: {receiver}")
         if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the federation for the sender
             if receiver:
                 sender.trainer_profile.federation = receiver.federation
                 sender.trainer_profile.is_trainer_verified = True
                 sender.trainer_profile.save()
-                instance.status = enums.UserRequestStatus.ACCEPTED.value
-                instance.save()
-                send_notification_to_user(
-                    user=sender,
-                    user_request=instance,
-                    title=_("Federation Request Accepted"),
-                    body=_(f"You have been assigned to {receiver.federation.name} as your federation."),
-                    data={
-                        "request_type": "federation_request",
-                        "federation_id": str(receiver.federation.id),
-                    }
-                )
+                notification_body = f"{receiver.federation.name} has accepted your request."
+                notification_data = {
+                    "request_type": "federation_request",
+                    "federation_id": str(receiver.federation.id),
+                }
+                UserRequestService.accept_request(instance, notification_body, notification_data)
             else:
                 raise_validation_error(message=_("Receiver must be a valid federation!"))
         else:
-            instance.status = status
-            instance.save()
-            send_notification_to_user(
-                user=receiver,
-                user_request=instance,
-                title=_("Federation Request Status Updated"),
-                body=_(f"The federation request from {sender.full_name} has been {status}."),
-                data={
-                    "request_type": "federation_request",
-                    "trainer_id": str(sender.id),
-                }
-            )
+            notification_body = f"{receiver.federation.name} has declined your request."
+            notification_data={
+                "request_type": "federation_request",
+                "trainer_id": str(sender.id),
+            }
+            UserRequestService.decline_request(instance, notification_body, notification_data)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -1119,12 +1111,22 @@ class UserRequestSerializer(serializers.ModelSerializer):
             "user_role": instance.sender.user_role,
             "phone_number": instance.sender.phone_number,
         }
-        data["receiver"] = {
-            "id": instance.receiver.id,
-            "full_name": instance.receiver.full_name,
-            "user_role": instance.receiver.user_role,
-            "phone_number": instance.receiver.phone_number,
-        }
+        if instance.receivers.count() == 1:
+            receiver = instance.receivers.first()
+            data["receiver"] = {
+                "id": receiver.id,
+                "full_name": receiver.full_name,
+                "user_role": receiver.user_role,
+                "phone_number": receiver.phone_number,
+            }
+        if instance.request_type == enums.UserRequestTypes.FEDERATION_REQUEST.value:
+            receiver = instance.receivers.first()
+            data["receiver"] = {
+                "id": receiver.federation.id,
+                "name": receiver.federation.name,
+                "phone_number": receiver.federation.phone_number,
+            }
+            data.pop("receivers")
         return data
 
 

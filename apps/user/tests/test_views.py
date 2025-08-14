@@ -1,4 +1,4 @@
-import pytest 
+import pytest
 from datetime import date
 from typing import Any
 
@@ -13,8 +13,8 @@ from shared.addons.custom_logging import logger
 class TestUserRegistrationView:
 
     def test_factories(
-            self, 
-            sport_factory, 
+            self,
+            sport_factory,
             tournament_factory
         ) -> None:
         """
@@ -23,7 +23,7 @@ class TestUserRegistrationView:
         sport = sport_factory()
         tournament = tournament_factory(sport=sport)
         assert tournament.sport == sport
-        
+
     def test_trainer_registration(
             self,
             api_client: APIClient,
@@ -48,7 +48,7 @@ class TestUserRegistrationView:
 
         response_create = api_client.post('/api/user/profile/trainer/', data=trainer_payload, format='json')
         assert response_create.status_code == 200
-        
+
         # logger.info(response_create.data)
         trainer_id = response_create.data["data"]["id"]
         logger.info(f"Trainer id: {trainer_id}")
@@ -61,13 +61,13 @@ class TestUserRegistrationView:
         }
 
     def test_sportsman_registration(
-            self, 
+            self,
             api_client: APIClient,
             sport_factory,
             school_factory,
             tournament_factory,
             sportsman_payload: dict,
-            trainer_payload: dict, 
+            trainer_payload: dict,
             trainer_registration: dict[str, Any]
         ):
         """

@@ -5,7 +5,7 @@ from apps.shared.utils.enums import GenderChoices, UserRoles
 from apps.shared.utils.logging import logger
 
 from apps.education.models import (
-    Education, 
+    Education,
     School
 )
 
@@ -16,10 +16,9 @@ class SchoolFilter(filters.FilterSet):
     class Meta:
         model = School
         fields = ["type", "sport"]
-    
+
     def filter_type(self, queryset, name, value): # noqa
         return queryset.filter(type=value)
-    
+
     def filter_sport(self, queryset, name, value): # noqa
         return queryset.filter(sports__name=value)
-    

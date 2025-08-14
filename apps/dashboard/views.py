@@ -71,7 +71,7 @@ class UserListView(generics.ListAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("Users list"),
             code=200,
         )
@@ -88,8 +88,8 @@ class ExportView(generics.ListAPIView):
         queryset = User.objects.select_related(
             "sportsman_profile", "trainer_profile"
         ).prefetch_related(
-            "sportsman_profile__trainer", 
-            "sportsman_profile__sport", 
+            "sportsman_profile__trainer",
+            "sportsman_profile__sport",
             "trainer_profile__sport"
         )
         return queryset
@@ -119,7 +119,7 @@ class PrivacyPolicyAddListView(generics.ListCreateAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("List of PrivacyPolicies")
         )
 
@@ -128,7 +128,7 @@ class PrivacyPolicyAddListView(generics.ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("PrivacyPolicy created successfully")
         )
 
@@ -186,7 +186,7 @@ class TermsOfConditionAddListView(generics.ListCreateAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("List of Terms of conditions")
         )
 

@@ -17,7 +17,7 @@ School = apps.get_model('education', 'School')
 class SportFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Sport
-    
+
     name = factory.Faker('word')
     logo = factory.django.ImageField(
         color="blue",
@@ -30,7 +30,7 @@ class SportFactory(factory.django.DjangoModelFactory):
 class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = User
-    
+
     first_name = factory.Faker("first_name")
     middle_name = factory.Faker("middle_name")
     last_name = factory.Faker("last_name")
@@ -46,7 +46,7 @@ class UserFactory(factory.django.DjangoModelFactory):
 class TrainerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Trainer
-    
+
     user = factory.SubFactory(UserFactory)
     sport = factory.SubFactory(SportFactory)
 
@@ -84,7 +84,7 @@ class ArchivedTrainerFactory(factory.django.DjangoModelFactory):
 class TournamentFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Tournament
-    
+
     name = factory.Faker('word')
     start_time = factory.Faker('date')
     place = factory.Faker('country')
@@ -132,7 +132,7 @@ class SchoolFactory(factory.django.DjangoModelFactory):
 class EducationFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Education
-    
+
     sport = factory.SubFactory(SportFactory)
     start_year = factory.Faker("random_int", min=2000, max=2010)
     end_year = factory.Faker("number_int", min=2011, max=2023)
@@ -140,4 +140,3 @@ class EducationFactory(factory.django.DjangoModelFactory):
 
     school = factory.SubFactory(SchoolFactory)
     user = factory.SubFactory(UserFactory)
-

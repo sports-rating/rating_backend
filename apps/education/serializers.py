@@ -46,7 +46,7 @@ class EducationCreateSerializer(serializers.ModelSerializer):
         end_year = attrs.get("end_year")
         if start_year and end_year and start_year >= end_year:
             raise_validation_error(message=_("Start year must be less than end year"))
-        
+
         return attrs
 
     def create(self, validated_data):
@@ -54,7 +54,7 @@ class EducationCreateSerializer(serializers.ModelSerializer):
         school = validated_data.pop("school")
         education = Education.objects.create(sport=sport, school=school, **validated_data)
         return education
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["sport_id"] = instance.sport.id
@@ -63,7 +63,7 @@ class EducationCreateSerializer(serializers.ModelSerializer):
             data["school_id"] = instance.school.id
             data["school_name"] = instance.school.name
         return data
-    
+
 
 class EducationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,7 +75,7 @@ class EducationSerializer(serializers.ModelSerializer):
             "school",
             "currently_studying",
         )
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.sport:
@@ -107,15 +107,15 @@ class SchoolSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         phone_number = attrs.get("phone_number")
-        
+
         if School.objects.filter(phone_number=phone_number).exists():
             raise_validation_error(message=_("Phone number is already registered"))
-        
+
         return attrs
 
     def create(self, validated_data):
         sport_ids = validated_data.pop("sport_ids", None)
-        
+
         with transaction.atomic():
             school = School.objects.create(**validated_data)
 
@@ -124,7 +124,7 @@ class SchoolSerializer(serializers.ModelSerializer):
                 if not sport_objects.exists():
                     raise_validation_error(message=_(f"At least one sport must be included"))
                 school.sports.set(sport_objects)
-            
+
         return school
 
     def update(self, instance, validated_data):
@@ -132,7 +132,7 @@ class SchoolSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        
+
         if sport_ids:
             sport_objects = Sport.objects.filter(id__in=sport_ids)
             if not sport_objects.exists():

@@ -37,7 +37,7 @@ def calculate_file_size(size):
         if size < 1024:
             return f"{size:.2f} {unit}"
         size /= 1024
-    return f"{size:.2f} TB" 
+    return f"{size:.2f} TB"
 
 
 def check_uniqueness(field_name, data, model, instance=None):

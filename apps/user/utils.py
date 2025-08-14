@@ -12,7 +12,7 @@ def calculate_sportsman_statistics(sportsman):
         total_silver=Count('id', filter=Q(rating=2)),
         total_bronze=Count('id', filter=Q(rating=3))
     )
-    
+
     return stats
 
 def calculate_trainer_statistics(trainer):

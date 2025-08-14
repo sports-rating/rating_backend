@@ -14,7 +14,7 @@ from rest_framework.generics import get_object_or_404
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.general import (
-    get_file_full_url, 
+    get_file_full_url,
     calculate_file_size,
     check_uniqueness
 )
@@ -54,7 +54,7 @@ class SportSerializer(serializers.ModelSerializer):
         if Sport.objects.filter(name=sport_name).exists():
             raise_validation_error(message=_(f"{sport_name} - sport is already created"))
         return attrs
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["logo"] = get_file_full_url(instance.logo.url) if instance.logo else None
@@ -78,7 +78,7 @@ class TournamentSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "logo": {"required": False},
         }
-    
+
     def validate(self, attrs):
         name = attrs.get("name", None)
         instance = self.instance  # This will be None during creation and the instance during updating
@@ -96,7 +96,7 @@ class TournamentSerializer(serializers.ModelSerializer):
 
                 if queryset.exists():
                     raise_validation_error(message=_("Tournament with this name already exists!"))
-        
+
         else:  # For creation
             if name:
                 queryset = Tournament.objects.filter(name=name)
@@ -104,10 +104,10 @@ class TournamentSerializer(serializers.ModelSerializer):
                     raise_validation_error(message=_("Tournament with this name already exists!"))
 
         return attrs
-    
+
     def create(self, validated_data):
         sport = validated_data.pop("sport")
-        tournament = Tournament.objects.create(sport=sport, **validated_data)       
+        tournament = Tournament.objects.create(sport=sport, **validated_data)
         return tournament
 
     def to_representation(self, instance):
@@ -153,18 +153,18 @@ class ResultCreateSerializer(serializers.ModelSerializer):
         elif archived_trainer_name:
             archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
             result = Result.objects.create(archived_trainer=archived_trainer, tournament=tournament, **validated_data)
-        else:  
+        else:
             result = Result.objects.create(tournament=tournament, **validated_data)
         return result
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["tournament_id"] = instance.tournament.id
         data["tournament_name"] = instance.tournament.name
-        
+
         data["trainer_id"] = instance.trainer.user.id if instance.trainer else None
         data["trainer_name"] = str(instance.trainer.user) if instance.trainer else None
-        
+
         data["archived_trainer_id"] = instance.archived_trainer.id if instance.archived_trainer else None
         data["archived_trainer_name"] = instance.archived_trainer.name if instance.archived_trainer else None
         return data
@@ -172,7 +172,7 @@ class ResultCreateSerializer(serializers.ModelSerializer):
 
 class ResultSerializer(serializers.ModelSerializer):
     tournament = TournamentSerializer(many=False)
-    
+
     class Meta:
         model = Result
         fields = (
@@ -187,7 +187,7 @@ class ResultSerializer(serializers.ModelSerializer):
             "silver",
             "bronze",
         )
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data['trianer_id'] = instance.trainer.user.id if instance.trainer else None
@@ -218,7 +218,7 @@ class TeamCreateSerializer(serializers.ModelSerializer):
             "draws",
         )
         extra_kwargs = {"id": {"read_only": True}, "wins": {"required": False}, "losses": {"required": False}, "draws": {"required": False}}
-    
+
     def validate(self, attrs):
         founded_year = attrs.get("founded_year", None)
         name = attrs.get("name", None)
@@ -229,7 +229,7 @@ class TeamCreateSerializer(serializers.ModelSerializer):
         current_year = datetime.now().year
         if founded_year and founded_year > current_year:
             raise_validation_error(message=_("Founded year must be less than current year"))
-        
+
         return attrs
 
     def create(self, validated_data):
@@ -237,24 +237,24 @@ class TeamCreateSerializer(serializers.ModelSerializer):
         member_ids = validated_data.pop("member_ids")
 
         team = Team.objects.create(sport=sport, **validated_data)
-        
+
         if member_ids:
             member_objects = User.objects.filter(id__in=member_ids)
             team.members.set(member_objects)
-        
+
         return team
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["sport_id"] = instance.sport.id
-        data["sport_name"] = instance.sport.name 
+        data["sport_name"] = instance.sport.name
         logger.info(f"Members: {instance.members}")
         data["members"] = UserListSerializer(
             [member for member in instance.members.all()],
             many=True,
         ).data
         return data
-    
+
 
 class TeamUpdateSerializer(TeamCreateSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True, required=False)
@@ -262,9 +262,9 @@ class TeamUpdateSerializer(TeamCreateSerializer):
 
     class Meta(TeamCreateSerializer.Meta):
         extra_kwargs = {
-            **TeamCreateSerializer.Meta.extra_kwargs, 
+            **TeamCreateSerializer.Meta.extra_kwargs,
         }
-    
+
     def update(self, instance, validated_data):
         member_ids = validated_data.pop("member_ids", None) # m-t-m
 

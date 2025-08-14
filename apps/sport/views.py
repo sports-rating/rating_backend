@@ -52,7 +52,7 @@ class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             message=_("Result retrieved successfully"),
             code=200,
         )
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -63,7 +63,7 @@ class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             message=_("Result updated successfully"),
             code=200,
         )
-    
+
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.delete()
@@ -71,7 +71,7 @@ class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             message=_("Result deleted successfully"),
             code=204
         )
-    
+
 
 class TournamentListCreateView(generics.ListCreateAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
@@ -102,7 +102,7 @@ class TournamentListCreateView(generics.ListCreateAPIView):
             message=_("Tournament created successfully"),
             code=status.HTTP_201_CREATED
         )
-    
+
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
@@ -134,7 +134,7 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             message=_("Tournament retrieved successfully"),
             code=status.HTTP_200_OK,
         )
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -174,7 +174,7 @@ class SportListCreateView(generics.ListCreateAPIView):
             message=_("Sport created successfully"),
             code=status.HTTP_201_CREATED
         )
-    
+
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
         return success_response(
@@ -182,7 +182,7 @@ class SportListCreateView(generics.ListCreateAPIView):
             message=_("Sport list retrieved successfully"),
             code=status.HTTP_200_OK
         )
-    
+
 
 class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
@@ -274,7 +274,7 @@ class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             message=_("Team retrieved successfully"),
             code=status.HTTP_200_OK,
         )
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)

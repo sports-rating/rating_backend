@@ -47,8 +47,8 @@ class Federation(BaseModel):
         validators=[
             FileExtensionValidator(allowed_extensions=['heic', 'png', 'jpg', 'jpeg'])
         ],
-        null=True, 
-        blank=True                       
+        null=True,
+        blank=True
     )
     social_media = models.JSONField(blank=True, null=True)
 
@@ -63,11 +63,11 @@ class Federation(BaseModel):
 
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
         super().save(*args, **kwargs)
-    
+
     def delete(self, *args, **kwargs):
         handle_file_delete(self, 'logo')
         super().delete(*args, **kwargs)

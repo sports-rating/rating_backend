@@ -43,7 +43,7 @@ class UserListSerializer(serializers.ModelSerializer):
             "user_role",
             "created_time",
         ]
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.user_role == "sportsman":
@@ -79,7 +79,7 @@ class SportsmanExportSerializer(serializers.ModelSerializer):
 
     def get_height(self, obj):
         return obj.user_metrics.get("height") if obj.user_metrics else None
-    
+
     def get_weight(self, obj):
         return obj.user_metrics.get("weight") if obj.user_metrics else None
 
@@ -125,7 +125,7 @@ class TrainerExportSerializer(serializers.ModelSerializer):
 
     def get_height(self, obj):
         return obj.user_metrics.get("height") if obj.user_metrics else None
-    
+
     def get_weight(self, obj):
         return obj.user_metrics.get("weight") if obj.user_metrics else None
 
@@ -161,10 +161,10 @@ class UserExportSerializer(serializers.ModelSerializer):
             "birth_date",
             "created_time",
         ]
-    
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        
+
         if instance.user_role == "sportsman":
             sportsman_data = SportsmanExportSerializer(instance.sportsman_profile).data
             data.update(sportsman_data)  # Merge sportsman data into the main data
@@ -174,7 +174,7 @@ class UserExportSerializer(serializers.ModelSerializer):
             data.update(trainer_data)  # Merge trainer data into the main data
 
         return data
-    
+
 
 class PrivacyPolicySerializer(serializers.ModelSerializer):
     class Meta:
@@ -189,7 +189,7 @@ class PrivacyPolicySerializer(serializers.ModelSerializer):
             current_language = instance.language
             is_language_updated = language is not None and language != current_language
 
-            if is_language_updated:                
+            if is_language_updated:
                 queryset = PrivacyPolicy.objects.filter(language=language)
                 queryset = queryset.exclude(id=instance.id)
 
@@ -226,5 +226,5 @@ class TermsOfConditionSerializer(serializers.ModelSerializer):
             if language:
                 if TermsOfCondition.objects.filter(language=language).exists():
                     raise_validation_error(message=_("Terms of Conditions with this language already exists"))
-            
+
         return attrs

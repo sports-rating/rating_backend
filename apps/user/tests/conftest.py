@@ -6,12 +6,12 @@ from typing import Generator
 from rest_framework.test import APIClient
 
 from sport.models import (
-    Sport, 
+    Sport,
     Tournament
 )
 
 from user.models import (
-    User, 
+    User,
     Trainer,
     Sportsman
 )
@@ -151,10 +151,10 @@ def trainer_payload() -> dict:
 
 @pytest.fixture
 def trainer_registration(
-        api_client, 
-        sport_factory, 
-        school_factory, 
-        tournament_factory, 
+        api_client,
+        sport_factory,
+        school_factory,
+        tournament_factory,
         trainer_payload
     ):
     sport_1 = sport_factory()
@@ -177,4 +177,3 @@ def trainer_registration(
         "tournament_id": tournament.id,
         "trainer_id": trainer_id,
     }
-

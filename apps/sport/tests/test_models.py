@@ -23,6 +23,6 @@ def test_tournament_required_fields():
 
     with pytest.raises(ValidationError) as e:
         tournament.full_clean()
-    
+
     logger.error(e.value)
     assert "This field cannot be null" in str(e.value)

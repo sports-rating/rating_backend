@@ -1,4 +1,4 @@
-import string 
+import string
 import os
 
 from django.db import models
@@ -40,4 +40,3 @@ class TermsOfCondition(BaseModel):
         db_table = "terms_of_condition"
         verbose_name = "Terms of Condition"
         verbose_name_plural = "Terms of Conditions"
-

@@ -14,7 +14,7 @@ from rest_framework.generics import get_object_or_404
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.general import (
-    get_file_full_url, 
+    get_file_full_url,
     calculate_file_size,
     check_uniqueness
 )
@@ -169,7 +169,7 @@ class FederationSerializer(serializers.ModelSerializer):
                         new_age_group = AgeGroup.objects.create(**age_group)
                         FederationAgeGroup.objects.create(federation=instance, age_group=new_age_group)
                         left_age_groups_id.append(new_age_group.id)
-                
+
                 FederationAgeGroup.objects.filter(federation=instance).exclude(age_group__id__in=left_age_groups_id).delete()
                 AgeGroup.objects.exclude(id__in=left_age_groups_id).delete()
         return instance
@@ -198,4 +198,3 @@ class FederationSerializer(serializers.ModelSerializer):
             many=True,
         ).data
         return data
-

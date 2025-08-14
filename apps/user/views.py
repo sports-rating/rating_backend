@@ -133,7 +133,7 @@ class LoginRefreshView(simplejwt_views.TokenRefreshView):
         return success_response(
             data=response.data, message=_("Token refreshed successfully")
         )
-    
+
 
 class LogoutView(APIView):
     serializer_class = serializers.LogoutSerializer
@@ -259,7 +259,7 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
             )
 
         return error_response(message=_(message))
-    
+
 
 class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
@@ -277,10 +277,10 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
         return context
-    
+
     def get_queryset(self):
         queryset = User.objects.filter(user_role='sportsman').select_related(
-            'sportsman_profile__sport', 'sportsman_profile__trainer', 
+            'sportsman_profile__sport', 'sportsman_profile__trainer',
         )
         return queryset
 
@@ -298,7 +298,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
             message=_("Sportsman created successfully"),
             code=status.HTTP_201_CREATED
         )
-    
+
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
         return success_response(
@@ -329,7 +329,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
         if not user_profile:
             raise_validation_error(message=_("Sportsman Profile not found"), code=status.HTTP_404_NOT_FOUND)
-        return user_profile            
+        return user_profile
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -340,7 +340,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("Sportsman retrieved successfully"),
             code=200,
         )
@@ -351,11 +351,11 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("Sportsman profile updated successfully"),
             code=200,
         )
-    
+
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.delete()
@@ -377,7 +377,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         if self.request.method == "GET":
             return serializers.TrainerListSerializer
         return super().get_serializer_class()
-    
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
@@ -388,7 +388,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
             "trainer_profile__sport",
         )
         return queryset
-    
+
     def get_permissions(self):
         if self.request.method == "GET":
             return (permissions.AllowAny(), )
@@ -432,7 +432,7 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
         if not user_profile:
             raise_validation_error(message=_("Trainer Profile not found"), code=404)
-        return user_profile  
+        return user_profile
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -448,7 +448,7 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("Trainer retrieved successfully"),
             code=200,
         )
@@ -459,7 +459,7 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("Trainer profile updated successfully"),
             code=200,
         )
@@ -486,7 +486,7 @@ class MediaUploadView(generics.CreateAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
-        model_type = self.request.data.get("type") # user, sportcomplex # 
+        model_type = self.request.data.get("type") # user, sportcomplex #
         if model_type:
             context["model"] = self.get_model(model_type=model_type)
         self.request.data.pop("type")
@@ -503,7 +503,7 @@ class MediaUploadView(generics.CreateAPIView):
             message="Media uploaded successfully",
             code=200
         )
-    
+
     def get_model(self, model_type):
         """
         Returns the appropriate model based on the media type
@@ -562,13 +562,13 @@ class ArchivedTrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIV
         archived_trainer = self.queryset.filter(pk=self.kwargs.get("pk")).first()
         if not archived_trainer:
             raise_validation_error(message=_("Trainer Profile not found"), code=404)
-        return archived_trainer  
+        return archived_trainer
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("Archived Trainer retrieved successfully"),
             code=200,
         )
@@ -579,7 +579,7 @@ class ArchivedTrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIV
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("Archived Trainer profile updated successfully"),
             code=200,
         )
@@ -645,11 +645,16 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
     search_fields = [
         "sender__first_name",
         "sender__last_name",
-        "receiver__first_name",
-        "receiver__last_name",
+        "receivers__first_name",
+        "receivers__last_name",
         "request_type",
         "message",
     ]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
 
     def _get_proper_message(self, request_type):
         if request_type == "trainer_request":
@@ -662,7 +667,7 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
         if req_type == "sent":
             return UserRequest.objects.filter(sender=self.request.user)
         elif req_type == "received":
-            return UserRequest.objects.filter(receiver=self.request.user)
+            return UserRequest.objects.filter(receivers=self.request.user)
         return super().get_queryset()
 
     def create(self, request, *args, **kwargs):
@@ -702,7 +707,7 @@ class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView)
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("User Request retrieved successfully"),
             code=status.HTTP_200_OK,
         )
@@ -713,7 +718,7 @@ class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("User Request updated successfully"),
             code=status.HTTP_200_OK,
         )
@@ -741,7 +746,7 @@ class RegionListView(generics.ListAPIView):
             message=_("Region list retrieved successfully"),
             code=status.HTTP_200_OK
         )
-    
+
 
 class DistrictListView(generics.ListAPIView):
     queryset = District.objects.all()
