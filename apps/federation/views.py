@@ -59,6 +59,11 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
             )
         )
 
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [permissions.AllowAny(),]
+        return super().get_permissions()
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -68,7 +73,7 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
             message=_("Federation created successfully"),
             code=status.HTTP_201_CREATED
         )
-    
+
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
         return success_response(
@@ -91,7 +96,7 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
             message=_("Federation retrieved successfully"),
             code=status.HTTP_200_OK,
         )
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -107,11 +112,11 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
-        
+
         # Deleting related AgeGroups first
         for link in instance.age_group_links.all():
             link.age_group.delete()
-        
+
         instance.delete()
         return success_response(
             message=_("Federation deleted successfully"),
@@ -142,7 +147,7 @@ class UserListAPIView(generics.ListAPIView):
 
         if federation:
             return base_qs.filter(
-                Q(trainer_profile__federation=federation) | 
+                Q(trainer_profile__federation=federation) |
                 Q(sportsman_profile__trainer__federation=federation)
             )
         return base_qs
@@ -151,7 +156,7 @@ class UserListAPIView(generics.ListAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
-            data=serializer.data, 
+            data=serializer.data,
             message=_("Users list"),
             code=200,
         )

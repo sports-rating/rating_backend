@@ -25,6 +25,7 @@ from apps.shared.utils.logging import logger
 from apps.shared.utils.notifications import send_notification_to_user
 from apps.shared.utils.utils import CorrectPath
 from apps.sport.models import Result, Sport, Tournament
+from apps.federation.models import Federation
 from apps.sport.serializers import ResultCreateSerializer, SportSerializer
 from apps.user.models import (ArchivedTrainer, Sportsman, Trainer, User,
                               UserMedia, UserNotification, UserRequest)
@@ -32,6 +33,7 @@ from apps.user.utils import (
     calculate_sportsman_statistics,
     calculate_trainer_statistics
 )
+from apps.shared.services.user_request import UserRequestService
 
 
 SEND_VERIFICATION_ACTION = (
@@ -431,55 +433,21 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         else:
             old_federation = None
 
-        if sport:
-            instance.sport = sport
+        # test this case two? will sport be updated?
+        # if sport:
+        #     instance.sport = sport
 
-        if send_request:
-            if federation and old_federation != federation:
-                federation_user = federation.users.filter(user_role="federation").first()
-                if UserRequest.objects.filter(
-                    sender=sender,
-                    status=enums.UserRequestStatus.PENDING.value,
-                ).exists():
-                    raise_validation_error(message=_("You already have a pending federation request!"))
-                user_request = UserRequest.objects.create(
-                    sender=sender,
-                    receiver=federation_user,
-                    request_type=enums.UserRequestTypes.FEDERATION_REQUEST.value,
-                    status=enums.UserRequestStatus.PENDING.value
-                )
-                send_notification_to_user(
-                    user=federation_user,
-                    user_request=user_request,
-                    title=_("New Federation Request"),
-                    body=_(f"{sender.first_name} {sender.last_name} has sent you a new federation request."),
-                    data={
-                        "request_type": enums.UserRequestTypes.FEDERATION_REQUEST.value,
-                        "trainer_id": str(sender.id)
-                    }
-                )
-            else:
-                raise_validation_error(message=_("You can not choose existing federation as a new federation!"))
+        if send_request and federation:
+            # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
+            receivers = federation.users.filter(user_role="federation")
+            UserRequestService.create_request(
+                sender=sender,
+                receivers=receivers,
+                request_type=enums.UserRequestTypes.FEDERATION_REQUEST.value
+            )
+
         elif federation:
             instance.federation = federation
-            existing_request = UserRequest.objects.filter(
-                sender=sender,
-                receiver=federation_user,
-                request_type=enums.UserRequestTypes.FEDERATION_REQUEST.value,
-                status=enums.UserRequestStatus.PENDING.value
-            )
-            if existing_request.exists():
-                existing_request.update(status=enums.UserRequestStatus.ACCEPTED.value)
-                send_notification_to_user(
-                    user=sender,
-                    user_request=existing_request.first(),
-                    title=_("Federation Request Accepted"),
-                    body=_(f"{federation_user.first_name} {federation_user.last_name} has accepted your federation request."),
-                    data={
-                        "request_type": "federation_request",
-                        "federation_id": str(federation_user.id),
-                    }
-                )
 
         # Update other fields
         for attr, value in validated_data.items():
@@ -653,6 +621,10 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
     tokens = serializers.SerializerMethodField()
     fcm_token = serializers.CharField(required=False)
     device_type = serializers.ChoiceField(choices=DeviceType.choices, required=False)
+    federation = serializers.PrimaryKeyRelatedField(
+        queryset=Federation.objects.all(),
+        required=False
+    )
 
     class Meta:
         model = User
@@ -665,6 +637,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             "birth_date",
             "email",
             "user_role",
+            "federation",
             "is_verified",
             "fcm_token",
             "device_type",
@@ -713,7 +686,18 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
                 Sportsman.objects.create(user=user)
             elif user_role == "trainer":
                 Trainer.objects.create(user=user)
+            # elif user_role == "federation":
+            #     federation = validated_data.get("federation")
+            #     if federation:
+            #         if UserRequest.objects.filter(
+            #             sender=user,
+            #             status=enums.UserRequestStatus.PENDING.value,
+            #         ).exists():
+            #             raise_validation_error(message=_("You already have a pending federation request!"))
+            #         user_request = UserRequest.objects.create(
+            #             sender=user,
 
+            #         )
             logger.info(f"User created -> {user}")
             return user
 
