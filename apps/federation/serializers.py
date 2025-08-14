@@ -102,6 +102,7 @@ class FederationSerializer(serializers.ModelSerializer):
             "logo": {"required": False},
             "parent_federation": {"required": False},
             "region": {"required": False},
+            "users": {"required": False}
         }
 
     def validate(self, attrs):
@@ -121,14 +122,16 @@ class FederationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         age_groups_data = validated_data.pop("age_groups", [])
+        user = self.context.get("request").user
         users = validated_data.pop("users", [])
+
         sports = validated_data.pop("sports", [])
         documents = validated_data.pop("documents", [])
         with transaction.atomic():
             federation = Federation.objects.create(**validated_data)
             for doc in documents:
                 FederationDocument.objects.create(federation=federation, **doc).save()
-            federation.users.set(users)
+            federation.users.set([user])
             federation.sports.set(sports)
             for age_group_data in age_groups_data:
                 age_group = AgeGroup.objects.create(**age_group_data)

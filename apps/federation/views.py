@@ -64,6 +64,11 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
             return [permissions.AllowAny(),]
         return super().get_permissions()
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

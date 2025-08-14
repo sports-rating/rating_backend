@@ -18,6 +18,7 @@ class Federation(BaseModel):
         "user.User",
         related_name='federations',
         help_text="Users associated with this federation",
+        blank=True
     )
     parent_federation = models.ForeignKey(
         "self",
