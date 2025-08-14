@@ -15,7 +15,7 @@ from apps.user.models import (
 
 
 class UserFilter(filters.FilterSet):
-    user_role = filters.CharFilter(method="filter_user_role")
+    user_role = filters.ChoiceFilter(choices=UserRoles.choices())
     start_time = filters.CharFilter(method="filter_start_time")
     end_time = filters.CharFilter(method="filter_end_time")
     sport = filters.CharFilter(method='filter_sport')
@@ -26,16 +26,18 @@ class UserFilter(filters.FilterSet):
         model = User
         fields = ["user_role", "start_time", "end_time", "sport", "region", "district"]
 
-    def filter_user_role(self, queryset, name, value):  # noqa
-        if value == "sportsman":
-            return queryset.filter(sportsman_profile__isnull=False)
-        elif value == "trainer":
-            return queryset.filter(trainer_profile__isnull=False)
-        elif value == "ordinary":
-            return queryset.filter(sportsman_profile__isnull=True, trainer_profile__isnull=True)
-        elif value == "federation":
-            return queryset.filter(user_role=UserRoles.FEDERATION.value)
-        return queryset
+    # def filter_user_role(self, queryset, name, value):  # noqa
+    #     if value == "sportsman":
+    #         return queryset.filter(user_role=UserRoles.SPORTSMAN.value)
+    #     elif value == "trainer":
+    #         # return queryset.filter(trainer_profile__isnull=False)
+    #         return queryset.filter(user_role=UserRoles.TRAINER.value)
+    #     elif value == "ordinary":
+    #         # return queryset.filter(sportsman_profile__isnull=True, trainer_profile__isnull=True)
+    #         return queryset.filter(user_role=UserRoles.ORDINARY.value)
+    #     elif value == "federation":
+    #         return queryset.filter(user_role=UserRoles.FEDERATION.value)
+    #     return queryset
 
     def filter_start_time(self, queryset, name, value):
         if value:
