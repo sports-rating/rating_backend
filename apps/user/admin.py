@@ -115,7 +115,6 @@ class SportsmanAdmin(admin.ModelAdmin):
                     "user",
                     "sport",
                     "trainer",
-                    "skill_level",
                     "division",
                     "sport_rank",
                     "bio",
@@ -128,7 +127,7 @@ class SportsmanAdmin(admin.ModelAdmin):
         # ("Media", {"fields": ("media",)}),
 
     )
-    list_filter = ["skill_level",]
+    list_filter = ["sport_rank",]
 
 
 @admin.register(Trainer)

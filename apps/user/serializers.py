@@ -242,7 +242,6 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
         fields = [
             "sport_id",
             "trainer_id",
-            "skill_level",
             "bio",
             "division",
             "sport_rank",
