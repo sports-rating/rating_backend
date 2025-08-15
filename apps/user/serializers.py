@@ -394,15 +394,6 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         federation = validated_data.pop("federation", None)
         send_request = validated_data.pop("send_request", None)
 
-        # if instance.federation:
-        #     old_federation = instance.federation
-        # else:
-        #     old_federation = None
-
-        # test this case two? will sport be updated?
-        # if sport:
-        #     instance.sport = sport
-
         if send_request and federation:
             # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
             receivers = federation.users.filter(user_role="federation")

@@ -170,3 +170,40 @@ class UserListAPIView(generics.ListAPIView):
             message=_("Users list"),
             code=200,
         )
+
+
+class RegionalFederationListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = serializer.FederationSerializer
+    queryset = Federation.objects.all()
+
+    def get_queryset(self):
+        federation_id = self.kwargs.get('pk')
+        return Federation.objects.filter(parent_federation_id=federation_id).prefetch_related(
+            Prefetch(
+                'age_group_links__age_group',
+                queryset=AgeGroup.objects.select_related('sport')
+            ),
+            Prefetch(
+                'documents',
+                queryset=FederationDocument.objects.all()
+            )
+        )
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Regional federations list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Regional federation created successfully"),
+            code=status.HTTP_201_CREATED
+        )
