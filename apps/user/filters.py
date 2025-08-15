@@ -16,6 +16,7 @@ from apps.shared.models import (
     District,
     Neighborhood
 )
+from apps.federation.models import Federation
 
 
 class SportsmanFilter(BaseFilterSet):
@@ -51,12 +52,17 @@ class UserNotificationFilter(BaseFilterSet):
 class UserRequestFilter(BaseFilterSet):
     status = filters.ChoiceFilter(choices=UserRequestStatus.choices())
     date = filters.DateFilter(field_name="created_time", lookup_expr="date")
+    federation = filters.ModelChoiceFilter(
+        queryset=Federation.objects.all(),
+        field_name="receivers__federations"
+    )
 
     class Meta:
         model = UserRequest
         fields = [
             "status",
-            "date"
+            "date",
+            "federation"
         ]
 
 
