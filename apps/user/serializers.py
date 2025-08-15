@@ -284,59 +284,25 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
         trainer = validated_data.pop("trainer", None)
         send_request = validated_data.pop("send_request", False)
 
-        sportsman_profile = getattr(instance, "sportsman_profile", None)
-        if sportsman_profile and sportsman_profile.trainer:
-            old_trainer = sportsman_profile.trainer
-        else:
-            old_trainer = None
+        logger.info(f"Send request: {send_request}")
+        logger.info(f"Sender: {sender}")
+        logger.info(f"Trainer: {trainer}")
 
         if sport:
             instance.sport = sport
         if send_request:
-            if trainer and old_trainer != trainer:
-                if UserRequest.objects.filter(
+            if trainer:
+                user_request, message, success = UserRequestService.create_request(
                     sender=sender,
-                    status=enums.UserRequestStatus.PENDING.value,
-                ).exists():
-                    raise_validation_error(message=_("You already have a pending trainer request!"))
-                user_request = UserRequest.objects.create(
-                    sender=sender,
-                    receiver=trainer,
-                    request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
-                    status=enums.UserRequestStatus.PENDING.value
+                    receivers=[trainer],
+                    request_type=enums.UserRequestTypes.TRAINER_REQUEST.value
                 )
-                send_notification_to_user(
-                    user=trainer,
-                    user_request=user_request,
-                    title=_("New Trainer Request"),
-                    body=_(f"{sender.first_name} {sender.last_name} has selected you as their trainer."),
-                    data={
-                        "request_type": "trainer_request",
-                        "sportsman_id": str(sender.id),
-                    }
-                )
+                if not success:
+                    raise_validation_error(message=_(message))
             else:
                 raise_validation_error(message=_("You can not choose existing trainer as a new trainer!"))
         elif trainer:
             instance.trainer = trainer.trainer_profile
-            existing_request = UserRequest.objects.filter(
-                sender=sender,
-                receiver=trainer,
-                request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
-                status=enums.UserRequestStatus.PENDING.value
-            )
-            if existing_request.exists():
-                existing_request.update(status=enums.UserRequestStatus.ACCEPTED.value)
-                send_notification_to_user(
-                    user=sender,
-                    user_request=existing_request.first(),
-                    title=_("Trainer Request Accepted"),
-                    body=_(f"{trainer.first_name} {trainer.last_name} has accepted your trainer request."),
-                    data={
-                        "request_type": "trainer_request",
-                        "trainer_id": str(trainer.id),
-                    }
-                )
 
         # Update other fields
         for attr, value in validated_data.items():
