@@ -661,6 +661,8 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
             return _("You cannot create a new request while you have a pending trainer request.")
         elif request_type == "federation_request":
             return _("You cannot create a new request while you have a pending federation request.")
+        elif request_type == "federation_admin_request":
+            return _("You cannot create a new request while you have a pending federation admin request.")
 
     def get_queryset(self):
         req_type = self.request.query_params.get("type")
