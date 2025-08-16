@@ -653,7 +653,8 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
                     user_request, message, success = UserRequestService.create_request(
                         sender=user,
                         receivers=receivers,
-                        request_type=enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value
+                        request_type=enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
+                        federation=federation
                     )
                     if not success:
                         raise_validation_error(message=message)

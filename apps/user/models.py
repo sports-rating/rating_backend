@@ -27,6 +27,9 @@ from apps.shared.utils import enums
 from apps.sport.models import (
     Sport,
 )
+from apps.federation.models import (
+    Federation
+)
 
 fake = Faker()
 
@@ -211,6 +214,13 @@ class UserRequest(BaseModel):
         User,
         related_name='received_requests',
         help_text="Users who will receive this request",
+    )
+    federation = models.ForeignKey(
+        Federation,
+        on_delete=models.CASCADE,
+        related_name='requests',
+        null=True, blank=True,
+        help_text="The federation this request is related to"
     )
 
     request_type = models.CharField(max_length=100, choices=enums.UserRequestTypes.choices(), default=enums.UserRequestTypes.TRAINER_REQUEST.value)

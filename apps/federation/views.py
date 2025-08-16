@@ -31,7 +31,8 @@ from apps.federation.models import (
 from apps.user.models import (
     User,
     Sportsman,
-    Trainer
+    Trainer,
+    UserRequest
 )
 from apps.dashboard.serializers import (
     UserListSerializer
@@ -206,4 +207,44 @@ class RegionalFederationListCreateAPIView(generics.ListCreateAPIView):
             data=serializer.data,
             message=_("Regional federation created successfully"),
             code=status.HTTP_201_CREATED
+        )
+
+
+class FederationUserRequestListAPIView(generics.ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = serializer.FederationUserRequestSerializer
+    queryset = UserRequest.objects.all()
+    pagination_class = CustomPagination
+    filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
+    search_fields = [
+        "sender__first_name",
+        "sender__last_name",
+        "receivers__first_name",
+        "receivers__last_name",
+        "request_type",
+        "message",
+    ]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        context["federation_id"] = self.kwargs.get('pk')
+        return context
+
+    def get_queryset(self):
+        request_type = "received"
+        federation_id = self.kwargs.get('pk')
+        queryset = UserRequest.objects.filter(
+            receivers=self.request.user,
+            federation_id=federation_id
+        )
+        print(queryset)
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Federation User Request list retrieved successfully"),
+            code=status.HTTP_200_OK
         )

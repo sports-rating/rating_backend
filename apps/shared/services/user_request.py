@@ -11,12 +11,13 @@ import apps.shared.utils.enums as enums
 
 class UserRequestService:
     @staticmethod
-    def create_request(sender, receivers, request_type, data=None, message=None):
+    def create_request(sender, receivers, request_type, federation=None, data=None, message=None):
         # Prevent duplicates
         if UserRequest.objects.filter(
             sender=sender,
             status=enums.UserRequestStatus.PENDING.value,
-            request_type=request_type
+            request_type=request_type,
+            federation=federation
         ).exists():
             return None, _("You already have a pending request!"), False
 
@@ -25,6 +26,7 @@ class UserRequestService:
             sender=sender,
             request_type=request_type,
             status=enums.UserRequestStatus.PENDING.value,
+            federation=federation,
             data=data or {},
             message=message or ""
         )

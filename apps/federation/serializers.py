@@ -29,7 +29,8 @@ from apps.federation.models import (
 from apps.user.models import (
     User,
     Trainer,
-    ArchivedTrainer
+    ArchivedTrainer,
+    UserRequest
 )
 
 from apps.dashboard.serializers import (
@@ -200,4 +201,45 @@ class FederationSerializer(serializers.ModelSerializer):
             instance.sports.all(),
             many=True,
         ).data
+        return data
+
+
+class FederationUserRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserRequest
+        fields = [
+            "id",
+            "sender",
+            "receivers",
+            "request_type",
+            "status",
+            "created_time",
+        ]
+        read_only_fields = ["id", "sender", "created_time"]
+        extra_kwargs = {
+            "status": {"required": False}
+        }
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        federation_id = self.context.get("federation_id")
+        data["sender"] = {
+            "id": instance.sender.id,
+            "full_name": instance.sender.full_name,
+            "user_role": instance.sender.user_role,
+            "phone_number": instance.sender.phone_number,
+        }
+        logger.info(f"Receivers: {instance.receivers}")
+        receiver = instance.receivers.first()
+        federation = Federation.objects.filter(id=federation_id).first()
+        data["receiver"] = {
+            "id": receiver.id,
+            "full_name": receiver.full_name,
+            "user_role": receiver.user_role,
+            "phone_number": receiver.phone_number,
+            "federation": {
+                "id": federation.id,
+                "name": federation.name
+            } if federation else None
+        }
         return data
