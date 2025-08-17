@@ -1060,6 +1060,7 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         sender = self.context.get("request").user
         trainer = validated_data.pop("trainer", None)
         archived_trainer_name = validated_data.pop("archived_trainer_name", None)
+        tournament = validated_data.get("tournament", None)
         if trainer:
             logger.info(f"{type(trainer)}")  # LOGGING
             result = Result.objects.create(user=sender, trainer=trainer, **validated_data)
