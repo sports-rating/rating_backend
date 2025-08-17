@@ -482,6 +482,10 @@ class SportsmanResultListCreateAPIView(generics.ListCreateAPIView):
     queryset = Result.objects.all()
     serializer_class = serializers.SportsmanResultSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(user=user)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -492,6 +496,54 @@ class SportsmanResultListCreateAPIView(generics.ListCreateAPIView):
             data=serializer.data,
             message=_("Sportsman Result sent for verification successfully"),
             code=status.HTTP_201_CREATED
+        )
+
+    def list(self, request, *args, **kwargs):
+        response =  super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Sportsman Results retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class SportsmanResultRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = Result.objects.all()
+    serializer_class = serializers.SportsmanResultSerializer
+
+    def get_object(self):
+        result = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+        if not result:
+            raise_validation_error(message=_("Sportsman Result not found"), code=404)
+        return result
+
+    def retrieve(self, request, *args, **kwargs):
+        result = self.get_object()
+        serializer = self.get_serializer(result)
+        return success_response(
+            data=serializer.data,
+            message=_("Sportsman Result retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+    def update(self, request, *args, **kwargs):
+        result = self.get_object()
+        serializer = self.get_serializer(result, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Sportsman Result updated successfully"),
+            code=status.HTTP_200_OK
+        )
+
+    def delete(self, request, *args, **kwargs):
+        result = self.get_object()
+        result.delete()
+        return success_response(
+            message=_("Sportsman Result deleted successfully"),
+            code=status.HTTP_204_NO_CONTENT
         )
 
 

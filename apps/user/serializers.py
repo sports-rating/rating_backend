@@ -1086,9 +1086,9 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
             "name": instance.tournament.name,
         } if instance.tournament else None
         data["trainer"] = {
-            "id": instance.trainer.id,
-            "full_name": instance.trainer.full_name,
-            "phone_number": instance.trainer.phone_number,
+            "id": instance.trainer.user.id,
+            "full_name": instance.trainer.user.full_name,
+            "phone_number": instance.trainer.user.phone_number,
         } if instance.trainer else None
         data["archived_trainer"] = {
             "id": instance.archived_trainer.id,
