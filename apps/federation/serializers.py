@@ -161,19 +161,21 @@ class FederationSerializer(serializers.ModelSerializer):
                 for doc in documents:
                     FederationDocument.objects.create(federation=instance, **doc).save()
 
+            # CUD(Create, Update, Delete) pattern is being used here
             if age_groups:
                 left_age_groups_id = []
 
                 for age_group in age_groups:
                     age_group_id = age_group.get("id", None)
-                    if age_group_id:
+                    if age_group_id:  # if id exists, update the existing age group
                         AgeGroup.objects.filter(id=age_group_id).update(**age_group)
                         left_age_groups_id.append(age_group_id)
-                    else:
+                    else:  # if id does not exist, create a new age group
                         new_age_group = AgeGroup.objects.create(**age_group)
                         FederationAgeGroup.objects.create(federation=instance, age_group=new_age_group)
                         left_age_groups_id.append(new_age_group.id)
 
+                # Delete age groups that are no longer present
                 FederationAgeGroup.objects.filter(federation=instance).exclude(age_group__id__in=left_age_groups_id).delete()
                 AgeGroup.objects.exclude(id__in=left_age_groups_id).delete()
         return instance

@@ -24,6 +24,7 @@ from apps.sport.models import (
     Tournament,
     Result,
     Team,
+    ScoringPolicy,
 )
 from apps.federation.models import (
     Federation,
@@ -64,9 +65,23 @@ class SportSerializer(serializers.ModelSerializer):
         return data
 
 
+class ScoringPolicySerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+
+    class Meta:
+        model = ScoringPolicy
+        fields = (
+            "id",
+            "position",
+            "score"
+        )
+        validators = []
+
+
 class TournamentSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     logo = serializers.ImageField(required=False)
+    scoring_policies = ScoringPolicySerializer(many=True, required=True)
 
     class Meta:
         model = Tournament
@@ -76,6 +91,7 @@ class TournamentSerializer(serializers.ModelSerializer):
             "sport_id",
             "federation",
             "logo",
+            "scoring_policies",
             "created_time"
         )
         read_only_fields = ("id", "created_time")
@@ -98,31 +114,36 @@ class TournamentSerializer(serializers.ModelSerializer):
         if name and Tournament.objects.exclude(pk=getattr(instance, 'pk', None)).filter(name=name, sport=sport, federation=federation).exists():
             raise_validation_error(message=_("Tournament with this name already exists for the selected sport and federation!"))
 
-        # if instance:  # Only for updates
-        #     current_name = instance.name
-
-        #     # Check if the name is being updated
-        #     is_name_updated = name is not None and name != current_name
-
-        #     # If name is being updated, perform the uniqueness check
-        #     if is_name_updated:
-        #         queryset = Tournament.objects.filter(name=name)
-        #         queryset = queryset.exclude(id=instance.id)  # Exclude the current instance
-
-        #         if queryset.exists():
-        #             raise_validation_error(message=_("Tournament with this name already exists!"))
-
-        # else:  # For creation
-        #     if name:
-        #         queryset = Tournament.objects.filter(name=name)
-        #         if queryset.exists():
-        #             raise_validation_error(message=_("Tournament with this name already exists!"))
-
         return attrs
 
     def create(self, validated_data):
-        tournament = Tournament.objects.create(**validated_data)
+        scoring_policies = validated_data.pop("scoring_policies", [])
+        with transaction.atomic():
+            tournament = Tournament.objects.create(**validated_data)
+            for scoring_policy in scoring_policies:
+                ScoringPolicy.objects.create(tournament=tournament, **scoring_policy)
         return tournament
+
+    def update(self, instance, validated_data):
+        scoring_policies = validated_data.pop("scoring_policies", [])
+        with transaction.atomic():
+
+            # CUD(Create, Update, Delete) pattern is being used here
+            if scoring_policies:
+                left_scoring_policies_id = []
+
+                for scoring_policy in scoring_policies:
+                    scoring_policy_id = scoring_policy.get("id", None)
+                    if scoring_policy_id:  # if id exists, update the existing scoring policy
+                        ScoringPolicy.objects.filter(id=scoring_policy_id).update(**scoring_policy)
+                        left_scoring_policies_id.append(scoring_policy_id)
+                    else:  # if id does not exist, create a new scoring policy
+                        new_scoring_policy = ScoringPolicy.objects.create(tournament=instance, **scoring_policy)
+                        left_scoring_policies_id.append(new_scoring_policy.id)
+
+                # Delete scoring policies that are no longer present
+                ScoringPolicy.objects.filter(tournament=instance).exclude(id__in=left_scoring_policies_id).delete()
+        return instance
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -137,6 +158,10 @@ class TournamentSerializer(serializers.ModelSerializer):
             "name": instance.federation.name,
             "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
         } if instance.federation else None
+        data['scoring_policies'] = ScoringPolicySerializer(
+            instance.scoring_policies,
+            many=True
+        ).data
         return data
 
 

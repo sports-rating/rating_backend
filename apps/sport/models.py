@@ -76,6 +76,28 @@ class Tournament(BaseModel):
         super().delete(*args, **kwargs)
 
 
+class ScoringPolicy(BaseModel):
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="scoring_policies")
+    position = models.PositiveIntegerField()
+    score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(0),
+        ]
+    )
+
+    class Meta:
+        db_table = "scoring_policy"
+        unique_together = ['tournament', 'position']
+        verbose_name = "Scoring Policy"
+        verbose_name_plural = "Scoring Policies"
+        ordering = ["position"]
+
+    def __str__(self):
+        return f"{self.tournament.name} - Position {self.position} - Score {self.score}"
+
+
 class Result(BaseModel):
     country = models.CharField(max_length=100, null=True, blank=True)
     year = models.PositiveIntegerField(
