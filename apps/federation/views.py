@@ -34,6 +34,9 @@ from apps.user.models import (
     Trainer,
     UserRequest
 )
+from apps.sport.models import Tournament
+import apps.sport.serializers as sport_serializers
+
 from apps.dashboard.serializers import (
     UserListSerializer
 )
@@ -246,5 +249,24 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
         return success_response(
             data=response.data,
             message=_("Federation User Request list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class FederationTournamentListAPIView(generics.ListAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = sport_serializers.TournamentSerializer
+    queryset = Tournament.objects.all()
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        federation_id = self.kwargs.get('pk')
+        return Tournament.objects.filter(federation_id=federation_id)
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Federation Tournament list retrieved successfully"),
             code=status.HTTP_200_OK
         )

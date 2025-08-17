@@ -10,7 +10,6 @@ from apps.shared.utils.utils import handle_file_update, handle_file_delete, Corr
 from apps.sport.models import Sport
 
 
-# Create your models here.
 class Federation(BaseModel):
     name = models.CharField(max_length=250)
     is_national = models.BooleanField(default=False)

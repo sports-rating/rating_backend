@@ -50,6 +50,14 @@ class Tournament(BaseModel):
         null=True,
         blank=True
     )
+    federation = models.ForeignKey(
+        "federation.Federation",
+        on_delete=models.CASCADE,
+        related_name="tournaments",
+        blank=True,
+        null=True
+    )
+
 
     class Meta:
         db_table = "tournament"

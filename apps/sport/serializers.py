@@ -16,7 +16,7 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.general import (
     get_file_full_url,
     calculate_file_size,
-    check_uniqueness
+    check_uniqueness,
 )
 
 from apps.sport.models import (
@@ -24,6 +24,9 @@ from apps.sport.models import (
     Tournament,
     Result,
     Team,
+)
+from apps.federation.models import (
+    Federation,
 )
 
 from apps.user.models import (
@@ -71,6 +74,7 @@ class TournamentSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "sport_id",
+            "federation",
             "logo",
             "created_time"
         )
@@ -80,34 +84,44 @@ class TournamentSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
+        instance = self.instance
         name = attrs.get("name", None)
-        instance = self.instance  # This will be None during creation and the instance during updating
+        federation = attrs.get("federation", None)
+        sport = attrs.get("sport", None)
 
-        if instance:  # Only for updates
-            current_name = instance.name
+        if sport and federation:
+            if not federation.sports.filter(pk=sport.pk).exists():
+                raise_validation_error(message=_("Selected sport does not belong to the given federation!"))
+        else:
+            raise_validation_error(message=_("Federation and sport must be provided."))
 
-            # Check if the name is being updated
-            is_name_updated = name is not None and name != current_name
+        if name and Tournament.objects.exclude(pk=getattr(instance, 'pk', None)).filter(name=name, sport=sport, federation=federation).exists():
+            raise_validation_error(message=_("Tournament with this name already exists for the selected sport and federation!"))
 
-            # If name is being updated, perform the uniqueness check
-            if is_name_updated:
-                queryset = Tournament.objects.filter(name=name)
-                queryset = queryset.exclude(id=instance.id)  # Exclude the current instance
+        # if instance:  # Only for updates
+        #     current_name = instance.name
 
-                if queryset.exists():
-                    raise_validation_error(message=_("Tournament with this name already exists!"))
+        #     # Check if the name is being updated
+        #     is_name_updated = name is not None and name != current_name
 
-        else:  # For creation
-            if name:
-                queryset = Tournament.objects.filter(name=name)
-                if queryset.exists():
-                    raise_validation_error(message=_("Tournament with this name already exists!"))
+        #     # If name is being updated, perform the uniqueness check
+        #     if is_name_updated:
+        #         queryset = Tournament.objects.filter(name=name)
+        #         queryset = queryset.exclude(id=instance.id)  # Exclude the current instance
+
+        #         if queryset.exists():
+        #             raise_validation_error(message=_("Tournament with this name already exists!"))
+
+        # else:  # For creation
+        #     if name:
+        #         queryset = Tournament.objects.filter(name=name)
+        #         if queryset.exists():
+        #             raise_validation_error(message=_("Tournament with this name already exists!"))
 
         return attrs
 
     def create(self, validated_data):
-        sport = validated_data.pop("sport")
-        tournament = Tournament.objects.create(sport=sport, **validated_data)
+        tournament = Tournament.objects.create(**validated_data)
         return tournament
 
     def to_representation(self, instance):
@@ -118,6 +132,11 @@ class TournamentSerializer(serializers.ModelSerializer):
             "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
         } if instance.sport else None
         data["logo"] = get_file_full_url(instance.logo.url) if instance.logo else None
+        data["federation"] = {
+            "id": instance.federation.id,
+            "name": instance.federation.name,
+            "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
+        } if instance.federation else None
         return data
 
 

@@ -11,4 +11,5 @@ urlpatterns = [
     path("<uuid:pk>/regional-federations/", views.RegionalFederationListCreateAPIView.as_view(), name='regional-federation-list-create'),
 
     path("<uuid:pk>/requests/", views.FederationUserRequestListAPIView.as_view(), name='federation-request-list'),
+    path("<uuid:pk>/tournaments/", views.FederationTournamentListAPIView.as_view(), name='federation-tournament-list'),
 ]

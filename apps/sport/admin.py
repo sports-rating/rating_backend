@@ -9,9 +9,10 @@ from apps.sport.models import (
 
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "sport"]
+    list_display = ["id", "name", "sport", "federation"]
     search_fields = ["name", "sport__name"]
     list_filter = ["sport",]
+
 
 
 @admin.register(Sport)
