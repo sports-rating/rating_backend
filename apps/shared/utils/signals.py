@@ -39,7 +39,7 @@ def update_trainer_results(sender, instance, created, **kwargs):
                 setattr(trainer_result, increment_field, getattr(trainer_result, increment_field) + 1)
             trainer_result.save()
         else:
-            logger.info(f"(post_save) Result does not exist or trainer participated in tournament: {trainer_result.tournament.name if trainer_result else None}, creating...")
+            logger.info(f"(post_save) Result does not exist or trainer participated in tournament: {tournament.name if tournament else None}, creating...")
             # Create a new result
             result = Result.objects.create(
                 user=trainer_profile.user,

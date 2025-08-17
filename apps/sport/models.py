@@ -106,7 +106,7 @@ class Result(BaseModel):
         validators=[
             MinValueValidator(1800)
         ]
-        )
+    )
     currently_participating = models.BooleanField(default=False)
 
     user = models.ForeignKey("user.User", on_delete=models.CASCADE, related_name="results", blank=True, null=True)
@@ -115,6 +115,7 @@ class Result(BaseModel):
 
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="tournament_results", blank=True, null=True)
     additional_attributes = models.JSONField(null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
 
     rating = models.PositiveIntegerField(default=0)
     gold = models.PositiveIntegerField(default=0)

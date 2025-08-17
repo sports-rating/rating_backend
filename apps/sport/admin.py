@@ -25,7 +25,7 @@ class SportAdmin(admin.ModelAdmin):
 
 @admin.register(Result)
 class ResultAdmin(admin.ModelAdmin):
-    list_display = ["id", "country", "tournament", "year", "currently_participating"]
+    list_display = ["id", "tournament", "year", "currently_participating"]
     list_filter = ["currently_participating",]
 
 

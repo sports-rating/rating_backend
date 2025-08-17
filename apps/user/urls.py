@@ -13,6 +13,9 @@ urlpatterns = [
     path("auth/refresh-token/", views.LoginRefreshView.as_view(), name='refresh-token'),
 
     path("profile/", views.UserRetrieveUpdateView.as_view(), name='profile-retrieve-update'),
+    path("profile/results/", views.SportsmanResultListCreateAPIView.as_view(), name='result-list-create'),
+    # path("profile/results/<uuid:pk>/", views.SportsmanResultRetrieveUpdateDeleteAPIView.as_view(), name='result-retrieve-update-delete'),
+
     path("profile/sportsman/", views.SportsmanListCreateView.as_view(), name='sportsman-register-list'),
     path("profile/sportsman/<uuid:pk>/", views.SportsmanRetrieveUpdateDeleteView.as_view(), name='sportsman-retrieve-update-delete'),
     path("profile/trainer/", views.TrainerListCreateView.as_view(), name='trainer-register-list'),

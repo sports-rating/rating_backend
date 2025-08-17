@@ -30,6 +30,9 @@ from apps.user.models import (
     UserNotification,
     UserRequest
 )
+from apps.sport.models import (
+    Result
+)
 from apps.shared.models import (
     Region,
     District,
@@ -37,6 +40,7 @@ from apps.shared.models import (
 )
 
 import apps.user.serializers as serializers
+import apps.sport.serializers as sport_serializers
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.verification import (
     send_verification_code,
@@ -470,6 +474,24 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             message=_("Trainer deleted successfully"),
             code=204
+        )
+
+
+class SportsmanResultListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = Result.objects.all()
+    serializer_class = serializers.SportsmanResultSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        obj, message, success = serializer.save()
+        if not success:
+            return error_response(message=_(message), code=status.HTTP_400_BAD_REQUEST)
+        return success_response(
+            data=serializer.data,
+            message=_("Sportsman Result sent for verification successfully"),
+            code=status.HTTP_201_CREATED
         )
 
 

@@ -298,7 +298,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
                     request_type=enums.UserRequestTypes.TRAINER_REQUEST.value
                 )
                 if not success:
-                    raise_validation_error(message=_(message))
+                    raise_validation_error(message=message)
             else:
                 raise_validation_error(message=_("You can not choose existing trainer as a new trainer!"))
         elif trainer:
@@ -981,104 +981,14 @@ class UserRequestSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         sender = instance.sender
         logger.info(f"Sender: {sender}")  # LOGGING
-        receivers = instance.receivers.all()
-        request_type = instance.request_type
-        status = validated_data.get("status")
-        logger.info(f"Status: {status}")  # LOGGING
-        logger.info(f"Request type: {request_type}")
-
-        if request_type == "trainer_request":
-            self._handle_trainer_request(instance, validated_data)
-        elif request_type == "federation_request":
-            self._handle_federation_request(instance, validated_data)
-        elif request_type == "federation_admin_request":
-            self._handle_federation_admin_request(instance, validated_data)
+        receiver = self.context.get("request").user
+        message, success = UserRequestService.handle_request(instance, validated_data, receiver)
+        if success:
+            logger.info(f"{message}")
         else:
-            raise_validation_error(message=_("Invalid request type!"))
-
+            logger.error(f"Failed to handle request: {message}")
+            raise_validation_error(message=message)
         return instance
-
-    def _handle_trainer_request(self, instance, validated_data):
-        status = validated_data.get("status")
-        sender = instance.sender
-        receiver = self.context.get("request").user
-        logger.info(f"Receiver (trainer): {receiver}")  # LOGGING
-        if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-            # If the request is accepted, update the trainer for the sender
-            if receiver and hasattr(receiver, "trainer_profile"):
-                sender.sportsman_profile.trainer = receiver.trainer_profile
-                sender.sportsman_profile.is_sportsman_verified = True
-                sender.sportsman_profile.save()
-                notification_body = f"{receiver.full_name} has accepted your request."
-                notification_data = {
-                    "request_type": "trainer_request",
-                    "trainer_id": str(receiver.id),
-                }
-                UserRequestService.accept_request(instance, notification_body, notification_data)
-            else:
-                raise_validation_error(message=_("Receiver must be a valid trainer!"))
-        else:
-            notification_body = f"{receiver.full_name} has declined your request."
-            notification_data = {
-                "request_type": "trainer_request",
-                "trainer_id": str(receiver.id),
-            }
-            UserRequestService.decline_request(instance, notification_body, notification_data)
-
-    def _handle_federation_request(self, instance, validated_data):
-        status = validated_data.get("status")
-        sender = instance.sender
-        # receiver = instance.receivers.first() if instance.receivers.exists() else None
-        receiver = self.context.get("request").user
-        logger.info(f"Receiver (federation): {receiver}")
-        if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-            # If the request is accepted, update the federation for the sender
-            if receiver:
-                sender.trainer_profile.federation = receiver.federation
-                sender.trainer_profile.is_trainer_verified = True
-                sender.trainer_profile.save()
-                notification_body = f"{receiver.federation.name} has accepted your request."
-                notification_data = {
-                    "request_type": "federation_request",
-                    "federation_id": str(receiver.federation.id),
-                }
-                UserRequestService.accept_request(instance, notification_body, notification_data)
-            else:
-                raise_validation_error(message=_("Receiver must be a valid federation!"))
-        else:
-            notification_body = f"{receiver.federation.name} has declined your request."
-            notification_data={
-                "request_type": "federation_request",
-                "federation_id": str(receiver.federation.id),
-            }
-            UserRequestService.decline_request(instance, notification_body, notification_data)
-
-    def _handle_federation_admin_request(self, instance, validated_data):
-        status = validated_data.get("status")
-        sender = instance.sender
-        receiver = self.context.get("request").user
-        logger.info(f"Receiver (federation admin): {receiver}")
-        if instance.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-            # If the request is accepted, update the federation for the sender
-            if receiver:
-                logger.info(f"Receiver federation: {receiver.federation}")  # LOGGING
-                sender.federations.add(receiver.federation)
-                sender.save()
-                notification_body = f"{receiver.federation.name} has accepted your request."
-                notification_data = {
-                    "request_type": "federation_admin_request",
-                    "federation_id": str(receiver.federation.id),
-                }
-                UserRequestService.accept_request(instance, notification_body, notification_data)
-            else:
-                raise_validation_error(message=_("Receiver must be a valid federation!"))
-        else:
-            notification_body = f"{receiver.federation.name} has declined your request."
-            notification_data = {
-                "request_type": "federation_admin_request",
-                "federation_id": str(receiver.federation.id),
-            }
-            UserRequestService.decline_request(instance, notification_body, notification_data)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -1105,6 +1015,84 @@ class UserRequestSerializer(serializers.ModelSerializer):
                 "phone_number": receiver.phone_number,
             }
         data.pop("receivers")
+        return data
+
+
+class SportsmanResultSerializer(serializers.ModelSerializer):
+    archived_trainer_name = serializers.CharField(max_length=255, required=False, allow_null=True)
+
+    class Meta:
+        model = Result
+        fields = [
+            "id",
+            "country",
+            "tournament",
+            "trainer",
+            "archived_trainer_name",
+            "year",
+            "currently_participating",
+            "rating",
+            "additional_attributes",
+            "is_verified",
+            "gold",
+            "silver",
+            "bronze",
+        ]
+        read_only_fields = ["id", "is_verified", "gold", "silver", "bronze"]
+
+    def validate(self, attrs):
+        sportsman = self.context.get("request").user
+        federation = sportsman.sportsman_profile.trainer.federation
+        tournament = attrs.get("tournament", None)
+        trainer = attrs.get("trainer", None)
+        rating = attrs.get("rating", None)
+        if federation and not federation.tournaments.filter(id=tournament.id).exists():
+            raise_validation_error(message=_("You are not allowed to submit results for this tournament."))
+        if trainer and not federation.trainers.filter(user_id=trainer.pk).exists():
+            raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
+        if rating and not tournament.scoring_policies.filter(position=rating).exists():
+            raise_validation_error(message=_("Invalid rating for this tournament."))
+        if Result.objects.filter(user=sportsman, tournament=tournament, trainer=trainer).exists():
+            raise_validation_error(message=_("You have already submitted a result for this tournament and trainer."))
+        return super().validate(attrs)
+
+    def create(self, validated_data):
+        sender = self.context.get("request").user
+        trainer = validated_data.pop("trainer", None)
+        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
+        if trainer:
+            logger.info(f"{type(trainer)}")  # LOGGING
+            result = Result.objects.create(user=sender, trainer=trainer, **validated_data)
+            user_request, message, success = UserRequestService.create_request(
+                sender=sender,
+                receivers=[trainer.user],
+                request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+                data={"result_id": str(result.id)}
+            )
+            if not success:
+                raise_validation_error(message=message)
+            return result, _("User request created successfully"), True
+        elif archived_trainer_name:
+            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+            result = Result.objects.create(user=sender, archived_trainer=archived_trainer, tournament=tournament, **validated_data)
+            return result, _("Sportsman Result created successfully"), True
+        return None, _("Failed to create Sportsman Result"), False
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["tournament"] = {
+            "id": instance.tournament.id,
+            "name": instance.tournament.name,
+        } if instance.tournament else None
+        data["trainer"] = {
+            "id": instance.trainer.id,
+            "full_name": instance.trainer.full_name,
+            "phone_number": instance.trainer.phone_number,
+        } if instance.trainer else None
+        data["archived_trainer"] = {
+            "id": instance.archived_trainer.id,
+            "name": instance.archived_trainer.name,
+        } if instance.archived_trainer else None
         return data
 
 
