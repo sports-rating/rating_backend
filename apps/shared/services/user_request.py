@@ -176,8 +176,15 @@ class UserRequestService:
             if receiver:
                 result_id = user_request.data.get("result_id")
                 sportsman_result = Result.objects.filter(id=result_id).first()
+
+                # Applying the requested rating here
+                requested_rating = user_request.data.get("requested_rating")
+                if requested_rating:
+                    sportsman_result.rating = int(requested_rating)
+
                 sportsman_result.is_verified = True
                 sportsman_result.save()
+
                 notification_body = f"{receiver.full_name} has accepted your request."
                 notification_data = {
                     "request_type": "sportsman_result_verification_request",

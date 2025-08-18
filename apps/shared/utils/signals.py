@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save, pre_delete
+from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
 
 from apps.shared.utils.logging import logger
@@ -7,90 +7,135 @@ from apps.user.models import Sportsman, Trainer
 from apps.sport.models import Result
 
 
+# -----------------------
+# CREATE → post_save
+# -----------------------
 @receiver(post_save, sender=Result)
-def update_trainer_results(sender, instance, created, **kwargs):
-    """
-    Update the trainer's results whenever a new result is created for a sportsman.
-    Ignore if the result is the trainer's own result.
-    """
-    if created and instance.trainer and instance.user:
-        logger.info(f"Signal triggered")
-        trainer_profile = instance.trainer
+def handle_result_creation(sender, instance, created, **kwargs):
+    if not created:
+        return
 
-        tournament = instance.tournament
-        rating = instance.rating
+    if not instance.trainer or not instance.user:
+        return
 
-        # Check if the trainer already has a result for this tournament
-        trainer_result = Result.objects.filter(user=trainer_profile.user, tournament=tournament, currently_participating=False).first()
+    if not instance.is_verified:
+        logger.info(f"Skipping creation for {instance} because result is not verified yet")
+        return
+    logger.info(f"Signal triggered for {instance} with created={created}")
+    trainer_profile = instance.trainer
+    tournament = instance.tournament
 
-        # Determine the value to increment based on the rating
-        increment_field = None
-        if rating == 1:
-            increment_field = 'gold'
-        elif rating == 2:
-            increment_field = 'silver'
-        elif rating == 3:
-            increment_field = 'bronze'
+    # New result → add rating
+    _increment_trainer_result(trainer_profile.user, tournament, instance.rating, instance)
 
-        if trainer_result:
-            logger.info(f"(post_save) Results exists, updating it...")
-            # Increment the appropriate field
-            if increment_field:
-                setattr(trainer_result, increment_field, getattr(trainer_result, increment_field) + 1)
-            trainer_result.save()
-        else:
-            logger.info(f"(post_save) Result does not exist or trainer participated in tournament: {tournament.name if tournament else None}, creating...")
-            # Create a new result
-            result = Result.objects.create(
-                user=trainer_profile.user,
-                tournament=tournament,
-                country=instance.country,
-                year=instance.year,
-                currently_participating=False,
-                rating=0,
-                gold=(1 if rating == 1 else 0),
-                silver=(1 if rating == 2 else 0),
-                bronze=(1 if rating == 3 else 0)
-            )
-            logger.info(f"(post_save) Currently_participating: {result.currently_participating}")
+
+# -----------------------
+# UPDATE → pre_save
+# -----------------------
+@receiver(pre_save, sender=Result)
+def handle_result_update(sender, instance, **kwargs):
+    if not instance.pk:
+        # Skip new objects (handled by post_save)
+        return
+
+    try:
+        old_instance = Result.objects.get(pk=instance.pk)
+    except Result.DoesNotExist:
+        return
+
+    if not instance.trainer or not instance.user:
+        return
+
+    if not instance.is_verified:
+        logger.info(f"Skipping update for {instance} because result is not verified yet")
+        return
+
+    trainer_profile = instance.trainer
+    tournament = instance.tournament
+
+    old_rating = old_instance.rating
+    new_rating = instance.rating
+
+    if old_rating != new_rating:
+        logger.info(f"Old rating: {old_rating}, New rating: {new_rating}")
+        if old_rating:
+            _decrement_trainer_result(trainer_profile.user, tournament, old_rating)
+        _increment_trainer_result(trainer_profile.user, tournament, new_rating, instance)
+
+
+def _increment_trainer_result(trainer_user, tournament, rating, sportsman_result):
+    trainer_result, _ = Result.objects.get_or_create(
+        user=trainer_user,
+        tournament=tournament,
+        defaults={
+            "country": sportsman_result.country,
+            "year": sportsman_result.year,
+            "currently_participating": False,
+            "rating": 0,
+            "gold": 0,
+            "silver": 0,
+            "bronze": 0,
+        },
+    )
+    logger.info(f"Incrementing trainer result for {trainer_user.username} in tournament {tournament.name} with rating {rating}")
+    if rating == 1:
+        trainer_result.gold += 1
+    elif rating == 2:
+        trainer_result.silver += 1
+    elif rating == 3:
+        trainer_result.bronze += 1
+
+    trainer_result.save()
+
+
+def _decrement_trainer_result(trainer_user, tournament, rating):
+    trainer_result = Result.objects.filter(
+        user=trainer_user,
+        tournament=tournament,
+        currently_participating=False
+    ).first()
+
+    if not trainer_result:
+        return
+    logger.info(f"Decrementing trainer result for {trainer_user.username} in tournament {tournament.name} with rating {rating}")
+    if rating == 1 and trainer_result.gold > 0:
+        trainer_result.gold -= 1
+    elif rating == 2 and trainer_result.silver > 0:
+        trainer_result.silver -= 1
+    elif rating == 3 and trainer_result.bronze > 0:
+        trainer_result.bronze -= 1
+
+    trainer_result.save()
 
 
 @receiver(pre_delete, sender=Result)
 def update_or_delete_trainer_result(sender, instance, **kwargs):
     """
-    This signal runs before deleting a sportsman's result.
-    It checks whether the trainer has results from other sportsmen in the
-    same tournament and updates or deletes them accordingly.
+    Runs before deleting a sportsman's result.
+    If trainer has other sportsmen in the same tournament → just decrement.
+    If not → delete the trainer result entirely.
     """
-    if instance.trainer:
-        trainer_profile = instance.trainer
-        tournament = instance.tournament
-        rating = instance.rating
+    if not instance.trainer or not instance.user or not instance.is_verified:
+        return  # Skip if no trainer/user or unverified result
 
-        # Determine the value to decrement based on the rating
-        decrement_field = None
-        if rating == 1:
-            decrement_field = 'gold'
-        elif rating == 2:
-            decrement_field = 'silver'
-        elif rating == 3:
-            decrement_field = 'bronze'
+    trainer_profile = instance.trainer
+    trainer_user = trainer_profile.user
+    tournament = instance.tournament
+    rating = instance.rating
 
-        logger.info(f"Rating: {rating}")
-        logger.info(f"Decrement field: {decrement_field}")
-        logger.info(f"Tournament: {instance.tournament}")
+    # Check if other sportsmen exist for this trainer in the same tournament
+    other_sportsman_results = Result.objects.filter(
+        trainer=trainer_profile,
+        tournament=tournament
+    ).exclude(id=instance.id)
 
-        # Check if other sportsmen have results for the same trainer & tournament
-        other_sportsman_results = Result.objects.filter(trainer=trainer_profile, tournament=tournament).exclude(id=instance.id)
-
-        if other_sportsman_results.exists():
-            logger.info(f"(pre_delete) Other sportsmans exists in trainer's result, updating it...")
-            # If other sportsmen exist, subtract the counts instead of deleting
-            trainer_result = Result.objects.filter(user=trainer_profile.user, tournament=tournament, currently_participating=False).first()
-            if trainer_result and decrement_field:
-                setattr(trainer_result, decrement_field, max(0, getattr(trainer_result, decrement_field) - 1))
-            trainer_result.save()
-        else:
-            logger.info(f"(pre_delete) No other sportsmans exists in trainer's result, deleting it...")
-            # If no other sportsman exist in trainer's result, delete the result entirely
-            Result.objects.filter(user=trainer_profile.user, tournament=tournament, currently_participating=False).delete()
+    if other_sportsman_results.exists():
+        logger.info(f"(pre_delete) Other sportsmen exist → decrementing trainer result...")
+        _decrement_trainer_result(trainer_user, tournament, rating)
+    else:
+        logger.info(f"(pre_delete) No other sportsmen exist → deleting trainer result...")
+        Result.objects.filter(
+            user=trainer_user,
+            tournament=tournament,
+            currently_participating=False
+        ).delete()

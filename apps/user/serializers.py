@@ -1063,27 +1063,32 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         archived_trainer_name = validated_data.pop("archived_trainer_name", None)
         tournament = validated_data.get("tournament", None)
         if trainer:
+            rating = validated_data.pop("rating", None)
             result = Result.objects.create(user=sender, trainer=trainer, **validated_data)
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=[trainer.user],
                 request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
-                data={"result_id": str(result.id)}
+                data={
+                    "result_id": str(result.id),
+                    "requested_rating": rating
+                }
             )
             if not success:
                 raise_validation_error(message=message)
-            return result, _("User request created successfully"), True
+            return result
         elif archived_trainer_name:
             archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
             result = Result.objects.create(user=sender, archived_trainer=archived_trainer, tournament=tournament, **validated_data)
-            return result, _("Sportsman Result created successfully"), True
-        return None, _("Failed to create Sportsman Result"), False
+            return result
+        return None
 
     def update(self, instance, validated_data):
         sender = self.context.get("request").user
         trainer = validated_data.pop("trainer", None)
         archived_trainer_name = validated_data.pop("archived_trainer_name", None)
         if trainer:
+            new_rating = validated_data.pop("rating", None)
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.is_verified = False
@@ -1092,7 +1097,10 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
                 sender=sender,
                 receivers=[trainer.user],
                 request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
-                data={"result_id": str(instance.id)}
+                data={
+                    "result_id": str(instance.id),
+                    "requested_rating": new_rating,  # New rating requested without saving
+                }
             )
             if not success:
                 raise_validation_error(message=message)

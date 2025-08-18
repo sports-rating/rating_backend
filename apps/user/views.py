@@ -489,9 +489,7 @@ class SportsmanResultListCreateAPIView(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        obj, message, success = serializer.save()
-        if not success:
-            return error_response(message=_(message), code=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
         return success_response(
             data=serializer.data,
             message=_("Sportsman Result sent for verification successfully"),
