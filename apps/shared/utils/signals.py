@@ -87,6 +87,8 @@ def _increment_trainer_result(trainer_user, tournament, rating, sportsman_result
 
     trainer_result.save()
 
+    _calculate_trainer_points(trainer_user)
+
 
 def _decrement_trainer_result(trainer_user, tournament, rating):
     trainer_result = Result.objects.filter(
@@ -106,6 +108,25 @@ def _decrement_trainer_result(trainer_user, tournament, rating):
         trainer_result.bronze -= 1
 
     trainer_result.save()
+
+    _calculate_trainer_points(trainer_user)
+
+
+def _calculate_trainer_points(trainer_user):
+    """
+    Calculates and updates the trainer's average points based on the tournament and rating.
+    """
+
+    all_scores = sum(
+        s.points for s in trainer_user.trainer_profile.sportsmen.all()
+    )
+    sportsmans_count = trainer_user.trainer_profile.sportsmen.count()
+
+    trainer_user.trainer_profile.points = (
+        all_scores / sportsmans_count if sportsmans_count > 0 else 0
+    )
+
+    trainer_user.trainer_profile.save()
 
 
 @receiver(pre_delete, sender=Result)

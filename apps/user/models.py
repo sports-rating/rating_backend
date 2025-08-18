@@ -129,6 +129,7 @@ class Sportsman(models.Model):
     division = models.CharField(max_length=100, blank=True, null=True)
     sport_rank = models.CharField(max_length=30, choices=enums.SportRankEnum.choices(), default=enums.SportRankEnum.YOUTH_3.value, blank=True, null=True)
     user_metrics = models.JSONField(blank=True, null=True)
+    points = models.FloatField(default=0.0, blank=True, null=True)
     # Address
     address = models.JSONField(blank=True, null=True)
     # Contacts
@@ -163,6 +164,7 @@ class Trainer(models.Model):
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
     user_metrics = models.JSONField(blank=True, null=True)
+    points = models.FloatField(default=0.0, blank=True, null=True)
     # Address
     address = models.JSONField(blank=True, null=True)
     # Contacts

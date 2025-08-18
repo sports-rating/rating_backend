@@ -247,6 +247,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             "bio",
             "division",
             "sport_rank",
+            "points",
             "user_metrics",
             "address",
             "social_media",
@@ -372,6 +373,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "bio",
             "division",
             "user_metrics",
+            "points",
             "address",
             "social_media",
             "is_trainer_verified",
@@ -1065,13 +1067,15 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         if trainer:
             rating = validated_data.pop("rating", None)
             result = Result.objects.create(user=sender, trainer=trainer, **validated_data)
+            score = tournament.get_score(rating)
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=[trainer.user],
                 request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
                 data={
                     "result_id": str(result.id),
-                    "requested_rating": rating
+                    "requested_rating": rating,
+                    "score": float(score),  # Score based on the rating
                 }
             )
             if not success:
@@ -1087,6 +1091,8 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         sender = self.context.get("request").user
         trainer = validated_data.pop("trainer", None)
         archived_trainer_name = validated_data.pop("archived_trainer_name", None)
+        tournament = validated_data.get("tournament", None)
+        score = tournament.get_score(new_rating)
         if trainer:
             new_rating = validated_data.pop("rating", None)
             for attr, value in validated_data.items():
@@ -1100,6 +1106,7 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
                 data={
                     "result_id": str(instance.id),
                     "requested_rating": new_rating,  # New rating requested without saving
+                    "score": float(score),  # Score based on the rating
                 }
             )
             if not success:
@@ -1110,9 +1117,27 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
             instance.archived_trainer = archived_trainer
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
+            SportsmanProfileSerializer.update_sportsman_points(instance, validated_data)
             instance.is_verified = True
             instance.save()
             return instance
+        return instance
+
+    @staticmethod
+    def update_sportsman_points(sportsman, instance, validated_data):
+        tournament = validated_data.get("tournament", None)
+        rating = validated_data.get("rating", None)
+
+        # --- Step 1: subtract old score ---
+        old_score = instance.tournament.get_score(instance.rating)  # previous score
+        sportsman.sportsman_profile.points -= old_score
+
+        # --- Step 2: calculate new score ---
+        new_score = tournament.get_score(rating)
+        sportsman.sportsman_profile.points += new_score
+
+        sportsman.sportsman_profile.save()
+
         return instance
 
     def to_representation(self, instance):

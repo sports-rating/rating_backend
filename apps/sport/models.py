@@ -75,6 +75,10 @@ class Tournament(BaseModel):
     def __str__(self):
         return self.name
 
+    def get_score(self, position):
+        scoring_policy = self.scoring_policies.filter(position=position).first()
+        return scoring_policy.score if scoring_policy else None
+
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
         super().save(*args, **kwargs)

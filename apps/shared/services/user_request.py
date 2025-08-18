@@ -174,6 +174,8 @@ class UserRequestService:
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the result for the sender
             if receiver:
+                sender = user_request.sender
+
                 result_id = user_request.data.get("result_id")
                 sportsman_result = Result.objects.filter(id=result_id).first()
 
@@ -181,7 +183,9 @@ class UserRequestService:
                 requested_rating = user_request.data.get("requested_rating")
                 if requested_rating:
                     sportsman_result.rating = int(requested_rating)
+                    sender.sportsman_profile.points += user_request.data.get("score", 0.0)
 
+                sender.sportsman_profile.save()
                 sportsman_result.is_verified = True
                 sportsman_result.save()
 
