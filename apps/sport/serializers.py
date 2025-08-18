@@ -127,6 +127,9 @@ class TournamentSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         scoring_policies = validated_data.pop("scoring_policies", [])
         with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
             # CUD(Create, Update, Delete) pattern is being used here
             if scoring_policies:
