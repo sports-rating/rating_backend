@@ -7,8 +7,16 @@ from django.core.validators import FileExtensionValidator, MinValueValidator, Ma
 from rest_framework.exceptions import ValidationError
 
 from apps.shared.models import BaseModel, Region, District, BaseMedia
-from apps.shared.utils.enums import LanguageTypes, GenderChoices
-from apps.shared.utils.utils import handle_file_update, handle_file_delete, CorrectPath
+from apps.shared.utils.enums import (
+    LanguageTypes,
+    GenderChoices,
+    ResultVerificationStatus
+)
+from apps.shared.utils.utils import (
+    handle_file_update,
+    handle_file_delete,
+    CorrectPath
+)
 
 
 class Sport(BaseModel):
@@ -116,6 +124,7 @@ class Result(BaseModel):
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="tournament_results", blank=True, null=True)
     additional_attributes = models.JSONField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+    # status = models.CharField(max_length=20, choices=ResultVerificationStatus.choices(), default=ResultVerificationStatus.PENDING.value)
 
     rating = models.PositiveIntegerField(default=0)
     gold = models.PositiveIntegerField(default=0)

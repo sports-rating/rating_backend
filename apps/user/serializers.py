@@ -1046,13 +1046,14 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         tournament = attrs.get("tournament", None)
         trainer = attrs.get("trainer", None)
         rating = attrs.get("rating", None)
+        instance = self.instance
         if federation and not federation.tournaments.filter(id=tournament.id).exists():
             raise_validation_error(message=_("You are not allowed to submit results for this tournament."))
         if trainer and not federation.trainers.filter(user_id=trainer.pk).exists():
             raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
         if rating and not tournament.scoring_policies.filter(position=rating).exists():
             raise_validation_error(message=_("Invalid rating for this tournament."))
-        if Result.objects.filter(user=sportsman, tournament=tournament, trainer=trainer).exists():
+        if instance and Result.objects.exclude(pk=instance.pk).filter(user=sportsman, tournament=tournament, trainer=trainer).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and trainer."))
         return super().validate(attrs)
 
@@ -1062,7 +1063,6 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         archived_trainer_name = validated_data.pop("archived_trainer_name", None)
         tournament = validated_data.get("tournament", None)
         if trainer:
-            logger.info(f"{type(trainer)}")  # LOGGING
             result = Result.objects.create(user=sender, trainer=trainer, **validated_data)
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
@@ -1078,6 +1078,34 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
             result = Result.objects.create(user=sender, archived_trainer=archived_trainer, tournament=tournament, **validated_data)
             return result, _("Sportsman Result created successfully"), True
         return None, _("Failed to create Sportsman Result"), False
+
+    def update(self, instance, validated_data):
+        sender = self.context.get("request").user
+        trainer = validated_data.pop("trainer", None)
+        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
+        if trainer:
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.is_verified = False
+            instance.save()
+            user_request, message, success = UserRequestService.create_request(
+                sender=sender,
+                receivers=[trainer.user],
+                request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+                data={"result_id": str(instance.id)}
+            )
+            if not success:
+                raise_validation_error(message=message)
+            return instance
+        elif archived_trainer_name:
+            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+            instance.archived_trainer = archived_trainer
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.is_verified = True
+            instance.save()
+            return instance
+        return instance
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

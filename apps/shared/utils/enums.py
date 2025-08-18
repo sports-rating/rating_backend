@@ -90,3 +90,9 @@ class SportRankEnum(BaseEnum):
     ADULT_2 = "Adult Second Rank"
     ADULT_1 = "Adult First Rank"
     CANDIDATE = "Candidate for Master of Sport"
+
+
+class ResultVerificationStatus(BaseEnum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    REJECTED = "rejected"
