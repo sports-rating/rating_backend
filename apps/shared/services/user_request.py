@@ -9,6 +9,7 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.logging import logger
 import apps.shared.utils.enums as enums
 from apps.sport.models import Result
+from apps.shared.services.scoring_service import ScoringService
 
 
 class UserRequestService:
@@ -170,7 +171,6 @@ class UserRequestService:
 
     def _handle_result_verification_request(user_request, validated_data, receiver):
         status = validated_data.get("status")
-        logger.info(f"Receiver (sportsman result verification): {receiver}")  # LOGGING
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the result for the sender
             if receiver:
@@ -181,9 +181,15 @@ class UserRequestService:
 
                 # Applying the requested rating here
                 requested_rating = user_request.data.get("requested_rating")
+                logger.info(f"Requested rating: {requested_rating}")  # LOGGING
                 if requested_rating:
+                    ScoringService.update_sportsman_points(
+                        sportsman=sender,
+                        instance=sportsman_result,
+                        tournament=sportsman_result.tournament,
+                        rating=requested_rating
+                    )
                     sportsman_result.rating = int(requested_rating)
-                    sender.sportsman_profile.points += user_request.data.get("score", 0.0)
 
                 sender.sportsman_profile.save()
                 sportsman_result.is_verified = True

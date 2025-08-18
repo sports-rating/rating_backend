@@ -34,6 +34,7 @@ from apps.user.utils import (
     calculate_trainer_statistics
 )
 from apps.shared.services.user_request import UserRequestService
+from apps.shared.services.scoring_service import ScoringService
 
 
 SEND_VERIFICATION_ACTION = (
@@ -1061,84 +1062,82 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         sender = self.context.get("request").user
-        trainer = validated_data.pop("trainer", None)
-        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
-        tournament = validated_data.get("tournament", None)
-        if trainer:
-            rating = validated_data.pop("rating", None)
-            result = Result.objects.create(user=sender, trainer=trainer, **validated_data)
-            score = tournament.get_score(rating)
-            user_request, message, success = UserRequestService.create_request(
-                sender=sender,
-                receivers=[trainer.user],
-                request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
-                data={
-                    "result_id": str(result.id),
-                    "requested_rating": rating,
-                    "score": float(score),  # Score based on the rating
-                }
-            )
-            if not success:
-                raise_validation_error(message=message)
-            return result
-        elif archived_trainer_name:
-            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-            result = Result.objects.create(user=sender, archived_trainer=archived_trainer, tournament=tournament, **validated_data)
-            return result
-        return None
+        result, rating = self._build_result(sender, validated_data, is_update=False)
+
+        if result.trainer:
+            self._create_verification_request(sender, result, rating)
+
+        return result
 
     def update(self, instance, validated_data):
         sender = self.context.get("request").user
+        result, new_rating = self._build_result(sender, validated_data, instance=instance, is_update=True)
+        tournament = validated_data.get("tournament", None)
+
+        if result.trainer:
+            self._create_verification_request(sender, result, new_rating)
+        else:
+            ScoringService.update_sportsman_points(sender, instance, tournament, new_rating)
+            result.is_verified = True
+            result.save()
+
+        return result
+
+    # ----------------------------
+    # Helpers
+    # ----------------------------
+    def _build_result(self, sender, validated_data, instance=None, is_update=False):
         trainer = validated_data.pop("trainer", None)
         archived_trainer_name = validated_data.pop("archived_trainer_name", None)
         tournament = validated_data.get("tournament", None)
-        score = tournament.get_score(new_rating)
-        if trainer:
-            new_rating = validated_data.pop("rating", None)
-            for attr, value in validated_data.items():
-                setattr(instance, attr, value)
-            instance.is_verified = False
-            instance.save()
-            user_request, message, success = UserRequestService.create_request(
-                sender=sender,
-                receivers=[trainer.user],
-                request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
-                data={
-                    "result_id": str(instance.id),
-                    "requested_rating": new_rating,  # New rating requested without saving
-                    "score": float(score),  # Score based on the rating
-                }
-            )
-            if not success:
-                raise_validation_error(message=message)
-            return instance
-        elif archived_trainer_name:
-            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-            instance.archived_trainer = archived_trainer
-            for attr, value in validated_data.items():
-                setattr(instance, attr, value)
-            SportsmanProfileSerializer.update_sportsman_points(instance, validated_data)
-            instance.is_verified = True
-            instance.save()
-            return instance
-        return instance
-
-    @staticmethod
-    def update_sportsman_points(sportsman, instance, validated_data):
-        tournament = validated_data.get("tournament", None)
         rating = validated_data.get("rating", None)
 
-        # --- Step 1: subtract old score ---
-        old_score = instance.tournament.get_score(instance.rating)  # previous score
-        sportsman.sportsman_profile.points -= old_score
+        if trainer:
+            # Pop the rating from validated_data, we add it after result verification
+            validated_data.pop("rating", None)
+            if is_update and instance:
+                for attr, value in validated_data.items():
+                    setattr(instance, attr, value)
+                instance.is_verified = False
+                instance.save()
+                return instance, rating  # return rating along with instance
+            result = Result.objects.create(user=sender, trainer=trainer, **validated_data)
+            return result, rating  # return rating too
 
-        # --- Step 2: calculate new score ---
-        new_score = tournament.get_score(rating)
-        sportsman.sportsman_profile.points += new_score
+        elif archived_trainer_name:
+            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+            if is_update and instance:
+                instance.archived_trainer = archived_trainer
+                for attr, value in validated_data.items():
+                    setattr(instance, attr, value)
+                instance.save()
+                return instance, rating  # return rating too
+            result = Result.objects.create(
+                user=sender,
+                archived_trainer=archived_trainer,
+                tournament=tournament,
+                **validated_data
+            )
+            return result, rating  # return rating too
 
-        sportsman.sportsman_profile.save()
+        return None, rating  # return rating too
 
-        return instance
+    def _create_verification_request(self, sender, result, rating):
+        score = result.tournament.get_score(rating)
+        print(rating)
+        print(score)
+        user_request, message, success = UserRequestService.create_request(
+            sender=sender,
+            receivers=[result.trainer.user],
+            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+            data={
+                "result_id": str(result.id),
+                "requested_rating": rating,
+                "score": float(score),
+            }
+        )
+        if not success:
+            raise_validation_error(message=message)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
