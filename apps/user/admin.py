@@ -117,6 +117,7 @@ class SportsmanAdmin(admin.ModelAdmin):
                     "trainer",
                     "division",
                     "sport_rank",
+                    "points",
                     "bio",
                 )
             },
@@ -142,8 +143,9 @@ class TrainerAdmin(admin.ModelAdmin):
                     "sport",
                     "skill_level",
                     "division",
-                    "bio",
+                    "points",
                     "federation",
+                    "bio",
                 )
             },
         ),
