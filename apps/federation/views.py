@@ -28,12 +28,14 @@ from apps.federation.models import (
     AgeGroup,
     FederationDocument
 )
+
 from apps.user.models import (
     User,
     Sportsman,
     Trainer,
     UserRequest
 )
+from apps.user.filters import UserRequestFilter
 from apps.sport.models import Tournament
 import apps.sport.serializers as sport_serializers
 
@@ -219,6 +221,7 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
     queryset = UserRequest.objects.all()
     pagination_class = CustomPagination
     filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
+    filterset_class = UserRequestFilter
     search_fields = [
         "sender__first_name",
         "sender__last_name",
