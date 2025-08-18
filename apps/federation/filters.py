@@ -7,3 +7,11 @@ from apps.federation.models import (
 )
 from apps.user.models import UserRequest
 from apps.shared.utils.enums import UserRequestStatus
+
+
+class FederationFilter(BaseFilterSet):
+    sport = filters.CharFilter(field_name="sports__id")
+
+    class Meta:
+        model = Federation
+        fields = ["sport"]

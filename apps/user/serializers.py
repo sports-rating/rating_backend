@@ -402,7 +402,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=receivers,
-                request_type=enums.UserRequestTypes.TRAINER_TO_FEDERATION.value
+                request_type=enums.UserRequestTypes.TRAINER_REQUEST.value
             )
             if not success:
                 raise_validation_error(message=message)

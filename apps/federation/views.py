@@ -38,6 +38,7 @@ from apps.user.models import (
 from apps.user.filters import UserRequestFilter
 from apps.sport.models import Tournament
 import apps.sport.serializers as sport_serializers
+from apps.federation.filters import FederationFilter
 
 from apps.dashboard.serializers import (
     UserListSerializer
@@ -52,6 +53,8 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
     queryset = Federation.objects.all()
     pagination_class = CustomPagination
     parser_classes = (FormParser, MultiPartParser)
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    filterset_class = FederationFilter
 
     def get_queryset(self):
         return Federation.objects.prefetch_related(
