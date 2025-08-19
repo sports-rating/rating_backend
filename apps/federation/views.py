@@ -154,25 +154,26 @@ class UserListAPIView(generics.ListAPIView):
     permission_classes = (
         permissions.IsAuthenticated,
     )
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
     filterset_class = UserFilter
     pagination_class = CustomPagination
 
     def get_queryset(self):
+        federation_id = self.kwargs.get('pk')
         user = self.request.user
-        federation = getattr(user, 'federation', None)
 
-        base_qs = User.objects.exclude(user_role__in=["ordinary", "admin"]).select_related(
+        base_qs = User.objects.exclude(user_role__in=["ordinary", "admin", "super_admin"]).select_related(
             "sportsman_profile", "trainer_profile"
         ).prefetch_related(
             "sportsman_profile__trainer",
             "trainer_profile__federation"
         )
 
-        if federation:
+        if federation_id:
             return base_qs.filter(
-                Q(trainer_profile__federation=federation) |
-                Q(sportsman_profile__trainer__federation=federation)
+                Q(trainer_profile__federation=federation_id) |
+                Q(sportsman_profile__trainer__federation=federation_id) |
+                Q(federations__id=federation_id)
             )
         return base_qs
 

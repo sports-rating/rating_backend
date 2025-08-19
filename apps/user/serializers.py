@@ -996,6 +996,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        receiver = self.context.get("request").user
         data["sender"] = {
             "id": instance.sender.id,
             "full_name": instance.sender.full_name,
@@ -1003,12 +1004,18 @@ class UserRequestSerializer(serializers.ModelSerializer):
             "phone_number": instance.sender.phone_number,
         }
         if instance.request_type == enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value:
-            receiver = instance.receivers.first()
+            federation = instance.federation
             data["receiver"] = {
-                "id": receiver.federation.id,
-                "name": receiver.federation.name,
-                "phone_number": receiver.federation.phone_number,
-                "is_national": receiver.federation.is_national,
+                "id": receiver.id,
+                "full_name": receiver.full_name,
+                "user_role": receiver.user_role,
+                "phone_number": receiver.phone_number,
+                "federation": {
+                    "id": federation.id,
+                    "name": federation.name,
+                    "phone_number": federation.phone_number,
+                    "is_national": federation.is_national,
+                } if federation else None
             }
         elif instance.receivers.count() == 1:
             receiver = instance.receivers.first()
