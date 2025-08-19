@@ -232,6 +232,7 @@ class FederationUserRequestSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        receiver = self.context.get("request").user
         federation_id = self.context.get("federation_id")
         sport = self._get_sender_sport(instance)
         data["sender"] = {
@@ -241,7 +242,6 @@ class FederationUserRequestSerializer(serializers.ModelSerializer):
             "phone_number": instance.sender.phone_number,
         }
         logger.info(f"Receivers: {instance.receivers}")
-        receiver = instance.receivers.first()
         federation = Federation.objects.filter(id=federation_id).first()
         data["receiver"] = {
             "id": receiver.id,
