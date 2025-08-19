@@ -383,6 +383,19 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["is_trainer_verified", "statistics"]
 
+    def validate(self, attrs):
+        validated_data = super().validate(attrs)
+        sport = validated_data.get("sport", None)
+        send_request = validated_data.get("send_request", None)
+        federation = validated_data.get("federation", None)
+        if not sport:
+            raise_validation_error(message=_("Sport is required."))
+        if send_request and not federation:
+            raise_validation_error(message=_("Federation is required to send request."))
+        if sport not in federation.sports.all():
+            raise_validation_error(message=_("Sport must be part of the federation sports."))
+        return validated_data
+
     def create(self, validated_data):
         sport = validated_data.pop("sport", None)
 
@@ -393,7 +406,6 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         sender = self.context.get("request").user
-        sport = validated_data.pop("sport", None)
         federation = validated_data.pop("federation", None)
         send_request = validated_data.pop("send_request", None)
 
@@ -1003,8 +1015,9 @@ class UserRequestSerializer(serializers.ModelSerializer):
             "user_role": instance.sender.user_role,
             "phone_number": instance.sender.phone_number,
         }
-        if instance.request_type == enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value:
+        if instance.federation:
             federation = instance.federation
+            logger.info(f"Federation: {federation}")
             data["receiver"] = {
                 "id": receiver.id,
                 "full_name": receiver.full_name,
@@ -1017,8 +1030,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
                     "is_national": federation.is_national,
                 } if federation else None
             }
-        elif instance.receivers.count() == 1:
-            receiver = instance.receivers.first()
+        else:
             data["receiver"] = {
                 "id": receiver.id,
                 "full_name": receiver.full_name,

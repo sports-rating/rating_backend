@@ -119,25 +119,27 @@ class UserRequestService:
         status = validated_data.get("status")
         sender = user_request.sender
         logger.info(f"Receiver (federation): {receiver}")  # LOGGING
+        federation = user_request.federation
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the federation for the sender
             if receiver:
-                sender.trainer_profile.federation = receiver.federation
+                logger.info(f"Receiver federation: {federation}")  # LOGGING
+                sender.trainer_profile.federation = federation
                 sender.trainer_profile.is_trainer_verified = True
                 sender.trainer_profile.save()
-                notification_body = f"{receiver.federation.name} has accepted your request."
+                notification_body = f"{federation.name} has accepted your request."
                 notification_data = {
                     "request_type": "trainer_federation_request",
-                    "federation_id": str(receiver.federation.id),
+                    "federation_id": str(federation.id),
                 }
                 UserRequestService.accept_request(user_request, notification_body, notification_data)
             else:
                 return _("Receiver must be a valid federation!"), False
         else:
-            notification_body = f"{receiver.federation.name} has declined your request."
-            notification_data={
+            notification_body = f"{federation.name} has declined your request."
+            notification_data = {
                 "request_type": "trainer_federation_request",
-                "federation_id": str(receiver.federation.id),
+                "federation_id": str(federation.id),
             }
             UserRequestService.decline_request(user_request, notification_body, notification_data)
         return _("Request handled successfully."), True
