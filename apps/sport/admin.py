@@ -44,5 +44,6 @@ class ScoringPolicyAdmin(admin.ModelAdmin):
     def tournament_obj(self, obj):
         if obj.tournament:
             url = reverse("admin:sport_tournament_change", args=[obj.tournament.id])
-            return format_html('<a href="{}">{}</a>', url, obj.tournament.name)
+            name = f"{obj.tournament.name} - ({obj.tournament.sport.name})"
+            return format_html('<a href="{}">{}</a>', url, name)
         return "N/A"

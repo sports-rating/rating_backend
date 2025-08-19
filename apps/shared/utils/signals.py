@@ -1,4 +1,5 @@
 from django.db.models.signals import post_save, pre_delete, pre_save
+from django.db.models import Avg, Sum, Count, Q
 from django.dispatch import receiver
 
 from apps.shared.utils.logging import logger
@@ -116,17 +117,26 @@ def _calculate_trainer_points(trainer_user):
     """
     Calculates and updates the trainer's average points based on the tournament and rating.
     """
+    qs = trainer_user.trainer_profile.sportsmen.all()
+    result = qs.aggregate(total_points=Sum('points'), count=Count('user_id'))
 
-    all_scores = sum(
-        s.points for s in trainer_user.trainer_profile.sportsmen.all()
-    )
-    sportsmans_count = trainer_user.trainer_profile.sportsmen.count()
+    total_points = result["total_points"] or 0
+    count = result["count"] or 0
 
     trainer_user.trainer_profile.points = (
-        all_scores / sportsmans_count if sportsmans_count > 0 else 0
+        total_points / count if count > 0 else 0
     )
 
-    trainer_user.trainer_profile.save()
+    # all_scores = sum(
+    #     (s.points or 0) for s in trainer_user.trainer_profile.sportsmen.all()
+    # )
+    # sportsmans_count = trainer_user.trainer_profile.sportsmen.count()
+
+    # trainer_user.trainer_profile.points = (
+    #     all_scores / sportsmans_count if sportsmans_count > 0 else 0
+    # )
+
+    trainer_user.trainer_profile.save(update_fields=["points"])
 
 
 @receiver(pre_delete, sender=Result)

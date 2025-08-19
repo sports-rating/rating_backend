@@ -24,6 +24,7 @@ class TournamentFilter(filters.FilterSet):
     start_time = filters.DateFilter(field_name="start_time", lookup_expr='gte')
     end_time = filters.DateFilter(field_name="end_time", lookup_expr="lte")
     sport = filters.CharFilter(method='filter_sport')
+    federation = filters.CharFilter(field_name="federation__id")
 
     class Meta:
         model = Tournament

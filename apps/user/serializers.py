@@ -282,7 +282,6 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         sender = self.context.get("request").user
-        sport = validated_data.pop("sport", None)
         trainer = validated_data.pop("trainer", None)
         send_request = validated_data.pop("send_request", False)
 
@@ -290,19 +289,14 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
         logger.info(f"Sender: {sender}")  # LOGGING
         logger.info(f"Trainer: {trainer}")  # LOGGING
 
-        if sport:
-            instance.sport = sport
-        if send_request:
-            if trainer:
-                user_request, message, success = UserRequestService.create_request(
-                    sender=sender,
-                    receivers=[trainer],
-                    request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
-                )
-                if not success:
-                    raise_validation_error(message=message)
-            else:
-                raise_validation_error(message=_("You can not choose existing trainer as a new trainer!"))
+        if send_request and trainer:
+            user_request, message, success = UserRequestService.create_request(
+                sender=sender,
+                receivers=[trainer],
+                request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
+            )
+            if not success:
+                raise_validation_error(message=message)
         elif trainer:
             instance.trainer = trainer.trainer_profile
 
@@ -329,6 +323,11 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
             "name": f'{instance.trainer.user}',
             "sport": instance.trainer.sport.name if instance.trainer.sport else None,
         } if instance.trainer else None
+        data["federation"] = {
+            "id": instance.trainer.federation.id,
+            "name": instance.trainer.federation.name,
+            "logo": get_file_full_url(instance.trainer.federation.logo.url) if instance.trainer.federation.logo else None
+        } if instance.trainer and instance.trainer.federation else None
         return data
 
 
@@ -420,7 +419,6 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             )
             if not success:
                 raise_validation_error(message=message)
-
         elif federation:
             instance.federation = federation
 
@@ -1144,8 +1142,6 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
 
     def _create_verification_request(self, sender, result, rating):
         score = result.tournament.get_score(rating)
-        print(rating)
-        print(score)
         user_request, message, success = UserRequestService.create_request(
             sender=sender,
             receivers=[result.trainer.user],
