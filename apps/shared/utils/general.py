@@ -56,10 +56,10 @@ def check_uniqueness(field_name, data, model, instance=None):
 
 def request_type_theme_mapping(request_type):
     """
-
+    Map user request types to their corresponding themes.
     """
-
     mapping = {
         UserRequestTypes.FEDERATION_ADMIN_REQUEST.value: "Join Federation as Admin",
         UserRequestTypes.TRAINER_FEDERATION_REQUEST.value: "Join Federation as Trainer",
     }
+    return mapping.get(request_type, "Unknown Request Type")

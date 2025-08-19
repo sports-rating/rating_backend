@@ -16,7 +16,8 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.general import (
     get_file_full_url,
     calculate_file_size,
-    check_uniqueness
+    check_uniqueness,
+    request_type_theme_mapping
 )
 
 from apps.federation.models import (
@@ -222,9 +223,17 @@ class FederationUserRequestSerializer(serializers.ModelSerializer):
             "status": {"required": False}
         }
 
+    def _get_sender_sport(self, instance):
+        if instance.sender.user_role == "sportsman":
+            return instance.sender.sportsman_profile.sport
+        elif instance.sender.user_role == "trainer":
+            return instance.sender.trainer_profile.sport
+        return None
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         federation_id = self.context.get("federation_id")
+        sport = self._get_sender_sport(instance)
         data["sender"] = {
             "id": instance.sender.id,
             "full_name": instance.sender.full_name,
@@ -244,6 +253,11 @@ class FederationUserRequestSerializer(serializers.ModelSerializer):
                 "name": federation.name
             } if federation else None
         }
-        data[""]
+        data["request_theme"] = request_type_theme_mapping(instance.request_type)
+        data["sport"] = {
+            "id": sport.id,
+            "name": sport.name,
+            "logo": get_file_full_url(sport.logo.url) if sport.logo else None
+        } if sport else None
         data.pop("receivers", None)
         return data
