@@ -60,6 +60,7 @@ class UserAdmin(admin.ModelAdmin):
         ("Permissions", {"fields": ("is_staff", "is_superuser", "user_permissions")}),
     )
     filter_horizontal = ("user_permissions",)
+    list_per_page = 10
 
     def educations(self, obj):
         """Display educations as clickable links."""
