@@ -16,6 +16,9 @@ from django.utils.translation import gettext as _
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.enums import (
+    UserRequestTypes
+)
 
 
 def get_file_full_url(url):
@@ -49,3 +52,14 @@ def check_uniqueness(field_name, data, model, instance=None):
         value = data[field_name]
         if value and model.objects.exclude(pk=getattr(instance, 'pk', None)).filter(**{field_name: value}).exists():
             raise_validation_error(message=_(f"{(model.__name__).capitalize()} with this {field_name.replace('_', ' ')} already exists!"))
+
+
+def request_type_theme_mapping(request_type):
+    """
+
+    """
+
+    mapping = {
+        UserRequestTypes.FEDERATION_ADMIN_REQUEST.value: "Join Federation as Admin",
+        UserRequestTypes.TRAINER_FEDERATION_REQUEST.value: "Join Federation as Trainer",
+    }

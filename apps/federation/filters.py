@@ -23,7 +23,7 @@ class FederationFilter(BaseFilterSet):
 class FederationUserRequestFilter(BaseFilterSet):
     REQUEST_ROLE_MAPPING = {
         "admin": UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
-        "trainer": UserRequestTypes.FEDERATION_REQUEST.value
+        "trainer": UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
     }
 
     status = filters.ChoiceFilter(choices=UserRequestStatus.choices())

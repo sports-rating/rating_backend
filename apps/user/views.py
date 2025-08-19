@@ -729,9 +729,9 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
         return context
 
     def _get_proper_message(self, request_type):
-        if request_type == "trainer_request":
+        if request_type == "sportsman_trainer_request":
             return _("You cannot create a new request while you have a pending trainer request.")
-        elif request_type == "federation_request":
+        elif request_type == "trainer_federation_request":
             return _("You cannot create a new request while you have a pending federation request.")
         elif request_type == "federation_admin_request":
             return _("You cannot create a new request while you have a pending federation admin request.")

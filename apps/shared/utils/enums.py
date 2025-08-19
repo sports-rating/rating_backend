@@ -67,8 +67,8 @@ class LanguageTypes(BaseEnum):
 
 
 class UserRequestTypes(BaseEnum):
-    TRAINER_REQUEST = "trainer_request"
-    FEDERATION_REQUEST = "federation_request"
+    SPORTSMAN_TRAINER_REQUEST = "sportsman_trainer_request"
+    TRAINER_FEDERATION_REQUEST = "trainer_federation_request"
     # SPORTSMAN_TO_TRAINER = "sportsman_to_trainer"
     # TRAINER_TO_FEDERATION = "trainer_to_federation"
     FEDERATION_ADMIN_REQUEST = "federation_admin_request"

@@ -244,4 +244,6 @@ class FederationUserRequestSerializer(serializers.ModelSerializer):
                 "name": federation.name
             } if federation else None
         }
+        data[""]
+        data.pop("receivers", None)
         return data

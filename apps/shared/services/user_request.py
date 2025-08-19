@@ -76,10 +76,10 @@ class UserRequestService:
     @staticmethod
     def handle_request(user_request, validated_data, receiver):
         request_type = user_request.request_type
-        if request_type == enums.UserRequestTypes.TRAINER_REQUEST.value:
-            return UserRequestService._handle_trainer_request(user_request, validated_data, receiver)
-        elif request_type == enums.UserRequestTypes.FEDERATION_REQUEST.value:
-            return UserRequestService._handle_federation_request(user_request, validated_data, receiver)
+        if request_type == enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value:
+            return UserRequestService._handle_sportsman_trainer_request(user_request, validated_data, receiver)
+        elif request_type == enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value:
+            return UserRequestService._handle_trainer_federation_request(user_request, validated_data, receiver)
         elif request_type == enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value:
             return UserRequestService._handle_federation_admin_request(user_request, validated_data, receiver)
         elif request_type == enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value:
@@ -87,7 +87,7 @@ class UserRequestService:
         return _("Invalid request type!"), False
 
     @staticmethod
-    def _handle_trainer_request(user_request, validated_data, receiver):
+    def _handle_sportsman_trainer_request(user_request, validated_data, receiver):
         status = validated_data.get("status")
         sender = user_request.sender
         logger.info(f"Receiver (trainer): {receiver}")  # LOGGING
@@ -99,7 +99,7 @@ class UserRequestService:
                 sender.sportsman_profile.save()
                 notification_body = f"{receiver.full_name} has accepted your request."
                 notification_data = {
-                    "request_type": "trainer_request",
+                    "request_type": "sportsman_trainer_request",
                     "trainer_id": str(receiver.id),
                 }
                 UserRequestService.accept_request(user_request, notification_body, notification_data)
@@ -108,14 +108,14 @@ class UserRequestService:
         else:
             notification_body = f"{receiver.full_name} has declined your request."
             notification_data = {
-                "request_type": "trainer_request",
+                "request_type": "sportsman_trainer_request",
                 "trainer_id": str(receiver.id),
             }
             UserRequestService.decline_request(user_request, notification_body, notification_data)
         return _("Request handled successfully."), True
 
     @staticmethod
-    def _handle_federation_request(user_request, validated_data, receiver):
+    def _handle_trainer_federation_request(user_request, validated_data, receiver):
         status = validated_data.get("status")
         sender = user_request.sender
         logger.info(f"Receiver (federation): {receiver}")  # LOGGING
@@ -127,7 +127,7 @@ class UserRequestService:
                 sender.trainer_profile.save()
                 notification_body = f"{receiver.federation.name} has accepted your request."
                 notification_data = {
-                    "request_type": "federation_request",
+                    "request_type": "trainer_federation_request",
                     "federation_id": str(receiver.federation.id),
                 }
                 UserRequestService.accept_request(user_request, notification_body, notification_data)
@@ -136,7 +136,7 @@ class UserRequestService:
         else:
             notification_body = f"{receiver.federation.name} has declined your request."
             notification_data={
-                "request_type": "federation_request",
+                "request_type": "trainer_federation_request",
                 "federation_id": str(receiver.federation.id),
             }
             UserRequestService.decline_request(user_request, notification_body, notification_data)

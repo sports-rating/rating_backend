@@ -225,7 +225,7 @@ class UserRequest(BaseModel):
         help_text="The federation this request is related to"
     )
 
-    request_type = models.CharField(max_length=100, choices=enums.UserRequestTypes.choices(), default=enums.UserRequestTypes.TRAINER_REQUEST.value)
+    request_type = models.CharField(max_length=100, choices=enums.UserRequestTypes.choices(), default=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value)
     status = models.CharField(max_length=50, choices=enums.UserRequestStatus.choices(), default=enums.UserRequestStatus.PENDING.value)
 
     message = models.TextField(null=True, blank=True)

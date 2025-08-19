@@ -297,7 +297,7 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
                 user_request, message, success = UserRequestService.create_request(
                     sender=sender,
                     receivers=[trainer],
-                    request_type=enums.UserRequestTypes.TRAINER_REQUEST.value
+                    request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
                 )
                 if not success:
                     raise_validation_error(message=message)
@@ -403,7 +403,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=receivers,
-                request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
+                request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value,
                 federation=federation
             )
             if not success:
@@ -940,7 +940,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request_type = attrs.get("request_type")
         sender = self.context.get("request").user
-        if request_type == "trainer_request" and sender.user_role == "trainer":
+        if request_type == "sportsman_trainer_request" and sender.user_role == "trainer":
             raise_validation_error(message=_("Trainers cannot send trainer requests!"))
         return super().validate(attrs)
 
@@ -951,7 +951,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
         receiver = validated_data.get("receiver")
         user_request = None
 
-        if request_type == "trainer_request":
+        if request_type == "sportsman_trainer_request":
             sportsman_profile = getattr(sender, "sportsman_profile", None)
             if sportsman_profile and sportsman_profile.trainer:
                 old_trainer = sportsman_profile.trainer
@@ -961,7 +961,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
                 user_request = UserRequest.objects.create(
                     sender=sender,
                     receiver=receiver,
-                    request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
+                    request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value,
                     status=enums.UserRequestStatus.PENDING.value
                 )
                 send_notification_to_user(
@@ -970,13 +970,13 @@ class UserRequestSerializer(serializers.ModelSerializer):
                     title=_("New Training Request"),
                     body=_(f"{sender.first_name} {sender.last_name} has selected you as their trainer."),
                     data={
-                        "request_type": "trainer_request",
+                        "request_type": "sportsman_trainer_request",
                         "sportsman_id": str(sender.id),
                     }
                 )
             else:
                 raise_validation_error(message=_("You can not choose existing trainer as a new trainer!"))
-        elif request_type == "federation_request":
+        elif request_type == "trainer_federation_request":
             # Implement logic federation request here!
             None
 
