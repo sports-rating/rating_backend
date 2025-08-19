@@ -286,9 +286,9 @@ class SportsmanProfileSerializer(serializers.ModelSerializer):
         trainer = validated_data.pop("trainer", None)
         send_request = validated_data.pop("send_request", False)
 
-        logger.info(f"Send request: {send_request}")
-        logger.info(f"Sender: {sender}")
-        logger.info(f"Trainer: {trainer}")
+        logger.info(f"Send request: {send_request}")  # LOGGING
+        logger.info(f"Sender: {sender}")  # LOGGING
+        logger.info(f"Trainer: {trainer}")  # LOGGING
 
         if sport:
             instance.sport = sport
@@ -403,7 +403,8 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=receivers,
-                request_type=enums.UserRequestTypes.TRAINER_REQUEST.value
+                request_type=enums.UserRequestTypes.TRAINER_REQUEST.value,
+                federation=federation
             )
             if not success:
                 raise_validation_error(message=message)

@@ -9,7 +9,8 @@ from apps.user.models import (
     UserRequest
 )
 from apps.shared.utils.enums import (
-    UserRequestStatus
+    UserRequestStatus,
+    UserRequestTypes
 )
 from apps.shared.utils.filters import BaseFilterSet
 from apps.shared.models import (
@@ -52,12 +53,14 @@ class UserNotificationFilter(BaseFilterSet):
 class UserRequestFilter(BaseFilterSet):
     status = filters.ChoiceFilter(choices=UserRequestStatus.choices())
     date = filters.DateFilter(field_name="created_time", lookup_expr="date")
+    type = filters.ChoiceFilter(choices=UserRequestTypes.choices())
 
     class Meta:
         model = UserRequest
         fields = [
             "status",
             "date",
+            "type"
         ]
 
 
