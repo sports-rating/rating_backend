@@ -45,9 +45,6 @@ from apps.federation.filters import (
     FederationUserRequestFilter
 )
 
-from apps.dashboard.serializers import (
-    UserListSerializer
-)
 from dashboard.filters import UserFilter
 import apps.federation.serializers as serializer
 
@@ -148,9 +145,9 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
         )
 
 
-class UserListAPIView(generics.ListAPIView):
+class FederationUserListAPIView(generics.ListAPIView):
     queryset = User.objects.all()
-    serializer_class = UserListSerializer
+    serializer_class = serializer.FederationUserListSerializer
     permission_classes = (
         permissions.IsAuthenticated,
     )

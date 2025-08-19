@@ -18,18 +18,6 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
 
 
-# class InlineMediaSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Media
-#         fields = [
-#             "id",
-#             "media_type",
-#             "file",
-#             "size",
-#             "extension",
-#         ]
-
-
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

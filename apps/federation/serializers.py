@@ -261,3 +261,48 @@ class FederationUserRequestSerializer(serializers.ModelSerializer):
         } if sport else None
         data.pop("receivers", None)
         return data
+
+
+class FederationUserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "phone_number",
+            "email",
+            "region",
+            "district",
+            "gender",
+            "user_role",
+            "created_time"
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def _get_sport(self, instance):
+        if instance.user_role == "sportsman":
+            return instance.sportsman_profile.sport
+        elif instance.user_role == "trainer":
+            return instance.trainer_profile.sport
+        return None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        sport = self._get_sport(instance)
+        data["full_name"] = instance.full_name
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        data["sport"] = {
+            "id": sport.id,
+            "name": sport.name,
+            "logo": get_file_full_url(sport.logo.url) if sport.logo else None
+        } if sport else None
+        return data
