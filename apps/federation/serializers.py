@@ -273,6 +273,7 @@ class FederationUserListSerializer(serializers.ModelSerializer):
             "last_name",
             "phone_number",
             "email",
+            "birth_date",
             "region",
             "district",
             "gender",

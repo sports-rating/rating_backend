@@ -42,7 +42,8 @@ from apps.sport.models import Tournament
 import apps.sport.serializers as sport_serializers
 from apps.federation.filters import (
     FederationFilter,
-    FederationUserRequestFilter
+    FederationUserRequestFilter,
+    FederationUserListFilter
 )
 
 from dashboard.filters import UserFilter
@@ -152,8 +153,15 @@ class FederationUserListAPIView(generics.ListAPIView):
         permissions.IsAuthenticated,
     )
     filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
-    filterset_class = UserFilter
+    filterset_class = FederationUserListFilter
     pagination_class = CustomPagination
+    search_fields = [
+        "first_name",
+        "last_name",
+        "sportsman_profile__sport__name",
+        "trainer_profile__sport__name",
+        "trainer_profile__federation__name",
+    ]
 
     def get_queryset(self):
         federation_id = self.kwargs.get('pk')
@@ -175,10 +183,9 @@ class FederationUserListAPIView(generics.ListAPIView):
         return base_qs
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        response = super().list(request, *args, **kwargs)
         return success_response(
-            data=serializer.data,
+            data=response.data,
             message=_("Users list"),
             code=200,
         )

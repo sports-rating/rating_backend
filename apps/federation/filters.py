@@ -1,15 +1,21 @@
 from django_filters import rest_framework as filters
-from django.db.models import F
+from django.db.models import F, Q
 
 from apps.shared.utils.filters import BaseFilterSet
 from apps.federation.models import (
     Federation
 )
-from apps.user.models import UserRequest
+from apps.user.models import (
+    UserRequest,
+    User
+)
 from apps.shared.utils.enums import (
     UserRequestStatus,
-    UserRequestTypes
+    UserRequestTypes,
+    UserRoles,
+    GenderChoices
 )
+
 
 
 class FederationFilter(BaseFilterSet):
@@ -18,6 +24,26 @@ class FederationFilter(BaseFilterSet):
     class Meta:
         model = Federation
         fields = ["sport"]
+
+
+class FederationUserListFilter(BaseFilterSet):
+    user_role = filters.ChoiceFilter(choices=UserRoles.choices())
+    sport = filters.CharFilter(method="filter_sport")
+    region = filters.CharFilter(field_name='region__id')
+    district = filters.CharFilter(field_name='district__id')
+    gender = filters.ChoiceFilter(choices=GenderChoices.choices())
+
+    class Meta:
+        model = User
+        fields = ["sport", "region", "district"]
+
+    def filter_sport(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(
+            Q(sportsman_profile__sport__id=value) |
+            Q(trainer_profile__sport__id=value)
+        )
 
 
 class FederationUserRequestFilter(BaseFilterSet):
