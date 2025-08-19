@@ -15,6 +15,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.utils import (
@@ -165,7 +166,6 @@ class FederationUserListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         federation_id = self.kwargs.get('pk')
-        user = self.request.user
 
         base_qs = User.objects.exclude(user_role__in=["ordinary", "admin", "super_admin"]).select_related(
             "sportsman_profile", "trainer_profile"
