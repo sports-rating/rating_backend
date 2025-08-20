@@ -17,7 +17,6 @@ from apps.shared.utils.enums import (
 )
 
 
-
 class FederationFilter(BaseFilterSet):
     sport = filters.CharFilter(field_name="sports__id")
 

@@ -810,7 +810,6 @@ class RegionListView(generics.ListAPIView):
     queryset = Region.objects.all()
     serializer_class = serializers.RegionSerializer
     permission_classes = [permissions.AllowAny, ]
-    pagination_class = CustomPagination
     search_fields = ["id", "name"]
 
     def list(self, request, *args, **kwargs):
@@ -826,7 +825,6 @@ class DistrictListView(generics.ListAPIView):
     queryset = District.objects.all()
     serializer_class = serializers.DistrictSerializer
     permission_classes = [permissions.AllowAny, ]
-    pagination_class = CustomPagination
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ["id", "name", "region__name"]
     filterset_class = DistrictFilter
@@ -844,7 +842,6 @@ class NeighborhoodListView(generics.ListAPIView):
     queryset = Neighborhood.objects.all()
     serializer_class = serializers.NeighborhoodSerializer
     permission_classes = [permissions.AllowAny, ]
-    pagination_class = CustomPagination
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ["id", "name", "district__name"]
     filterset_class = NeighborhoodFilter
