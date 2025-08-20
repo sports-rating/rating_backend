@@ -68,4 +68,4 @@ class FederationUserRequestFilter(BaseFilterSet):
         print(mapped_value)
         if mapped_value:
             return queryset.filter(request_type=mapped_value)
-        return queryset.none()
+        return queryset
