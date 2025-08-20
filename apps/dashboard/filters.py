@@ -21,10 +21,19 @@ class UserFilter(filters.FilterSet):
     sport = filters.CharFilter(method='filter_sport')
     region = filters.CharFilter(field_name='region__id')
     district = filters.CharFilter(field_name='district__id')
+    federation = filters.CharFilter(field_name='trainer_profile__federation__id')
 
     class Meta:
         model = User
-        fields = ["user_role", "start_time", "end_time", "sport", "region", "district"]
+        fields = [
+            "user_role",
+            "start_time",
+            "end_time",
+            "sport",
+            "region",
+            "district",
+            "federation"
+        ]
 
     def filter_start_time(self, queryset, name, value):
         if value:

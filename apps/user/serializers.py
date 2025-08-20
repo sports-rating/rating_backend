@@ -1068,6 +1068,8 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         trainer = attrs.get("trainer", None)
         rating = attrs.get("rating", None)
         instance = self.instance
+        if not federation:
+            raise_validation_error(message=_("You must be part of a federation to submit results."))
         if federation and not federation.tournaments.filter(id=tournament.id).exists():
             raise_validation_error(message=_("You are not allowed to submit results for this tournament."))
         if trainer and not federation.trainers.filter(user_id=trainer.pk).exists():
@@ -1160,6 +1162,7 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         data["tournament"] = {
             "id": instance.tournament.id,
             "name": instance.tournament.name,
+            "logo": get_file_full_url(instance.tournament.logo.url) if instance.tournament.logo else None,
         } if instance.tournament else None
         data["trainer"] = {
             "id": instance.trainer.user.id,
