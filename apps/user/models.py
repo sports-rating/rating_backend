@@ -240,6 +240,7 @@ class UserRequest(BaseModel):
         ]
         verbose_name = "User Request"
         verbose_name_plural = "User Requests"
+        ordering = ['-created_time']
 
     def __str__(self):
         return f"{self.sender.username} -> {self.receivers.all().values_list('username', flat=True)} ({self.request_type}) - {self.status}"

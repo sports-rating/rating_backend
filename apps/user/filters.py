@@ -52,8 +52,14 @@ class UserNotificationFilter(BaseFilterSet):
 
 
 class UserRequestFilter(BaseFilterSet):
+    REQUEST_ROLE_MAPPING = {
+        "sportsman_trainer": UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value,
+        "sportsman_result": UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value
+    }
+
     status = filters.ChoiceFilter(choices=UserRequestStatus.choices())
     date = filters.DateFilter(field_name="created_time", lookup_expr="date")
+    request_type = filters.CharFilter(method='filter_request_type')
 
     class Meta:
         model = UserRequest
@@ -61,6 +67,13 @@ class UserRequestFilter(BaseFilterSet):
             "status",
             "date"
         ]
+
+    def filter_request_type(self, queryset, name, value):
+        mapped_value = self.REQUEST_ROLE_MAPPING.get(value)
+        print(mapped_value)
+        if mapped_value:
+            return queryset.filter(request_type=mapped_value)
+        return queryset
 
 
 class DistrictFilter(BaseFilterSet):
