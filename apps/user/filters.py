@@ -33,10 +33,11 @@ class SportsmanFilter(BaseFilterSet):
 
 class TrainerFilter(BaseFilterSet):
     sport = filters.CharFilter(method='filter_sport')
+    verified = filters.BooleanFilter(field_name='trainer_profile__is_trainer_verified')
 
     class Meta:
         model = User
-        fields = ["sport"]
+        fields = ["sport", "verified"]
 
     def filter_sport(self, queryset, name, value): # noqa
         return queryset.filter(trainer_profile__sport__name=value)
