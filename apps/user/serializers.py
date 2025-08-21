@@ -1006,7 +1006,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        receiver = self.context.get("request").user
+        receiver = instance.receivers.first()
         data["sender"] = {
             "id": instance.sender.id,
             "full_name": instance.sender.full_name,
@@ -1017,10 +1017,6 @@ class UserRequestSerializer(serializers.ModelSerializer):
             federation = instance.federation
             logger.info(f"Federation: {federation}")
             data["receiver"] = {
-                "id": receiver.id,
-                "full_name": receiver.full_name,
-                "user_role": receiver.user_role,
-                "phone_number": receiver.phone_number,
                 "federation": {
                     "id": federation.id,
                     "name": federation.name,
@@ -1035,6 +1031,8 @@ class UserRequestSerializer(serializers.ModelSerializer):
                 "user_role": receiver.user_role,
                 "phone_number": receiver.phone_number,
             }
+        if instance.request_type == enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value:
+            data["result_id"] = instance.data.get("result_id") if instance.data else None
         data.pop("receivers")
         return data
 
@@ -1055,11 +1053,12 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
             "rating",
             "additional_attributes",
             "is_verified",
+            "status",
             "gold",
             "silver",
             "bronze",
         ]
-        read_only_fields = ["id", "is_verified", "gold", "silver", "bronze"]
+        read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status"]
 
     def validate(self, attrs):
         sportsman = self.context.get("request").user

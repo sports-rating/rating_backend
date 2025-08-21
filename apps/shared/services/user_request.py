@@ -196,6 +196,7 @@ class UserRequestService:
 
                 sender.sportsman_profile.save()
                 sportsman_result.is_verified = True
+                sportsman_result.status = enums.ResultVerificationStatus.VERIFIED.value
                 sportsman_result.save()
 
                 notification_body = f"{receiver.full_name} has accepted your request."
@@ -208,6 +209,10 @@ class UserRequestService:
                 return _("Receiver must be a valid trainer!"), False
         else:
             result_id = user_request.data.get("result_id")
+            sportsman_result = Result.objects.filter(id=result_id).first()
+            sportsman_result.status = enums.ResultVerificationStatus.REJECTED.value
+            sportsman_result.save()
+
             notification_body = f"{receiver.full_name} has declined your request."
             notification_data = {
                 "request_type": "sportsman_result_verification_request",

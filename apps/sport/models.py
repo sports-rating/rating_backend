@@ -128,7 +128,7 @@ class Result(BaseModel):
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="tournament_results", blank=True, null=True)
     additional_attributes = models.JSONField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
-    # status = models.CharField(max_length=20, choices=ResultVerificationStatus.choices(), default=ResultVerificationStatus.PENDING.value)
+    status = models.CharField(max_length=20, choices=ResultVerificationStatus.choices(), default=ResultVerificationStatus.PENDING.value)
 
     rating = models.PositiveIntegerField(default=0)
     gold = models.PositiveIntegerField(default=0)
