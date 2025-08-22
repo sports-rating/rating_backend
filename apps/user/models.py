@@ -211,7 +211,6 @@ class UserMedia(BaseMedia):
 
 class UserRequest(BaseModel):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
-    # receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
     receivers = models.ManyToManyField(
         User,
         related_name='received_requests',
@@ -228,8 +227,20 @@ class UserRequest(BaseModel):
     request_type = models.CharField(max_length=100, choices=enums.UserRequestTypes.choices(), default=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value)
     status = models.CharField(max_length=50, choices=enums.UserRequestStatus.choices(), default=enums.UserRequestStatus.PENDING.value)
 
-    message = models.TextField(null=True, blank=True)
-    data = models.JSONField(null=True, blank=True) # for future extensibility
+    message_from_sender = models.TextField(
+        null=True, blank=True,
+        help_text="Optional message from the sender"
+    )
+    message_from_receiver = models.TextField(
+        null=True, blank=True,
+        help_text="Optional message from the receiver"
+    )
+
+    old_data = models.JSONField(null=True, blank=True, help_text="Snapshot of user's data before changes")
+    new_data = models.JSONField(null=True, blank=True, help_text="Snapshot of user's data after changes")
+
+    metadata = models.JSONField(null=True, blank=True, help_text="Additional context or request-specific data")
+
 
     class Meta:
         db_table = "user_request"

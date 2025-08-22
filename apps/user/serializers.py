@@ -940,6 +940,10 @@ class UserRequestSerializer(serializers.ModelSerializer):
             "receivers",
             "request_type",
             "status",
+            "message_from_sender",
+            "message_from_receiver",
+            "old_data",
+            "new_data",
             "created_time",
         ]
         read_only_fields = ["id", "sender", "created_time"]
@@ -957,39 +961,9 @@ class UserRequestSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         sender = self.context.get("request").user
         logger.info(f"Sender: {sender}")
-        request_type = validated_data.get("request_type")
-        receiver = validated_data.get("receiver")
         user_request = None
 
-        if request_type == "sportsman_trainer_request":
-            sportsman_profile = getattr(sender, "sportsman_profile", None)
-            if sportsman_profile and sportsman_profile.trainer:
-                old_trainer = sportsman_profile.trainer
-            else:
-                old_trainer = None
-            if receiver and old_trainer != receiver:
-                user_request = UserRequest.objects.create(
-                    sender=sender,
-                    receiver=receiver,
-                    request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value,
-                    status=enums.UserRequestStatus.PENDING.value
-                )
-                send_notification_to_user(
-                    user=receiver,
-                    user_request=user_request,
-                    title=_("New Training Request"),
-                    body=_(f"{sender.first_name} {sender.last_name} has selected you as their trainer."),
-                    data={
-                        "request_type": "sportsman_trainer_request",
-                        "sportsman_id": str(sender.id),
-                    }
-                )
-            else:
-                raise_validation_error(message=_("You can not choose existing trainer as a new trainer!"))
-        elif request_type == "trainer_federation_request":
-            # Implement logic federation request here!
-            None
-
+        #TODO(CoderB7): implement logic of sending request if needed in some cases
         return user_request
 
     def update(self, instance, validated_data):
