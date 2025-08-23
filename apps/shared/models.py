@@ -1,11 +1,11 @@
 import uuid
 import os
 import mimetypes
+import typing as t
 
 from django.db import models
 from apps.shared.utils.enums import MediaChoices
 from apps.shared.utils.utils import CorrectPath
-
 
 
 class BaseModel(models.Model):
@@ -17,6 +17,46 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+    # defining Class variable using ClassVar annotation
+    repr_fields: t.ClassVar[tuple[str, ...] | None] = None
+
+    def __repr__(self) -> str:
+        return self.to_string()
+
+    def __str__(self) -> str:
+        return self.to_string()
+
+    def to_string(self) -> str:
+        """
+        Custom method for representing instance in string format
+        """
+
+        # default
+        if self.repr_fields is None:
+            return "{}<pk={}>".format(self.__class__.__name__, self.pk)
+
+        # custom
+        template: str = "{}<{}>"
+
+        model_fields: tuple[str, ...] = tuple(
+            field.name for field in self._meta.get_fields()
+        )
+
+        for repr_field in self.repr_fields:
+            if repr_field not in model_fields:
+                raise ValueError(
+                    f"{repr_field} is not present in {self.__class__.__name__}"
+                )
+
+        key_value_pairs: tuple[str, ...] = tuple(
+            f"{field}={getattr(self, field)}" for field in self.repr_fields
+        )
+
+        return template.format(
+            self.__class__.__name__,
+            ", ".join(key_value_pairs),
+        )
 
 
 class BaseMedia(BaseModel):

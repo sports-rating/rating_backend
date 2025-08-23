@@ -5,6 +5,7 @@ celerybeat-schedule*
 fcm-test/
 fcm-test.html
 firebase-messaging-sw.js
+practice.txt
 
 # Created by https://www.gitignore.io
 

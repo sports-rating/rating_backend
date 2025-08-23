@@ -21,8 +21,10 @@ django-cors-headers==4.6.0
 django-filter==24.3
 django-jazzmin==3.0.0
 django-timezone-field==7.0
+django-stubs>=5.2.0
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
+djangorestframework-stubs==3.15.4
 drf-spectacular==0.27.2
 drf-spectacular-sidecar==2024.11.1
 fcm-django==2.2.1
@@ -47,6 +49,7 @@ jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
 kombu==5.4.2
 msgpack==1.1.0
+mypy==1.17.1
 packaging==24.2
 payme-pkg==3.0.13
 phonenumbers==8.13.50

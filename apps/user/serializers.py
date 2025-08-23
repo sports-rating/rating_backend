@@ -598,6 +598,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
         queryset=Federation.objects.all(),
         required=False
     )
+    message = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
     class Meta:
         model = User
@@ -611,6 +612,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             "email",
             "user_role",
             "federation",
+            "message",
             "is_verified",
             "fcm_token",
             "device_type",
@@ -644,6 +646,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
         fcm_token = validated_data.pop("fcm_token", None)
         device_type = validated_data.pop("device_type", None)
         federation = validated_data.pop("federation", None)
+        message = validated_data.pop("message", "")
         with transaction.atomic():
             user = super().create(validated_data)
             user_role = validated_data.get("user_role")
@@ -668,7 +671,8 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
                         sender=user,
                         receivers=receivers,
                         request_type=enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
-                        federation=federation
+                        federation=federation,
+                        message=message
                     )
                     if not success:
                         raise_validation_error(message=message)
