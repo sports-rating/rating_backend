@@ -66,8 +66,7 @@ class User(AbstractUser, BaseModel):
     def federation(self):
         return self.federations.first()
 
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+    repr_fields = ("first_name", "last_name", "phone_number")
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -253,8 +252,7 @@ class UserRequest(BaseModel):
         verbose_name_plural = "User Requests"
         ordering = ['-created_time']
 
-    def __str__(self):
-        return f"{self.sender.username} -> {self.receivers.all().values_list('username', flat=True)} ({self.request_type}) - {self.status}"
+    repr_fields = ("sender", "request_type", "status")
 
 
 class UserNotification(BaseModel):
@@ -275,5 +273,4 @@ class UserNotification(BaseModel):
         verbose_name = "User Notification"
         verbose_name_plural = "User Notifications"
 
-    def __str__(self):
-        return f"Notification for {self.user.username}: {self.title or 'No Title'} - {'Read' if self.is_read else 'Unread'}"
+    repr_fields = ("user", "title", "is_read")

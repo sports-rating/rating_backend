@@ -22,6 +22,7 @@ class BaseModel(models.Model):
     repr_fields: t.ClassVar[tuple[str, ...] | None] = None
 
     def __repr__(self) -> str:
+        print(self.to_string())
         return self.to_string()
 
     def __str__(self) -> str:
@@ -105,8 +106,7 @@ class Country(BaseModel):
         verbose_name = "Country"
         verbose_name_plural = "Countries"
 
-    def __str__(self):
-        return self.name
+    repr_fields = ("name",)
 
 
 class Region(BaseModel):
@@ -120,8 +120,7 @@ class Region(BaseModel):
         verbose_name = "Region"
         verbose_name_plural = "Regions"
 
-    def __str__(self):
-        return self.name
+    repr_fields = ("name",)
 
 
 class District(BaseModel):
@@ -138,8 +137,7 @@ class District(BaseModel):
         verbose_name = "District"
         verbose_name_plural = "Districts"
 
-    def __str__(self):
-        return f"{self.name}, {self.region.name}"
+    repr_fields = ("name", "region")
 
 
 class Neighborhood(BaseModel):
@@ -156,5 +154,4 @@ class Neighborhood(BaseModel):
         verbose_name = "Neighborhood"
         verbose_name_plural = "Neighborhoods"
 
-    def __str__(self):
-        return f"{self.name}, {self.district.name} ({self.district.region.name})"
+    repr_fields = ("name", "district")

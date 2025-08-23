@@ -35,8 +35,7 @@ class Sport(BaseModel):
         verbose_name = "Sport"
         verbose_name_plural = "Sports"
 
-    def __str__(self):
-        return self.name
+    repr_fields = ("name",)
 
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
@@ -66,14 +65,12 @@ class Tournament(BaseModel):
         null=True
     )
 
-
     class Meta:
         db_table = "tournament"
         verbose_name = "Tournament"
         verbose_name_plural = "Tournaments"
 
-    def __str__(self):
-        return f"{self.name} - {self.federation.name if self.federation else 'No Federation'}"
+    repr_fields = ("name", "federation")
 
     def get_score(self, position):
         scoring_policy = self.scoring_policies.filter(position=position).first()
@@ -106,8 +103,7 @@ class ScoringPolicy(BaseModel):
         verbose_name_plural = "Scoring Policies"
         ordering = ["position"]
 
-    def __str__(self):
-        return f"{self.tournament.name} - Position {self.position} - Score {self.score}"
+    repr_fields = ("tournament", "position", "score")
 
 
 class Result(BaseModel):
@@ -138,8 +134,7 @@ class Result(BaseModel):
     class Meta:
         db_table = "result"
 
-    def __str__(self):
-        return f"{self.tournament.name} - {self.year}"
+    repr_fields = ("tournament", "year")
 
 
 class Team(BaseModel):
@@ -169,8 +164,10 @@ class Team(BaseModel):
     losses = models.PositiveIntegerField(default=0, blank=True, null=True)
     draws = models.PositiveIntegerField(default=0, blank=True, null=True)
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        db_table = "team"
+
+    repr_fields = ("name", "sport")
 
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
@@ -179,6 +176,3 @@ class Team(BaseModel):
     def delete(self, *args, **kwargs):
         handle_file_delete(self, 'logo')
         super().delete(*args, **kwargs)
-
-    class Meta:
-        db_table = "team"

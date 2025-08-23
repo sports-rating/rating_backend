@@ -61,8 +61,7 @@ class Federation(BaseModel):
             models.Index(fields=['is_national']),
         ]
 
-    def __str__(self):
-        return self.name
+    repr_fields = ("name", "is_national")
 
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
@@ -110,8 +109,7 @@ class AgeGroup(BaseModel):
         verbose_name = "Age Group"
         verbose_name_plural = "Age Groups"
 
-    def __str__(self):
-        return f"{self.name} {self.age} - {self.sport.name}"
+    repr_fields = ("name", "age", "sport")
 
 
 class FederationAgeGroup(BaseModel):
@@ -127,5 +125,4 @@ class FederationAgeGroup(BaseModel):
         verbose_name = "Federation Age Group"
         verbose_name_plural = "Federation Age Groups"
 
-    def __str__(self):
-        return f"{self.age_group.name} - {self.federation.name}"
+    repr_fields = ("age_group", "federation")
