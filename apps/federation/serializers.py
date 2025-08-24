@@ -1,5 +1,6 @@
-from datetime import datetime
-from typing import Optional
+import typing as t
+
+from uuid import UUID
 
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
@@ -9,7 +10,6 @@ from django.db.models import Sum
 from django.conf import settings
 
 from rest_framework import serializers
-from rest_framework.generics import get_object_or_404
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
@@ -19,6 +19,8 @@ from apps.shared.utils.general import (
     check_uniqueness,
     request_type_theme_mapping
 )
+from apps.shared.utils.mixins import RequestContextMixin
+from apps.shared.utils.types import *
 
 from apps.federation.models import (
     Federation,
@@ -26,18 +28,17 @@ from apps.federation.models import (
     FederationAgeGroup,
     FederationDocument
 )
-
+from apps.sport.models import (
+    Sport
+)
 from apps.user.models import (
     User,
-    Trainer,
-    ArchivedTrainer,
     UserRequest
 )
 
 from apps.dashboard.serializers import (
     UserListSerializer
 )
-
 from apps.sport.serializers import SportSerializer
 
 
@@ -55,7 +56,7 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "gender",
             "created_time"
         )
-        validators = []
+        validators: list = []
 
 
 class FederationDocumentSerializer(serializers.ModelSerializer):
@@ -69,14 +70,14 @@ class FederationDocumentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ("id", "media_type", "size")
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: FederationDocument) -> dict:
         data = super().to_representation(instance)
         data['file'] = get_file_full_url(instance.file.url) if instance.file else None
         data["size"] = calculate_file_size(instance.size) if instance.size else None
         return data
 
 
-class FederationSerializer(serializers.ModelSerializer):
+class FederationSerializer(RequestContextMixin, serializers.ModelSerializer):
     documents = FederationDocumentSerializer(many=True, required=False)
     age_groups = AgeGroupSerializer(many=True, required=False)
 
@@ -107,7 +108,7 @@ class FederationSerializer(serializers.ModelSerializer):
             "users": {"required": False}
         }
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
         instance = getattr(self, 'instance', None)
         documents = attrs.get('documents', [])
         is_national = attrs.get("is_national", False)
@@ -122,15 +123,15 @@ class FederationSerializer(serializers.ModelSerializer):
             raise_validation_error(message=_("Documents must be a list of files."))
         return attrs
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Federation:
         age_groups_data = validated_data.pop("age_groups", [])
-        user = self.context.get("request").user
+        user: User = self.request.user  # type: ignore
         users = validated_data.pop("users", [])
 
         sports = validated_data.pop("sports", [])
         documents = validated_data.pop("documents", [])
         with transaction.atomic():
-            federation = Federation.objects.create(**validated_data)
+            federation: Federation = Federation.objects.create(**validated_data)
             for doc in documents:
                 FederationDocument.objects.create(federation=federation, **doc).save()
             federation.users.set([user])
@@ -140,10 +141,10 @@ class FederationSerializer(serializers.ModelSerializer):
                 FederationAgeGroup.objects.create(federation=federation, age_group=age_group)
         return federation
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Federation, validated_data: dict) -> Federation:
         age_groups = validated_data.pop("age_groups", [])
-        users = validated_data.pop("users", [])
-        sports = validated_data.pop("sports", [])
+        users: list[User] = validated_data.pop("users", [])
+        sports: list[Sport] = validated_data.pop("sports", [])
         documents = validated_data.pop("documents", [])
 
         with transaction.atomic():
@@ -164,15 +165,15 @@ class FederationSerializer(serializers.ModelSerializer):
 
             # CUD(Create, Update, Delete) pattern is being used here
             if age_groups:
-                left_age_groups_id = []
+                left_age_groups_id: list = []
 
                 for age_group in age_groups:
-                    age_group_id = age_group.get("id", None)
+                    age_group_id: UUID = age_group.get("id", None)
                     if age_group_id:  # if id exists, update the existing age group
                         AgeGroup.objects.filter(id=age_group_id).update(**age_group)
                         left_age_groups_id.append(age_group_id)
                     else:  # if id does not exist, create a new age group
-                        new_age_group = AgeGroup.objects.create(**age_group)
+                        new_age_group: AgeGroup = AgeGroup.objects.create(**age_group)
                         FederationAgeGroup.objects.create(federation=instance, age_group=new_age_group)
                         left_age_groups_id.append(new_age_group.id)
 
@@ -181,7 +182,7 @@ class FederationSerializer(serializers.ModelSerializer):
                 AgeGroup.objects.exclude(id__in=left_age_groups_id).delete()
         return instance
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: Federation) -> dict:
         data = super().to_representation(instance)
         data['logo'] = get_file_full_url(instance.logo.url) if instance.logo else None
         data['age_groups'] = AgeGroupSerializer(
@@ -207,7 +208,7 @@ class FederationSerializer(serializers.ModelSerializer):
         return data
 
 
-class FederationUserRequestSerializer(serializers.ModelSerializer):
+class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
     class Meta:
         model = UserRequest
         fields = [
@@ -223,18 +224,21 @@ class FederationUserRequestSerializer(serializers.ModelSerializer):
             "status": {"required": False}
         }
 
-    def _get_sender_sport(self, instance):
+    def _get_sender_sport(self, instance: UserRequest) -> t.Union[Sport, None]:
         if instance.sender.user_role == "sportsman":
             return instance.sender.sportsman_profile.sport
         elif instance.sender.user_role == "trainer":
             return instance.sender.trainer_profile.sport
         return None
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: UserRequest) -> dict:
         data = super().to_representation(instance)
-        receiver = self.context.get("request").user
-        federation_id = self.context.get("federation_id")
-        sport = self._get_sender_sport(instance)
+        receiver: User = self.request.user  # type: ignore
+
+        # NOTE: CoderB7 -> cast tells mypy: trust me, this is a UUID.
+        # It does not change runtime behavior
+        federation_id: UUID = t.cast(UUID, self.context.get("federation_id"))
+        sport: Sport | None = self._get_sender_sport(instance)
         data["sender"] = {
             "id": instance.sender.id,
             "full_name": instance.sender.full_name,
@@ -242,7 +246,7 @@ class FederationUserRequestSerializer(serializers.ModelSerializer):
             "phone_number": instance.sender.phone_number,
         }
         logger.info(f"Receivers: {instance.receivers}")
-        federation = Federation.objects.filter(id=federation_id).first()
+        federation: Federation | None = Federation.objects.filter(id=federation_id).first()
         data["receiver"] = {
             "id": receiver.id,
             "full_name": receiver.full_name,
@@ -282,16 +286,16 @@ class FederationUserListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_time"]
 
-    def _get_sport(self, instance):
+    def _get_sport(self, instance: User) -> t.Union[Sport, None]:
         if instance.user_role == "sportsman":
             return instance.sportsman_profile.sport
         elif instance.user_role == "trainer":
             return instance.trainer_profile.sport
         return None
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)
-        sport = self._get_sport(instance)
+        sport: Sport | None = self._get_sport(instance)
         data["full_name"] = instance.full_name
         data["region"] = {
             "id": instance.region.id,

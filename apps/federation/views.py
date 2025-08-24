@@ -1,12 +1,15 @@
-from django.shortcuts import render
+import typing as t
+from uuid import UUID
+from typing import reveal_type
 
-# Create your views here.
+from django.shortcuts import render
 from django.utils.translation import gettext as _, get_language
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
 from django.http import HttpResponse
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, QuerySet
+from django.contrib.auth.models import AnonymousUser
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -14,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import BasePermission
 
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
@@ -36,18 +40,16 @@ from apps.user.models import (
     Trainer,
     UserRequest
 )
-from apps.user.filters import (
-    UserRequestFilter
-)
 from apps.sport.models import Tournament
-import apps.sport.serializers as sport_serializers
 from apps.federation.filters import (
     FederationFilter,
     FederationUserRequestFilter,
     FederationUserListFilter
 )
 
-from dashboard.filters import UserFilter
+from apps.shared.utils.types import *
+
+import apps.sport.serializers as sport_serializers
 import apps.federation.serializers as serializer
 
 
@@ -60,7 +62,7 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
     filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
     filterset_class = FederationFilter
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Federation]:
         return Federation.objects.prefetch_related(
             Prefetch(
                 'age_group_links__age_group',
@@ -74,15 +76,15 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [permissions.AllowAny(),]
+            return [permissions.AllowAny()]
         return super().get_permissions()
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict[str, t.Any]:
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -92,7 +94,7 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
             code=status.HTTP_201_CREATED
         )
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request: Request, *args, **kwargs) -> Response:
         response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
@@ -111,8 +113,8 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
             return [permissions.AllowAny()]
         return super().get_permissions()
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        instance: Federation = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
             data=serializer.data,
@@ -120,12 +122,10 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
             code=status.HTTP_200_OK,
         )
 
-    def update(self, request, *args, **kwargs):
+    def update(self, request: Request, *args, **kwargs) -> Response:
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
-        print('here')
         serializer.is_valid(raise_exception=True)
-        print('passed')
         serializer.save()
         return success_response(
             data=serializer.data,
@@ -133,8 +133,8 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
             code=status.HTTP_200_OK,
         )
 
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def delete(self, request: Request, *args, **kwargs) -> Response:
+        instance: Federation = self.get_object()
 
         # Deleting related AgeGroups first
         for link in instance.age_group_links.all():
@@ -151,7 +151,8 @@ class FederationUserListAPIView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = serializer.FederationUserListSerializer
     permission_classes = (
-        permissions.IsAuthenticated,
+        permissions.AllowAny,
+        # permissions.IsAuthenticated,
     )
     filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
     filterset_class = FederationUserListFilter
@@ -164,8 +165,8 @@ class FederationUserListAPIView(generics.ListAPIView):
         "trainer_profile__federation__name",
     ]
 
-    def get_queryset(self):
-        federation_id = self.kwargs.get('pk')
+    def get_queryset(self) -> QuerySet[User]:
+        federation_id: UUID = self.kwargs.get('pk')
 
         base_qs = User.objects.exclude(user_role__in=["ordinary", "admin", "super_admin"]).select_related(
             "sportsman_profile", "trainer_profile"
@@ -182,8 +183,8 @@ class FederationUserListAPIView(generics.ListAPIView):
             )
         return base_qs
 
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
             message=_("Users list"),
@@ -196,8 +197,13 @@ class RegionalFederationListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = serializer.FederationSerializer
     queryset = Federation.objects.all()
 
-    def get_queryset(self):
-        federation_id = self.kwargs.get('pk')
+    def get_serializer_context(self) -> dict[str, t.Any]:
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
+    def get_queryset(self) -> QuerySet[Federation]:
+        federation_id: UUID = self.kwargs.get('pk')
         return Federation.objects.filter(parent_federation_id=federation_id).prefetch_related(
             Prefetch(
                 'age_group_links__age_group',
@@ -209,15 +215,15 @@ class RegionalFederationListCreateAPIView(generics.ListCreateAPIView):
             )
         )
 
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
             message=_("Regional federations list retrieved successfully"),
             code=status.HTTP_200_OK
         )
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -244,24 +250,24 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
         "message",
     ]
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict[str, t.Any]:
         context = super().get_serializer_context()
         context["request"] = self.request
         context["federation_id"] = self.kwargs.get('pk')
         return context
 
-    def get_queryset(self):
-        request_type = "received"
-        federation_id = self.kwargs.get('pk')
-        queryset = UserRequest.objects.filter(
-            receivers=self.request.user,
+    def get_queryset(self) -> QuerySet[UserRequest]:
+        federation_id: UUID = self.kwargs.get('pk')
+        user: User = self.request.user  # type: ignore
+
+        queryset: QuerySet[UserRequest] = UserRequest.objects.filter(
+            receivers=user,
             federation_id=federation_id
         )
-        print(queryset)
         return queryset
 
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
             message=_("Federation User Request list retrieved successfully"),
@@ -275,12 +281,12 @@ class FederationTournamentListAPIView(generics.ListAPIView):
     queryset = Tournament.objects.all()
     pagination_class = CustomPagination
 
-    def get_queryset(self):
-        federation_id = self.kwargs.get('pk')
+    def get_queryset(self) -> QuerySet[Tournament]:
+        federation_id: UUID = self.kwargs.get('pk')
         return Tournament.objects.filter(federation_id=federation_id)
 
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
             message=_("Federation Tournament list retrieved successfully"),
