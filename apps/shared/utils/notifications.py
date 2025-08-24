@@ -1,5 +1,8 @@
+import typing as t
+
 from firebase_admin.messaging import Message, Notification
 from fcm_django.models import FCMDevice
+from django.utils.functional import Promise
 
 from apps.shared.utils.logging import logger
 from apps.user.models import UserNotification
@@ -56,7 +59,7 @@ def send_firebase_notification(
 def send_notification_to_user(
         user: User,
         user_request: UserRequest,
-        title: str,
+        title: t.Union[str, Promise],
         body: str,
         **extra
     ) -> None:

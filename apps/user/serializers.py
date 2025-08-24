@@ -1,18 +1,22 @@
+import typing as t
+
 from datetime import date
 from typing import Any, Dict, List
 
 import rest_framework_simplejwt.serializers as jwt_serializers
 import rest_framework_simplejwt.tokens as jwt_tokens
+from rest_framework.generics import get_object_or_404
+from rest_framework import serializers
+
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 from django.db import IntegrityError, transaction
-from django.db.models import Sum
+from django.db.models import Sum, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext as _
+
 from fcm_django.models import DeviceType, FCMDevice
-from rest_framework import serializers
-from rest_framework.generics import get_object_or_404
 
 from apps.education.models import Education
 from apps.education.serializers import EducationCreateSerializer
@@ -621,7 +625,7 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ["id", "is_verified", "created_time"]
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
         phone_number = attrs.get("phone_number")
         first_name = attrs.get("first_name")
         last_name = attrs.get("last_name")
@@ -642,13 +646,13 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> User:
         fcm_token = validated_data.pop("fcm_token", None)
         device_type = validated_data.pop("device_type", None)
         federation = validated_data.pop("federation", None)
-        message = validated_data.pop("message", "")
+        message_from_sender: str = validated_data.pop("message", "")
         with transaction.atomic():
-            user = super().create(validated_data)
+            user: User = super().create(validated_data)
             user_role = validated_data.get("user_role")
             if fcm_token:
                 FCMDevice.objects.update_or_create(
@@ -666,13 +670,21 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             elif user_role == "federation":
                 if federation:
                     logger.info(f"Federation '{federation.name}' selected for user {user.first_name} {user.last_name}")
-                    receivers = federation.users.all()
+                    request_type: str = enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value
+                    receivers: QuerySet[User] = federation.users.all()
+                    user_data = UserRequestService.build_snapshot(
+                        model=user,
+                        request_type=request_type
+                    )
+                    logger.info(user_data)
                     user_request, message, success = UserRequestService.create_request(
                         sender=user,
                         receivers=receivers,
-                        request_type=enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
+                        request_type=request_type,
                         federation=federation,
-                        message=message
+                        old_data={},
+                        new_data=user_data,
+                        message_from_sender=message_from_sender
                     )
                     if not success:
                         raise_validation_error(message=message)

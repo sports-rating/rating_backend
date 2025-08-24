@@ -114,11 +114,13 @@ class RegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = serializers.SelfRegistrationSerializer
 
-    def create(self, request):
+    def create(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         phone_number: str = serializer.validated_data.get("phone_number", None)
+        is_verified: bool
+        message: str
         is_verified, message = check_verification_status(phone_number)
 
         if is_verified:

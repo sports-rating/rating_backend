@@ -5,11 +5,9 @@ from django.utils.html import format_html
 from apps.federation.models import (
     AgeGroup,
     Federation,
-    FederationAgeGroup,
-    FederationDocument
 )
 
-# Register your models here.
+
 @admin.register(Federation)
 class FederationAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "region", "is_national"]
