@@ -39,7 +39,7 @@ from apps.user.utils import (
 )
 from apps.shared.services.user_request import UserRequestService
 from apps.shared.services.scoring_service import ScoringService
-
+from apps.shared.utils.mixins import RequestContextMixin
 
 SEND_VERIFICATION_ACTION = (
     ("signup", "signup"),
@@ -947,7 +947,7 @@ class UserNotificationSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_time", "updated_time"]
 
 
-class UserRequestSerializer(serializers.ModelSerializer):
+class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
     class Meta:
         model = UserRequest
         fields = [
@@ -967,36 +967,39 @@ class UserRequestSerializer(serializers.ModelSerializer):
             "status": {"required": False}
         }
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
         request_type = attrs.get("request_type")
-        sender = self.context.get("request").user
+        sender = t.cast(User, self.request.user)
         if request_type == "sportsman_trainer_request" and sender.user_role == "trainer":
             raise_validation_error(message=_("Trainers cannot send trainer requests!"))
         return super().validate(attrs)
 
-    def create(self, validated_data):
-        sender = self.context.get("request").user
+    def create(self, validated_data: dict) -> t.Optional[UserRequest]:
+        sender = self.request.user  # type: ignore
         logger.info(f"Sender: {sender}")
-        user_request = None
+        user_request: None = None
 
         #TODO(CoderB7): implement logic of sending request if needed in some cases
         return user_request
 
-    def update(self, instance, validated_data):
-        sender = instance.sender
+    def update(self, instance: UserRequest, validated_data: dict) -> UserRequest:
+        sender: User = instance.sender
         logger.info(f"Sender: {sender}")  # LOGGING
-        receiver = self.context.get("request").user
+        receiver: User = self.request.user  # type: ignore
         message, success = UserRequestService.handle_request(instance, validated_data, receiver)
         if success:
             logger.info(f"{message}")
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
         else:
             logger.error(f"Failed to handle request: {message}")
             raise_validation_error(message=message)
         return instance
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: UserRequest) -> dict:
         data = super().to_representation(instance)
-        receiver = instance.receivers.first()
+        receiver: User = instance.receivers.first()  # type: ignore
         data["sender"] = {
             "id": instance.sender.id,
             "full_name": instance.sender.full_name,
@@ -1004,7 +1007,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
             "phone_number": instance.sender.phone_number,
         }
         if instance.federation:
-            federation = instance.federation
+            federation: Federation = instance.federation
             logger.info(f"Federation: {federation}")
             data["receiver"] = {
                 "federation": {
@@ -1022,7 +1025,7 @@ class UserRequestSerializer(serializers.ModelSerializer):
                 "phone_number": receiver.phone_number,
             }
         if instance.request_type == enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value:
-            data["result_id"] = instance.data.get("result_id") if instance.data else None
+            data["result_id"] = instance.old_data.get("result_id") if instance.old_data else None
         data.pop("receivers")
         return data
 

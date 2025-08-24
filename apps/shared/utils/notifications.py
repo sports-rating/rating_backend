@@ -60,7 +60,7 @@ def send_notification_to_user(
         user: User,
         user_request: UserRequest,
         title: t.Union[str, Promise],
-        body: str,
+        body: t.Union[str, Promise],
         **extra
     ) -> None:
     """

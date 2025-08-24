@@ -1,5 +1,7 @@
 import typing as t
 
+from uuid import UUID
+
 from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet, Model
 from django.utils.functional import Promise
@@ -30,8 +32,8 @@ class UserRequestService:
         old_data: t.Optional[dict] = None,
         new_data: t.Optional[dict] = None,
         metadata: t.Optional[dict] = None,
-        message_from_sender: str = "",
-        message_from_receiver: str = ""
+        message_from_sender: t.Optional[str] = None,
+        message_from_receiver: t.Optional[str] = None
     ) -> tuple[t.Optional[UserRequest], str | Promise, bool]:
 
         # Prevent duplicates
@@ -55,7 +57,7 @@ class UserRequestService:
             message_from_sender=message_from_sender
         )
         user_request.receivers.set(receivers)
-        logger.info("hello")
+
         # Notify all receivers
         for receiver in receivers:
             send_notification_to_user(
@@ -69,7 +71,11 @@ class UserRequestService:
         return user_request, _("Request created successfully."), True
 
     @staticmethod
-    def accept_request(user_request, notification_body, notification_data):
+    def accept_request(
+        user_request: UserRequest,
+        notification_body: t.Union[str, Promise],
+        notification_data: dict
+    ) -> None:
         user_request.status = enums.UserRequestStatus.ACCEPTED.value
         user_request.save()
 
@@ -82,7 +88,28 @@ class UserRequestService:
         )
 
     @staticmethod
-    def decline_request(user_request, notification_body, notification_data):
+    def cancel_request(
+        user_request: UserRequest,
+        notification_body: t.Union[str, Promise],
+        notification_data: dict
+    ) -> None:
+        user_request.status = enums.UserRequestStatus.CANCELLED.value
+        user_request.save()
+
+        send_notification_to_user(
+            user=user_request.sender,
+            user_request=user_request,
+            title=_("Request Cancelled"),
+            body=notification_body,
+            data=notification_data
+        )
+
+    @staticmethod
+    def decline_request(
+        user_request: UserRequest,
+        notification_body: t.Union[str, Promise],
+        notification_data: dict
+    ) -> None:
         user_request.status = enums.UserRequestStatus.REJECTED.value
         user_request.save()
 
@@ -95,8 +122,12 @@ class UserRequestService:
         )
 
     @staticmethod
-    def handle_request(user_request, validated_data, receiver):
-        request_type = user_request.request_type
+    def handle_request(
+        user_request: UserRequest,
+        validated_data: dict,
+        receiver: User
+    ) -> tuple[t.Union[Promise, str], bool]:
+        request_type: str = user_request.request_type
         if request_type == enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value:
             return UserRequestService._handle_sportsman_trainer_request(user_request, validated_data, receiver)
         elif request_type == enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value:
@@ -108,9 +139,13 @@ class UserRequestService:
         return _("Invalid request type!"), False
 
     @staticmethod
-    def _handle_sportsman_trainer_request(user_request, validated_data, receiver):
-        status = validated_data.get("status")
-        sender = user_request.sender
+    def _handle_sportsman_trainer_request(
+        user_request: UserRequest,
+        validated_data: dict,
+        receiver: User
+    ) -> tuple[t.Union[Promise, str], bool]:
+        status: t.Union[str, None] = validated_data.get("status")
+        sender: User = user_request.sender
         logger.info(f"Receiver (trainer): {receiver}")  # LOGGING
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the trainer for the sender
@@ -136,11 +171,15 @@ class UserRequestService:
         return _("Request handled successfully."), True
 
     @staticmethod
-    def _handle_trainer_federation_request(user_request, validated_data, receiver):
-        status = validated_data.get("status")
-        sender = user_request.sender
+    def _handle_trainer_federation_request(
+        user_request: UserRequest,
+        validated_data: dict,
+        receiver: User
+    ) -> tuple[t.Union[Promise, str], bool]:
+        status: t.Union[str, None] = validated_data.get("status")
+        sender: User = user_request.sender
         logger.info(f"Receiver (federation): {receiver}")  # LOGGING
-        federation = user_request.federation
+        federation: Federation = t.cast(Federation, user_request.federation)
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the federation for the sender
             if receiver:
@@ -165,11 +204,16 @@ class UserRequestService:
             UserRequestService.decline_request(user_request, notification_body, notification_data)
         return _("Request handled successfully."), True
 
-    def _handle_federation_admin_request(user_request, validated_data, receiver):
-        status = validated_data.get("status")
-        sender = user_request.sender
+    @staticmethod
+    def _handle_federation_admin_request(
+            user_request: UserRequest,
+            validated_data: dict,
+            receiver: User
+        ) -> tuple[t.Union[Promise, str], bool]:
+        status: t.Union[str, None] = validated_data.get("status")
+        sender: User = user_request.sender
         logger.info(f"Receiver (federation admin): {receiver}")  # LOGGING
-        federation = user_request.federation
+        federation: Federation = t.cast(Federation, user_request.federation)
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the federation for the sender
             if receiver:
@@ -179,12 +223,21 @@ class UserRequestService:
                 notification_body = f"{federation.name} has accepted your request."
                 notification_data = {
                     "request_type": "federation_admin_request",
+                    "message_from_receiver": validated_data.get("message_from_receiver"),
                     "federation_id": str(federation.id),
                 }
                 UserRequestService.accept_request(user_request, notification_body, notification_data)
             else:
                 return _("Receiver must be a valid federation!"), False
+        elif status == enums.UserRequestStatus.CANCELLED.value:
+            notification_body = f"Successfully cancelled the request."
+            notification_data = {
+                "request_type": "federation_admin_request",
+                "federation_id": str(federation.id),
+            }
+            UserRequestService.cancel_request(user_request, notification_body, notification_data)
         else:
+            logger.info("hello")
             notification_body = f"{federation.name} has declined your request."
             notification_data = {
                 "request_type": "federation_admin_request",
@@ -193,18 +246,28 @@ class UserRequestService:
             UserRequestService.decline_request(user_request, notification_body, notification_data)
         return _("Request handled successfully."), True
 
-    def _handle_result_verification_request(user_request, validated_data, receiver):
+    @staticmethod
+    def _handle_result_verification_request(
+            user_request: UserRequest,
+            validated_data: dict,
+            receiver: User
+        ) -> tuple[t.Union[Promise, str], bool]:
         status = validated_data.get("status")
+        old_data: dict = user_request.old_data or {}
+        metadata: dict[str, t.Any] = user_request.metadata or {}
+
+        result_id: UUID = UUID(old_data.get('result_id'))
+        sportsman_result: Result = t.cast(Result, Result.objects.filter(id=result_id).first())
+
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the result for the sender
             if receiver:
                 sender = user_request.sender
 
-                result_id = user_request.data.get("result_id")
-                sportsman_result = Result.objects.filter(id=result_id).first()
-
                 # Applying the requested rating here
-                requested_rating = user_request.data.get("requested_rating")
+
+                requested_rating: str | None = metadata.get("requested_rating")
+
                 logger.info(f"Requested rating: {requested_rating}")  # LOGGING
                 if requested_rating:
                     ScoringService.update_sportsman_points(
@@ -229,8 +292,6 @@ class UserRequestService:
             else:
                 return _("Receiver must be a valid trainer!"), False
         else:
-            result_id = user_request.data.get("result_id")
-            sportsman_result = Result.objects.filter(id=result_id).first()
             sportsman_result.status = enums.ResultVerificationStatus.REJECTED.value
             sportsman_result.save()
 
