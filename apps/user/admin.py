@@ -123,7 +123,7 @@ class SportsmanAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("User Metrics", {"fields": ("user_metrics", )}),
+        ("User Metrics", {"fields": ("user_metrics", "height", "weight")}),
         ("Adress", {"fields": ("address",)}),
         ("Social media", {"fields": ("social_media",)}),
         # ("Media", {"fields": ("media",)}),
@@ -150,7 +150,7 @@ class TrainerAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("User Metrics", {"fields": ("user_metrics", )}),
+        ("User Metrics", {"fields": ("user_metrics", "height", "weight")}),
         ("Adress", {"fields": ("address",)}),
         ("Social media", {"fields": ("social_media",)}),
         # ("Media", {"fields": ("media",)}),

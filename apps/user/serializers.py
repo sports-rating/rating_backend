@@ -41,6 +41,10 @@ from apps.shared.services.user_request import UserRequestService
 from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.utils.mixins import RequestContextMixin
+from apps.shared.utils.payloads import (
+    SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
+    TRAINER_APPROVAL_REQUIRED_FIELDS
+)
 
 SEND_VERIFICATION_ACTION = (
     ("signup", "signup"),
@@ -240,10 +244,6 @@ class SportsmanListSerializer(serializers.ModelSerializer):
 
 
 class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerializer):
-    CRITICAL_FIELDS = {
-        "sportsman": ["trainer", "height", "weight", "rank"]
-    }
-
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
     statistics = serializers.SerializerMethodField()
@@ -307,7 +307,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         return filtered
 
     def _check_critical_fields(self, instance: Sportsman, data: dict) -> bool:
-        critical_fields = self.CRITICAL_FIELDS.get("sportsman", [])
+        critical_fields: list[str] = SPORTSMAN_APPROVAL_REQUIRED_FIELDS
         return any(
             field in data and getattr(instance, field) != data[field]
             for field in critical_fields
@@ -317,11 +317,8 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         self,
         instance: Sportsman,
         sportsman_data: dict,
-    ) -> tuple[dict | None, dict | None]:
-        critical_fields = self.CRITICAL_FIELDS.get("sportsman", [])
-
-        old_snapshot: dict | None = None
-        new_snapshot: dict | None = None
+    ) -> tuple[dict | None, dict | None, dict | None]:
+        critical_fields = SPORTSMAN_APPROVAL_REQUIRED_FIELDS
 
         old_snapshot, new_snapshot = self.build_sportsman_snapshot(
             instance=instance,
@@ -446,6 +443,8 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "bio",
             "division",
             "user_metrics",
+            "height",
+            "weight",
             "points",
             "address",
             "message",
@@ -469,38 +468,83 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             raise_validation_error(message=_("Sport must be part of the federation sports."))
         return validated_data
 
-    def _get_snapshot_data(self) -> dict:
-        return {
-            "old_snapshot": self.context.get("old_snapshot", {}),
-            "new_snapshot": self.context.get("new_snapshot", {})
-        }
+    def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
+        filtered = {}
+        for k, v in data.items():
+            if isinstance(v, dict):
+                # Recursively filter nested dictionaries
+                filtered[k] = self._filter_critical_fields(v, critical_fields)
+            elif k not in critical_fields:
+                filtered[k] = v
+        return filtered
+
+    def _check_critical_fields(self, instance: Trainer, data: dict) -> bool:
+        critical_fields: list[str] = TRAINER_APPROVAL_REQUIRED_FIELDS
+        changed: bool = False
+        sender: User = self.context.get("request").user  # type: ignore
+
+        changed = any(
+            field in data and getattr(instance, field) != data[field]
+            for field in critical_fields
+        )
+        # If sender is admin/super_admin, always return False
+        if sender.user_role in ["admin", "super_admin"]:
+            return False
+        # If sender is trainer and fields have changed, return True
+        elif changed and sender.user_role == "trainer":
+            return True
+        return False
+
+    def _handle_snapshot(
+        self,
+        instance: Trainer,
+        trainer_data: dict,
+    ) -> tuple[dict | None, dict | None, dict | None]:
+        critical_fields: list[str] = TRAINER_APPROVAL_REQUIRED_FIELDS
+
+        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
+            model=instance,
+            data=trainer_data,
+            request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
+        )
+        trainer_data = self._filter_critical_fields(trainer_data, critical_fields)
+
+        return old_snapshot, new_snapshot, trainer_data
 
     def create(self, validated_data: dict) -> Trainer:
-        sport = validated_data.pop("sport", None)
+        sport: Sport = validated_data.pop("sport", None)
 
         profile = Trainer.objects.create(sport=sport, **validated_data)
         logger.info(f"Trainer Profile created -> {profile}")
 
         return profile
 
+    @transaction.atomic
     def update(self, instance: Trainer, validated_data: dict) -> Trainer:
         sender: User = self.context.get("request").user  # type: ignore
-        federation: Federation = validated_data.pop("federation", None)
+        federation: Federation = validated_data.get("federation", None)
         send_request: bool = validated_data.pop("send_request", None)
         message_from_sender: str | None = validated_data.pop("message", None)
+        trainer_data: dict = validated_data
+        send_request: bool = self._check_critical_fields(instance=instance, data=trainer_data)
+
+        logger.info(f"Send request: {send_request}")  # LOGGING
 
         if send_request and federation:
             # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
             request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
             receivers: QuerySet[User] = federation.users.filter(user_role="federation")
-            snapshot_data: dict = self._get_snapshot_data()
+            old_snapshot, new_snapshot, trainer_data = self._handle_snapshot(instance, validated_data)
+            logger.info(f"Old Snapshot: {old_snapshot}")  # LOGGING
+            logger.info(f"New Snapshot: {new_snapshot}")  # LOGGING
+            logger.info(f"Trainer data: {trainer_data}")
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=receivers,
                 request_type=request_type,
                 federation=federation,
-                old_data=snapshot_data.get("old_snapshot", {}),
-                new_data=snapshot_data.get("new_snapshot", {}),
+                old_data=old_snapshot,
+                new_data=new_snapshot,
                 message_from_sender=message_from_sender
             )
             if not success:
@@ -509,7 +553,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             instance.federation = federation
 
         # Update other fields
-        for attr, value in validated_data.items():
+        for attr, value in trainer_data.items():
             setattr(instance, attr, value)
 
         instance.save()

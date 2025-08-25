@@ -9,6 +9,8 @@ from django.utils.functional import Promise
 from apps.user.models import (
     User,
     UserRequest,
+    Sportsman,
+    Trainer
 )
 from apps.federation.models import (
     Federation
@@ -147,19 +149,19 @@ class UserRequestService:
         status: t.Union[str, None] = validated_data.get("status")
         sender: User = user_request.sender
         logger.info(f"Receiver (trainer): {receiver}")  # LOGGING
+
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the trainer for the sender
             if receiver and hasattr(receiver, "trainer_profile"):
-                sender.sportsman_profile.trainer = receiver.trainer_profile
-                sender.sportsman_profile.is_sportsman_verified = True
 
                 # --- APPLY SNAPSHOT FIELDS ---
                 new_snapshot = user_request.new_data or {}
                 if new_snapshot:
-                    logger.info(f"Applying snapshot: {new_snapshot}")
-                    for field, value in new_snapshot.items():
-                        setattr(sender.sportsman_profile, field, value)
+                    new_snapshot.pop("trainer", None)  # Trainer is set separately below
+                    UserRequestService._apply_trainer_snapshot(sender.sportsman_profile, new_snapshot)
 
+                sender.sportsman_profile.trainer = receiver.trainer_profile
+                sender.sportsman_profile.is_sportsman_verified = True
                 sender.sportsman_profile.save()
 
                 notification_body = f"{receiver.full_name} has accepted your request."
@@ -189,13 +191,18 @@ class UserRequestService:
         sender: User = user_request.sender
         logger.info(f"Receiver (federation): {receiver}")  # LOGGING
         federation: Federation = t.cast(Federation, user_request.federation)
+
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the federation for the sender
             if receiver:
-                logger.info(f"Receiver federation: {federation}")  # LOGGING
-                sender.trainer_profile.federation = federation
+                # --- APPLY SNAPSHOT FIELDS ---
+                new_snapshot = user_request.new_data or {}
+                if new_snapshot:
+                    UserRequestService._apply_trainer_snapshot(sender.trainer_profile, new_snapshot)
+
                 sender.trainer_profile.is_trainer_verified = True
                 sender.trainer_profile.save()
+
                 notification_body = f"{federation.name} has accepted your request."
                 notification_data = {
                     "request_type": "trainer_federation_request",
@@ -311,3 +318,20 @@ class UserRequestService:
             }
             UserRequestService.decline_request(user_request, notification_body, notification_data)
         return _("Request handled successfully."), True
+
+    @staticmethod
+    def _apply_trainer_snapshot(sender_profile: t.Union[Sportsman, Trainer], snapshot: dict) -> None:
+        for field, value in snapshot.items():
+            if value in (None, "None"):
+                setattr(sender_profile, field, None)
+                continue
+
+            # Handling Foreignkey fields stored as dicts
+            if isinstance(value, dict) and 'id' in value:
+                id = UUID(value.get('id'))
+                setattr(sender_profile, field + "_id", id)
+
+            else:
+                setattr(sender_profile, field, value)
+
+        sender_profile.save()

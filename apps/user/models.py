@@ -177,6 +177,18 @@ class Trainer(models.Model):
     division = models.CharField(max_length=100, blank=True, null=True)
     user_metrics = models.JSONField(blank=True, null=True)
     points = models.FloatField(default=0.0, null=False)
+    height = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )  # in cm
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )  # in kg
     # Address
     address = models.JSONField(blank=True, null=True)
     # Contacts
