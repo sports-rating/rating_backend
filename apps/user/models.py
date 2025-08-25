@@ -121,8 +121,8 @@ class User(AbstractUser, BaseModel):
 
 class Sportsman(models.Model):
     user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='sportsman_profile')
-    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True) # will likely changes
-    trainer = models.ForeignKey("user.Trainer", on_delete=models.CASCADE, related_name="sportsmen", blank=True, null=True)
+    sport = models.ForeignKey(Sport, on_delete=models.SET_NULL, related_name="sportsmen", blank=True, null=True) # will likely changes
+    trainer = models.ForeignKey("user.Trainer", on_delete=models.SET_NULL, related_name="sportsmen", blank=True, null=True)
 
     bio = models.TextField(blank=True, null=True)
     division = models.CharField(max_length=100, blank=True, null=True)
@@ -169,8 +169,8 @@ class Sportsman(models.Model):
 
 class Trainer(models.Model):
     user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='trainer_profile')
-    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
-    federation = models.ForeignKey("federation.Federation", on_delete=models.CASCADE, related_name="trainers", blank=True, null=True)
+    sport = models.ForeignKey(Sport, on_delete=models.SET_NULL, related_name="trainers", blank=True, null=True)
+    federation = models.ForeignKey("federation.Federation", on_delete=models.SET_NULL, related_name="trainers", blank=True, null=True)
 
     skill_level = models.CharField(max_length=100, null=True, blank=True)
     bio = models.TextField(blank=True, null=True)

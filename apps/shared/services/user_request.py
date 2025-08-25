@@ -195,6 +195,11 @@ class UserRequestService:
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the federation for the sender
             if receiver:
+                old_federation = sender.trainer_profile.federation
+                new_federation = federation
+                if old_federation and old_federation != new_federation:
+                    sender.trainer_profile.sportsmen.update(trainer=None)
+
                 # --- APPLY SNAPSHOT FIELDS ---
                 new_snapshot = user_request.new_data or {}
                 if new_snapshot:

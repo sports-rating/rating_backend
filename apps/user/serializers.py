@@ -526,7 +526,8 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance: Trainer, validated_data: dict) -> Trainer:
         sender: User = self.context.get("request").user  # type: ignore
-        federation: Federation = validated_data.get("federation", None)
+        new_federation: Federation = validated_data.get("federation", None)
+        old_federation = instance.federation
         send_request: bool = validated_data.pop("send_request", None)
         message_from_sender: str | None = validated_data.pop("message", None)
         trainer_data: dict = validated_data
@@ -534,11 +535,13 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
         logger.info(f"Send request: {send_request}")  # LOGGING
 
-        if send_request and federation:
+        if send_request and new_federation:
             # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
-            request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
-            receivers: QuerySet[User] = federation.users.filter(user_role="federation")
             old_snapshot, new_snapshot, trainer_data = self._handle_snapshot(instance, validated_data)
+            if old_federation != new_federation:
+                old_snapshot = None # Reset old snapshot if federation is changing
+            request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
+            receivers: QuerySet[User] = new_federation.users.filter(user_role="federation")
             logger.info(f"Old Snapshot: {old_snapshot}")  # LOGGING
             logger.info(f"New Snapshot: {new_snapshot}")  # LOGGING
             logger.info(f"Trainer data: {trainer_data}")
@@ -546,15 +549,15 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
                 sender=sender,
                 receivers=receivers,
                 request_type=request_type,
-                federation=federation,
+                federation=new_federation,
                 old_data=old_snapshot,
                 new_data=new_snapshot,
                 message_from_sender=message_from_sender
             )
             if not success:
                 raise_validation_error(message=message)
-        elif federation:
-            instance.federation = federation
+        elif new_federation:
+            instance.federation = new_federation
 
         # Update other fields
         for attr, value in trainer_data.items():
