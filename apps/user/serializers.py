@@ -284,18 +284,6 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
         return validated_data
 
-    def build_sportsman_snapshot(
-        self,
-        instance: Sportsman,
-        data: dict
-    ) -> tuple[dict | None, dict | None]:
-        old_snapshot, new_snapshot = SnapshotService.prepare_user_snapshot(
-            instance=instance,
-            data=data,
-            request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
-        )
-        return old_snapshot, new_snapshot
-
     def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
         filtered = {}
         for k, v in data.items():
@@ -308,10 +296,21 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
     def _check_critical_fields(self, instance: Sportsman, data: dict) -> bool:
         critical_fields: list[str] = SPORTSMAN_APPROVAL_REQUIRED_FIELDS
-        return any(
+        changed: bool = False
+        sender: User = self.context.get("request").user  # type: ignore
+
+        changed = any(
             field in data and getattr(instance, field) != data[field]
             for field in critical_fields
         )
+
+        # If the sender is admin/super_admin, always return False
+        if sender.user_role in ["admin", "super_admin"]:
+            return False
+        # If the sender is sportsman and fields have changed, return True
+        elif changed and sender.user_role == "sportsman":
+            return True
+        return False
 
     def _handle_snapshot(
         self,
@@ -320,9 +319,10 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
     ) -> tuple[dict | None, dict | None, dict | None]:
         critical_fields = SPORTSMAN_APPROVAL_REQUIRED_FIELDS
 
-        old_snapshot, new_snapshot = self.build_sportsman_snapshot(
-            instance=instance,
-            data=sportsman_data
+        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
+            model=instance,
+            data=sportsman_data,
+            request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
         )
         sportsman_data = self._filter_critical_fields(sportsman_data, critical_fields)
 
@@ -342,11 +342,12 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
     @transaction.atomic
     def update(self, instance: Sportsman, validated_data: dict) -> Sportsman:
         sender: User = self.request.user  # type: ignore
-        trainer: User = validated_data.pop("trainer", None)
+        trainer: User = validated_data.get("trainer", None)
         validated_data.pop("send_request", False)
         message_from_sender: str | None = validated_data.pop("message", None)
         sportsman_data: dict = validated_data
-        send_request = self._check_critical_fields(instance=instance, data=sportsman_data)
+        send_request: bool = self._check_critical_fields(instance=instance, data=sportsman_data)
+
         logger.info(f"Send request: {send_request}")  # LOGGING
         logger.info(f"Sender: {sender}")  # LOGGING
         logger.info(f"Trainer: {trainer}")  # LOGGING
