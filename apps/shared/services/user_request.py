@@ -23,7 +23,10 @@ from apps.shared.utils.logging import logger
 import apps.shared.utils.enums as enums
 from apps.sport.models import Result
 from apps.shared.services.scoring_service import ScoringService
-from apps.shared.serializers import ResultSnapshotSerializer
+from apps.shared.serializers import (
+    SportsmanResultSnapshotSerializer,
+    SportsmanSnapshotSerializer
+)
 
 
 class UserRequestService:
@@ -333,9 +336,9 @@ class UserRequestService:
     @staticmethod
     def _apply_snapshot(instance: t.Union[Sportsman, Trainer, Result], snapshot: dict) -> None:
         serializer_class_map = {
-            # Sportsman: SportsmanSnapshotSerializer,
+            Sportsman: SportsmanSnapshotSerializer,
             # Trainer: TrainerSnapshotSerializer,
-            Result: ResultSnapshotSerializer,
+            Result: SportsmanResultSnapshotSerializer,
         }
         serializer_class = serializer_class_map.get(type(instance))
         serializer = serializer_class(data=snapshot, partial=True)

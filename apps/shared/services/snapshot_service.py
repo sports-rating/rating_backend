@@ -28,28 +28,14 @@ from apps.shared.utils.payloads import (
     TRAINER_FEDERATION_ADMIN_APPROVAL_REQUIRED_FIELDS,
     SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
 )
-from apps.shared.serializers import ResultSnapshotSerializer
+from apps.shared.serializers import (
+    SportsmanResultSnapshotSerializer,
+    SportsmanSnapshotSerializer,
+    TrainerSnapshotSerializer
+)
 
 
 class SnapshotService:
-
-    # @staticmethod
-    # def prepare_user_snapshot(
-    #         instance: Sportsman,
-    #         data: dict,
-    #         request_type: str
-    #     ) -> tuple[dict | None, dict | None]:
-    #     """
-    #     Determines if a snapshot is needed and returns old and new snapshots with request_type.
-    #     """
-    #     flattened_data = data.copy()
-    #     logger.info(f"Flattened data for snapshot: {flattened_data}")
-
-    #     old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-    #         model=instance, request_type=request_type, data=flattened_data
-    #     )
-    #     logger.debug(f"Old Snapshot: {old_snapshot}, New Snapshot: {new_snapshot}")
-    #     return old_snapshot, new_snapshot
 
     @staticmethod
     def build_snapshot(
@@ -96,17 +82,30 @@ class SnapshotService:
         Returns (old_snapshot, new_snapshot) with all required fields included,
         even if missing in validated_data.
         """
-        old_snapshot = {}
-        new_snapshot = {}
+        serializer = SportsmanSnapshotSerializer()
+        fields = serializer.get_fields().keys()
 
-        for field in SPORTSMAN_APPROVAL_REQUIRED_FIELDS:
-            old_value = getattr(sportsman, field, None)
-            new_value = data.get(field, old_value)
+        def build_snapshot(source: dict | Sportsman) -> dict:
+            return {
+                field: SnapshotService._serialize_value(
+                    source.get(field) if isinstance(source, dict) else getattr(source, field, None)
+                )
+                for field in fields
+            }
 
-            old_snapshot[field] = SnapshotService._serialize_value(old_value)
-            new_snapshot[field] = SnapshotService._serialize_value(new_value)
+        # Build old and new snapshots
+        old_snapshot = build_snapshot(sportsman)
+        new_snapshot = build_snapshot({**{f: getattr(sportsman, f, None) for f in fields}, **data})
+        logger.debug(f"Old snapshot before validation: {old_snapshot}")
+        logger.debug(f"New snapshot before validation: {new_snapshot}")
 
-        return old_snapshot, new_snapshot
+        # Validate and normalize using serializer
+        def validate(snapshot: dict) -> dict:
+            s = SportsmanSnapshotSerializer(data=snapshot)
+            s.is_valid(raise_exception=True)
+            return s.data
+
+        return validate(old_snapshot), validate(new_snapshot)
 
     @staticmethod
     def _build_trainer_snapshot(trainer: Trainer, data: dict) -> tuple[dict | None, dict | None]:
@@ -148,7 +147,7 @@ class SnapshotService:
         Returns a validated snapshot dict using DRF serializer.
         """
         # Get all fields defined in serializer
-        serializer_fields = ResultSnapshotSerializer().get_fields().keys()
+        serializer_fields = SportsmanResultSnapshotSerializer().get_fields().keys()
 
         # Build a dict with either data-provided or fallback to model
         snapshot_data = {
@@ -157,7 +156,7 @@ class SnapshotService:
         }
 
         # Validate and normalize using the serializer
-        serializer = ResultSnapshotSerializer(data=snapshot_data)
+        serializer = SportsmanResultSnapshotSerializer(data=snapshot_data)
         serializer.is_valid(raise_exception=True)
 
         return {}, serializer.data

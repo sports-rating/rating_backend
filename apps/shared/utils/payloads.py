@@ -4,13 +4,13 @@ TRAINER_FEDERATION_ADMIN_APPROVAL_REQUIRED_FIELDS = [
 ]
 
 SPORTSMAN_APPROVAL_REQUIRED_FIELDS = [
-    "trainer", "height", "weight", "sport_rank", "sport"
+    "trainer", "sport", "height", "weight", "sport_rank"
 ]
 
 TRAINER_APPROVAL_REQUIRED_FIELDS = [
-    "sport", "federation", "skill_level", "division", "height", "weight"
+    "federation", "sport", "skill_level", "division", "height", "weight"
 ]
 
 SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS = [
-    "country", "trainer", "year", "currently_participating", "rating", "tournament"
+    "trainer", "tournament", "country", "year", "currently_participating", "rating"
 ]
