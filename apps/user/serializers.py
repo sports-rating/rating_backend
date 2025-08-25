@@ -285,6 +285,75 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
         return validated_data
 
+    def create(self, validated_data: dict) -> Sportsman:
+        sport: Sport = validated_data.pop("sport", None)
+        trainer: User = validated_data.pop("trainer", None)
+        send_request: bool = validated_data.pop("send_request", False)
+        validated_data.pop("message", None)
+
+        profile = Sportsman.objects.create(sport=sport, trainer=trainer.trainer_profile, **validated_data)
+        logger.info(f"Sportsman Profile created -> {profile}")
+
+        return profile
+
+    @transaction.atomic
+    def update(self, instance: Sportsman, validated_data: dict) -> Sportsman:
+        sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type = \
+        self._extract_update_data(instance, validated_data)
+
+        send_request: bool = self._check_critical_fields(instance=instance, data=sportsman_data)
+
+        if send_request and new_trainer:
+            old_snapshot, new_snapshot, sportsman_data = self._handle_snapshot(instance, validated_data)
+            if old_trainer != new_trainer:
+                old_snapshot = None  # Reset old snapshot if trainer is changing
+
+            user_request, message, success = UserRequestService.create_request(
+                sender=sender,
+                receivers=User.objects.filter(id=new_trainer.id),
+                request_type=request_type,
+                old_data=old_snapshot,
+                new_data=new_snapshot,
+                message_from_sender=message_from_sender
+            )
+            if not success:
+                raise_validation_error(message=message)
+        elif new_trainer:
+            instance.trainer = new_trainer.trainer_profile
+
+        # Update other fields
+        for attr, value in sportsman_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        return instance
+
+    def get_statistics(self, obj) -> Dict[str, Any]:
+        return calculate_sportsman_statistics(sportsman=obj.user)
+
+    def to_representation(self, instance: Sportsman) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        data["trainer"] = {
+            "id": instance.trainer.user_id,
+            "name": f'{instance.trainer.user}',
+            "sport": instance.trainer.sport.name if instance.trainer.sport else None,
+        } if instance.trainer else None
+        data["federation"] = {
+            "id": instance.trainer.federation.id,
+            "name": instance.trainer.federation.name,
+            "logo": get_file_full_url(instance.trainer.federation.logo.url) if instance.trainer.federation.logo else None
+        } if instance.trainer and instance.trainer.federation else None
+        return data
+
+    # ----------------------------
+    # Helpers
+    # ----------------------------
     def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
         filtered = {}
         for k, v in data.items():
@@ -329,80 +398,19 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
         return old_snapshot, new_snapshot, sportsman_data
 
-    def create(self, validated_data: dict) -> Sportsman:
-        sport: Sport = validated_data.pop("sport", None)
-        trainer: User = validated_data.pop("trainer", None)
-        send_request: bool = validated_data.pop("send_request", False)
-        validated_data.pop("message", None)
-
-        profile = Sportsman.objects.create(sport=sport, trainer=trainer.trainer_profile, **validated_data)
-        logger.info(f"Sportsman Profile created -> {profile}")
-
-        return profile
-
-    @transaction.atomic
-    def update(self, instance: Sportsman, validated_data: dict) -> Sportsman:
+    def _extract_update_data(self, instance: Sportsman, validated_data: dict) -> tuple:
+        """
+        Extracts and prepares the necessary fields from validated_data.
+        Returns: (sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type)
+        """
         sender: User = self.request.user  # type: ignore
-        new_trainer: User = validated_data.get("trainer", None)
-        old_trainer = instance.trainer.user if instance.trainer else None
-        validated_data.pop("send_request", False)
+        new_trainer: User | None = validated_data.get("trainer")
+        old_trainer: User | None = instance.trainer.user if instance.trainer else None
+        validated_data.pop("send_request", None)
         message_from_sender: str | None = validated_data.pop("message", None)
         sportsman_data: dict = validated_data
-        send_request: bool = self._check_critical_fields(instance=instance, data=sportsman_data)
-
-        logger.info(f"Send request: {send_request}")  # LOGGING
-        logger.info(f"Sender: {sender}")  # LOGGING
-        logger.info(f"Trainer: {new_trainer}")  # LOGGING
-
-        if send_request and new_trainer:
-            old_snapshot, new_snapshot, sportsman_data = self._handle_snapshot(instance, validated_data)
-            if old_trainer != new_trainer:
-                old_snapshot = None  # Reset old snapshot if trainer is changing
-            request_type: str = enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
-            logger.info(f"Old Snapshot: {old_snapshot}")  # LOGGING
-            logger.info(f"New Snapshot: {new_snapshot}")  # LOGGING
-            user_request, message, success = UserRequestService.create_request(
-                sender=sender,
-                receivers=User.objects.filter(id=new_trainer.id),
-                request_type=request_type,
-                old_data=old_snapshot,
-                new_data=new_snapshot,
-                message_from_sender=message_from_sender
-            )
-            if not success:
-                raise_validation_error(message=message)
-        elif new_trainer:
-            instance.trainer = new_trainer.trainer_profile
-
-        # Update other fields
-        for attr, value in sportsman_data.items():
-            setattr(instance, attr, value)
-
-        instance.save()
-
-        return instance
-
-    def get_statistics(self, obj) -> Dict[str, Any]:
-        return calculate_sportsman_statistics(sportsman=obj.user)
-
-    def to_representation(self, instance: Sportsman) -> dict:
-        data = super().to_representation(instance)
-        data["sport"] = {
-            "id": instance.sport.id,
-            "name": instance.sport.name,
-            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
-        } if instance.sport else None
-        data["trainer"] = {
-            "id": instance.trainer.user_id,
-            "name": f'{instance.trainer.user}',
-            "sport": instance.trainer.sport.name if instance.trainer.sport else None,
-        } if instance.trainer else None
-        data["federation"] = {
-            "id": instance.trainer.federation.id,
-            "name": instance.trainer.federation.name,
-            "logo": get_file_full_url(instance.trainer.federation.logo.url) if instance.trainer.federation.logo else None
-        } if instance.trainer and instance.trainer.federation else None
-        return data
+        request_type = enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
+        return sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type
 
 
 class TrainerListSerializer(serializers.ModelSerializer):
@@ -541,11 +549,10 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             old_snapshot, new_snapshot, trainer_data = self._handle_snapshot(instance, validated_data)
             if old_federation != new_federation:
                 old_snapshot = None # Reset old snapshot if federation is changing
+
             request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
             receivers: QuerySet[User] = new_federation.users.filter(user_role="federation")
-            logger.info(f"Old Snapshot: {old_snapshot}")  # LOGGING
-            logger.info(f"New Snapshot: {new_snapshot}")  # LOGGING
-            logger.info(f"Trainer data: {trainer_data}")
+
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=receivers,

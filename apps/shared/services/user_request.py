@@ -23,6 +23,7 @@ from apps.shared.utils.logging import logger
 import apps.shared.utils.enums as enums
 from apps.sport.models import Result
 from apps.shared.services.scoring_service import ScoringService
+from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
     SportsmanSnapshotSerializer,
@@ -164,7 +165,7 @@ class UserRequestService:
                 new_snapshot = user_request.new_data or {}
                 if new_snapshot:
                     new_snapshot.pop("trainer", None)  # Trainer is set separately below
-                    UserRequestService._apply_snapshot(sender.sportsman_profile, new_snapshot)
+                    SnapshotService.apply_snapshot(sender.sportsman_profile, new_snapshot)
 
                 sender.sportsman_profile.trainer = receiver.trainer_profile
                 sender.sportsman_profile.is_sportsman_verified = True
@@ -209,7 +210,7 @@ class UserRequestService:
                 # --- APPLY SNAPSHOT FIELDS ---
                 new_snapshot = user_request.new_data or {}
                 if new_snapshot:
-                    UserRequestService._apply_snapshot(sender.trainer_profile, new_snapshot)
+                    SnapshotService.apply_snapshot(sender.trainer_profile, new_snapshot)
 
                 sender.trainer_profile.is_trainer_verified = True
                 sender.trainer_profile.save()
@@ -306,7 +307,7 @@ class UserRequestService:
                 new_snapshot = user_request.new_data or {}
                 if new_snapshot:
                     # new_snapshot.pop("trainer", None) # Trainer is set separately below
-                    UserRequestService._apply_snapshot(sportsman_result, new_snapshot)
+                    SnapshotService.apply_snapshot(sportsman_result, new_snapshot)
 
                 sender.sportsman_profile.save()
                 sportsman_result.trainer = receiver.trainer_profile
@@ -333,24 +334,3 @@ class UserRequestService:
             }
             UserRequestService.decline_request(user_request, notification_body, notification_data)
         return _("Request handled successfully."), True
-
-    @staticmethod
-    def _apply_snapshot(instance: t.Union[Sportsman, Trainer, Result], snapshot: dict) -> None:
-        serializer_class_map = {
-            Sportsman: SportsmanSnapshotSerializer,
-            Trainer: TrainerSnapshotSerializer,
-            Result: SportsmanResultSnapshotSerializer,
-        }
-        serializer_class = serializer_class_map.get(type(instance))
-        serializer = serializer_class(data=snapshot, partial=True)
-        serializer.is_valid(raise_exception=True)
-
-        for field, value in serializer.validated_data.items():
-            if isinstance(value, dict) and 'id' in value:
-                setattr(instance, f"{field}_id", value['id'])
-            else:
-                setattr(instance, field, None if value in (None, "None") else value)
-
-        # Only save if not a Result instance
-        if not isinstance(instance, Result):
-            instance.save()

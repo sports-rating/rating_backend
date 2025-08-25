@@ -62,6 +62,27 @@ class SnapshotService:
         return function_mapping.get(request_type, lambda x, y: (None, None))(model, data)
 
     @staticmethod
+    def apply_snapshot(instance: t.Union[Sportsman, Trainer, Result], snapshot: dict) -> None:
+        serializer_class_map = {
+            Sportsman: SportsmanSnapshotSerializer,
+            Trainer: TrainerSnapshotSerializer,
+            Result: SportsmanResultSnapshotSerializer,
+        }
+        serializer_class = serializer_class_map.get(type(instance))
+        serializer = serializer_class(data=snapshot, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        for field, value in serializer.validated_data.items():
+            if isinstance(value, dict) and 'id' in value:
+                setattr(instance, f"{field}_id", value['id'])
+            else:
+                setattr(instance, field, None if value in (None, "None") else value)
+
+        # Only save if not a Result instance
+        if not isinstance(instance, Result):
+            instance.save()
+
+    @staticmethod
     def _build_user_federation_snapshot(user: User, data: dict) -> tuple[dict | None, dict | None]:
         """
         Builds a snapshot of the user's federation information.
@@ -96,8 +117,6 @@ class SnapshotService:
         # Build old and new snapshots
         old_snapshot = build_snapshot(sportsman)
         new_snapshot = build_snapshot({**{f: getattr(sportsman, f, None) for f in fields}, **data})
-        logger.debug(f"Old snapshot before validation: {old_snapshot}")
-        logger.debug(f"New snapshot before validation: {new_snapshot}")
 
         # Validate and normalize using serializer
         def validate(snapshot: dict) -> dict:
