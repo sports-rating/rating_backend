@@ -129,6 +129,19 @@ class Sportsman(models.Model):
     sport_rank = models.CharField(max_length=30, choices=enums.SportRankEnum.choices(), default=enums.SportRankEnum.YOUTH_3.value, blank=True, null=True)
     user_metrics = models.JSONField(blank=True, null=True)
     points = models.FloatField(default=0.0, null=False)
+    # Physical Attributes
+    height = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )  # in cm
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )  # in kg
     # Address
     address = models.JSONField(blank=True, null=True)
     # Contacts

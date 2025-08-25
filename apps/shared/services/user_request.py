@@ -152,7 +152,16 @@ class UserRequestService:
             if receiver and hasattr(receiver, "trainer_profile"):
                 sender.sportsman_profile.trainer = receiver.trainer_profile
                 sender.sportsman_profile.is_sportsman_verified = True
+
+                # --- APPLY SNAPSHOT FIELDS ---
+                new_snapshot = user_request.new_data or {}
+                if new_snapshot:
+                    logger.info(f"Applying snapshot: {new_snapshot}")
+                    for field, value in new_snapshot.items():
+                        setattr(sender.sportsman_profile, field, value)
+
                 sender.sportsman_profile.save()
+
                 notification_body = f"{receiver.full_name} has accepted your request."
                 notification_data = {
                     "request_type": "sportsman_trainer_request",
@@ -302,24 +311,3 @@ class UserRequestService:
             }
             UserRequestService.decline_request(user_request, notification_body, notification_data)
         return _("Request handled successfully."), True
-
-    @staticmethod
-    def build_snapshot(model: ModelT, request_type: str) -> dict:
-        """
-        Builds a snapshot (dict) of important model fields
-        """
-        function_mapping: dict[str, t.Callable[[t.Any], dict[str, t.Any]]] = {
-            "federation_admin_request": UserRequestService._build_user_federation_snapshot,
-        }
-        return function_mapping.get(request_type, lambda x: {})(model)
-
-    @staticmethod
-    def _build_user_federation_snapshot(user: User) -> dict:
-        return {
-            "id": str(user.id),
-            "full_name": user.full_name,
-            "phone_number": user.phone_number,
-            "birth_date": user.birth_date.isoformat() if user.birth_date else None,
-            "email": user.email,
-            "user_role": user.user_role,
-        }

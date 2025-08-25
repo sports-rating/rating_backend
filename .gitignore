@@ -100,7 +100,7 @@ local_settings.py
 /media
 /static
 # ignore virtualenvs
-venv
+venv/
 env/
 
 # Custom
