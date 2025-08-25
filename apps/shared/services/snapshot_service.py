@@ -24,7 +24,8 @@ from apps.sport.models import Result
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.utils.payloads import (
     SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
-    TRAINER_APPROVAL_REQUIRED_FIELDS
+    TRAINER_APPROVAL_REQUIRED_FIELDS,
+    TRAINER_FEDERATION_ADMIN_APPROVAL_REQUIRED_FIELDS
 )
 
 
@@ -76,14 +77,15 @@ class SnapshotService:
         """
         Builds a snapshot of the user's federation information.
         """
-        return None, {
-            "id": str(user.id),
-            "full_name": user.full_name,
-            "phone_number": user.phone_number,
-            "birth_date": user.birth_date.isoformat() if user.birth_date else None,
-            "email": user.email,
-            "user_role": user.user_role,
-        }
+        new_snapshot = {}
+
+        for field in TRAINER_FEDERATION_ADMIN_APPROVAL_REQUIRED_FIELDS:
+            value = getattr(user, field, None)
+            new_snapshot[field] = SnapshotService._serialize_value(value)
+
+        new_snapshot["id"] = str(user.id)
+
+        return None, new_snapshot
 
     @staticmethod
     def _build_sportsman_snapshot(sportsman: Sportsman, data: dict) -> tuple[dict | None, dict | None]:

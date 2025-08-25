@@ -805,18 +805,18 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
                     logger.info(f"Federation '{federation.name}' selected for user {user.first_name} {user.last_name}")
                     request_type: str = enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value
                     receivers: QuerySet[User] = federation.users.all()
-                    _, user_data = SnapshotService.build_snapshot(
+                    old_snapshot, new_snapshot = SnapshotService.build_snapshot(
                         model=user,
                         request_type=request_type
                     )
-                    logger.info(user_data)
+                    logger.info(new_snapshot)
                     user_request, message, success = UserRequestService.create_request(
                         sender=user,
                         receivers=receivers,
                         request_type=request_type,
                         federation=federation,
                         old_data={},
-                        new_data=user_data,
+                        new_data=new_snapshot,
                         message_from_sender=message_from_sender
                     )
                     if not success:
