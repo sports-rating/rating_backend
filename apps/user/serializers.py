@@ -298,10 +298,8 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
     @transaction.atomic
     def update(self, instance: Sportsman, validated_data: dict) -> Sportsman:
-        sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type = \
+        sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type, send_request = \
         self._extract_update_data(instance, validated_data)
-
-        send_request: bool = self._check_critical_fields(instance=instance, data=sportsman_data)
 
         if send_request and new_trainer:
             old_snapshot, new_snapshot, sportsman_data = self._handle_snapshot(instance, validated_data)
@@ -318,6 +316,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             )
             if not success:
                 raise_validation_error(message=message)
+
         elif new_trainer:
             instance.trainer = new_trainer.trainer_profile
 
@@ -410,7 +409,8 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         message_from_sender: str | None = validated_data.pop("message", None)
         sportsman_data: dict = validated_data
         request_type = enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
-        return sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type
+        send_request: bool = self._check_critical_fields(instance=instance, data=sportsman_data)
+        return sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type, send_request
 
 
 class TrainerListSerializer(serializers.ModelSerializer):
@@ -481,6 +481,68 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             raise_validation_error(message=_("Sport must be part of the federation sports."))
         return validated_data
 
+    def create(self, validated_data: dict) -> Trainer:
+        sport: Sport = validated_data.pop("sport", None)
+
+        profile = Trainer.objects.create(sport=sport, **validated_data)
+        logger.info(f"Trainer Profile created -> {profile}")
+
+        return profile
+
+    @transaction.atomic
+    def update(self, instance: Trainer, validated_data: dict) -> Trainer:
+        sender, trainer_data, new_federation, old_federation, send_request, message_from_sender, request_type, receivers = \
+        self._extract_update_data(instance, validated_data)
+
+        if send_request and new_federation:
+            # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
+            old_snapshot, new_snapshot, trainer_data = self._handle_snapshot(instance, validated_data)
+            if old_federation != new_federation:
+                old_snapshot = None # Reset old snapshot if federation is changing
+
+            user_request, message, success = UserRequestService.create_request(
+                sender=sender,
+                receivers=receivers,
+                request_type=request_type,
+                federation=new_federation,
+                old_data=old_snapshot,
+                new_data=new_snapshot,
+                message_from_sender=message_from_sender
+            )
+            if not success:
+                raise_validation_error(message=message)
+
+        elif new_federation:
+            instance.federation = new_federation
+
+        # Update other fields
+        for attr, value in trainer_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        return instance
+
+    def get_statistics(self, obj) -> Dict[str, Any]:
+        return calculate_trainer_statistics(trainer=obj.user)
+
+    def to_representation(self, instance: Trainer) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        data["federation"] = {
+            "id": instance.federation.id,
+            "name": instance.federation.name,
+            "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
+        } if instance.federation else None
+        return data
+
+    # ----------------------------
+    # Helpers
+    # ----------------------------
     def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
         filtered = {}
         for k, v in data.items():
@@ -524,73 +586,21 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
         return old_snapshot, new_snapshot, trainer_data
 
-    def create(self, validated_data: dict) -> Trainer:
-        sport: Sport = validated_data.pop("sport", None)
-
-        profile = Trainer.objects.create(sport=sport, **validated_data)
-        logger.info(f"Trainer Profile created -> {profile}")
-
-        return profile
-
-    @transaction.atomic
-    def update(self, instance: Trainer, validated_data: dict) -> Trainer:
+    def _extract_update_data(self, instance: Trainer, validated_data: dict) -> tuple[dict, Federation | None, bool, str | None]:
+        """
+        Extracts and prepares trainer update-related data for the update method.
+        Returns: (trainer_data, new_federation, send_request, message_from_sender)
+        """
         sender: User = self.context.get("request").user  # type: ignore
-        new_federation: Federation = validated_data.get("federation", None)
+        new_federation: Federation = validated_data.get("federation")
         old_federation = instance.federation
-        send_request: bool = validated_data.pop("send_request", None)
+        validated_data.pop("send_request", None)
         message_from_sender: str | None = validated_data.pop("message", None)
         trainer_data: dict = validated_data
         send_request: bool = self._check_critical_fields(instance=instance, data=trainer_data)
-
-        logger.info(f"Send request: {send_request}")  # LOGGING
-
-        if send_request and new_federation:
-            # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
-            old_snapshot, new_snapshot, trainer_data = self._handle_snapshot(instance, validated_data)
-            if old_federation != new_federation:
-                old_snapshot = None # Reset old snapshot if federation is changing
-
-            request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
-            receivers: QuerySet[User] = new_federation.users.filter(user_role="federation")
-
-            user_request, message, success = UserRequestService.create_request(
-                sender=sender,
-                receivers=receivers,
-                request_type=request_type,
-                federation=new_federation,
-                old_data=old_snapshot,
-                new_data=new_snapshot,
-                message_from_sender=message_from_sender
-            )
-            if not success:
-                raise_validation_error(message=message)
-        elif new_federation:
-            instance.federation = new_federation
-
-        # Update other fields
-        for attr, value in trainer_data.items():
-            setattr(instance, attr, value)
-
-        instance.save()
-
-        return instance
-
-    def get_statistics(self, obj) -> Dict[str, Any]:
-        return calculate_trainer_statistics(trainer=obj.user)
-
-    def to_representation(self, instance: Trainer) -> dict:
-        data = super().to_representation(instance)
-        data["sport"] = {
-            "id": instance.sport.id,
-            "name": instance.sport.name,
-            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
-        } if instance.sport else None
-        data["federation"] = {
-            "id": instance.federation.id,
-            "name": instance.federation.name,
-            "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
-        } if instance.federation else None
-        return data
+        request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
+        receivers: QuerySet[User] = new_federation.users.filter(user_role="federation")
+        return sender, trainer_data, new_federation, old_federation, send_request, message_from_sender, request_type, receivers
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
