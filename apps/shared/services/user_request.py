@@ -25,7 +25,8 @@ from apps.sport.models import Result
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
-    SportsmanSnapshotSerializer
+    SportsmanSnapshotSerializer,
+    TrainerSnapshotSerializer
 )
 
 
@@ -337,7 +338,7 @@ class UserRequestService:
     def _apply_snapshot(instance: t.Union[Sportsman, Trainer, Result], snapshot: dict) -> None:
         serializer_class_map = {
             Sportsman: SportsmanSnapshotSerializer,
-            # Trainer: TrainerSnapshotSerializer,
+            Trainer: TrainerSnapshotSerializer,
             Result: SportsmanResultSnapshotSerializer,
         }
         serializer_class = serializer_class_map.get(type(instance))

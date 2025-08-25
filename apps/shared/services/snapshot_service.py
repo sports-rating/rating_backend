@@ -113,17 +113,27 @@ class SnapshotService:
         Returns (old_snapshot, new_snapshot) with all required fields included,
         even if missing in validated_data.
         """
-        old_snapshot = {}
-        new_snapshot = {}
+        serializer = TrainerSnapshotSerializer()
+        fields = serializer.get_fields().keys()
 
-        for field in TRAINER_APPROVAL_REQUIRED_FIELDS:
-            old_value = getattr(trainer, field, None)
-            new_value = data.get(field, old_value)
+        def build_snapshot(source: dict | Trainer) -> dict:
+            return {
+                field: SnapshotService._serialize_value(
+                    source.get(field) if isinstance(source, dict) else getattr(source, field, None)
+                )
+                for field in fields
+            }
 
-            old_snapshot[field] = SnapshotService._serialize_value(old_value)
-            new_snapshot[field] = SnapshotService._serialize_value(new_value)
+        # Build old and new snapshots
+        old_snapshot = build_snapshot(trainer)
+        new_snapshot = build_snapshot({**{f: getattr(trainer, f, None) for f in fields}, **data})
 
-        return old_snapshot, new_snapshot
+        def validate(snapshot: dict) -> dict:
+            s = TrainerSnapshotSerializer(data=snapshot)
+            s.is_valid(raise_exception=True)
+            return s.data
+
+        return validate(old_snapshot), validate(new_snapshot)
 
     # @staticmethod
     # def _build_sportsman_result_snapshot(result: Result, data: dict) -> tuple[dict | None, dict | None]:

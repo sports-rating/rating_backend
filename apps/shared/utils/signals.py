@@ -6,6 +6,7 @@ from apps.shared.utils.logging import logger
 
 from apps.user.models import Sportsman, Trainer
 from apps.sport.models import Result
+from apps.shared.utils import enums
 
 
 # -----------------------
@@ -64,6 +65,11 @@ def handle_result_update(sender, instance, **kwargs):
         _increment_trainer_result(trainer_profile.user, tournament, new_rating, instance)
 
 
+# -----------------------
+# Helper Functions
+# -----------------------
+
+# -- Increment Trainer Result --
 def _increment_trainer_result(trainer_user, tournament, rating, sportsman_result):
     trainer_result, _ = Result.objects.get_or_create(
         user=trainer_user,
@@ -76,6 +82,8 @@ def _increment_trainer_result(trainer_user, tournament, rating, sportsman_result
             "gold": 0,
             "silver": 0,
             "bronze": 0,
+            "is_verified": True,
+            "status": enums.ResultVerificationStatus.VERIFIED.value,
         },
     )
     logger.info(f"Incrementing trainer result for {trainer_user.username} in tournament {tournament.name} with rating {rating}")
@@ -90,7 +98,7 @@ def _increment_trainer_result(trainer_user, tournament, rating, sportsman_result
 
     _calculate_trainer_points(trainer_user)
 
-
+# -- Decrement Trainer Result --
 def _decrement_trainer_result(trainer_user, tournament, rating):
     trainer_result = Result.objects.filter(
         user=trainer_user,
@@ -112,7 +120,7 @@ def _decrement_trainer_result(trainer_user, tournament, rating):
 
     _calculate_trainer_points(trainer_user)
 
-
+# -- Calculate Trainer Points --
 def _calculate_trainer_points(trainer_user):
     """
     Calculates and updates the trainer's average points based on the tournament and rating.
