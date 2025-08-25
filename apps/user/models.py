@@ -166,6 +166,10 @@ class Sportsman(models.Model):
     def __str__(self):
         return f"Sportsman {self.user.first_name} - {self.user.last_name}"
 
+    @property
+    def get_name(self):
+        return self.user.get_full_name()
+
 
 class Trainer(models.Model):
     user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE, related_name='trainer_profile')
@@ -216,6 +220,10 @@ class Trainer(models.Model):
 
     def __str__(self):
         return f"Trainer {self.user.first_name} - {self.user.last_name}"
+
+    @property
+    def get_name(self):
+        return self.user.get_full_name()
 
 
 class ArchivedTrainer(models.Model):

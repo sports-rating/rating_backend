@@ -43,7 +43,8 @@ from apps.shared.services.scoring_service import ScoringService
 from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.payloads import (
     SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
-    TRAINER_APPROVAL_REQUIRED_FIELDS
+    TRAINER_APPROVAL_REQUIRED_FIELDS,
+    SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
 )
 
 SEND_VERIFICATION_ACTION = (
@@ -1172,14 +1173,13 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                 "user_role": receiver.user_role,
                 "phone_number": receiver.phone_number,
             }
-        if instance.request_type == enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value:
-            data["result_id"] = instance.old_data.get("result_id") if instance.old_data else None
         data.pop("receivers")
         return data
 
 
-class SportsmanResultSerializer(serializers.ModelSerializer):
+class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer):
     archived_trainer_name = serializers.CharField(max_length=255, required=False, allow_null=True)
+    message = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
     class Meta:
         model = Result
@@ -1192,6 +1192,7 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
             "year",
             "currently_participating",
             "rating",
+            "message",
             "additional_attributes",
             "is_verified",
             "status",
@@ -1201,13 +1202,18 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status"]
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
         sportsman = self.context.get("request").user
         federation = sportsman.sportsman_profile.trainer.federation
         tournament = attrs.get("tournament", None)
         trainer = attrs.get("trainer", None)
         rating = attrs.get("rating", None)
         instance = self.instance
+        # if instance and tournament:
+        #     if instance.tournament != tournament:
+        #         raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
+        if not trainer:
+            raise_validation_error(message=_("You must specify a trainer to submit results."))
         if not federation:
             raise_validation_error(message=_("You must be part of a federation to submit results."))
         if federation and not federation.tournaments.filter(id=tournament.id).exists():
@@ -1221,81 +1227,58 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
     def create(self, validated_data):
-        sender = self.context.get("request").user
-        result, rating = self._build_result(sender, validated_data, is_update=False)
-
-        if result.trainer:
-            self._create_verification_request(sender, result, rating)
-
+        sender: User = self.request.user  # type: ignore
+        result = self._save_result(sender, validated_data)
         return result
 
-    def update(self, instance, validated_data):
-        sender = self.context.get("request").user
-        result, new_rating = self._build_result(sender, validated_data, instance=instance, is_update=True)
-        tournament = validated_data.get("tournament", None)
-
-        if result.trainer:
-            self._create_verification_request(sender, result, new_rating)
-        else:
-            ScoringService.update_sportsman_points(sender, instance, tournament, new_rating)
-            result.is_verified = True
-            result.save()
-
-        return result
-
-    # ----------------------------
-    # Helpers
-    # ----------------------------
-    def _build_result(self, sender, validated_data, instance=None, is_update=False):
-        trainer = validated_data.pop("trainer", None)
+    def _save_result(self, sender, validated_data):
+        new_trainer = validated_data.pop("trainer", None)
         archived_trainer_name = validated_data.pop("archived_trainer_name", None)
+        message_from_sender = validated_data.pop("message", None)
+
+        # Handle archived trainer case
+        if archived_trainer_name:
+            return self._handle_archived_trainer(sender, archived_trainer_name, validated_data)
+
+        # Handle trainer case (with snapshot + request if needed)
+        return self._handle_trainer(sender, new_trainer, validated_data, message_from_sender)
+
+    def _handle_archived_trainer(self, sender, archived_trainer_name, validated_data):
+        archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+        result = Result.objects.create(user=sender, archived_trainer=archived_trainer, **validated_data)
+        return result
+
+    @transaction.atomic
+    def _handle_trainer(self, sender, new_trainer, validated_data, message_from_sender):
+        rating = validated_data.pop("rating")
         tournament = validated_data.get("tournament", None)
-        rating = validated_data.get("rating", None)
+        score = tournament.get_score(rating) if tournament and rating else None
+        result: Result = None
 
-        if trainer:
-            # Pop the rating from validated_data, we add it after result verification
-            validated_data.pop("rating", None)
-            if is_update and instance:
-                for attr, value in validated_data.items():
-                    setattr(instance, attr, value)
-                instance.is_verified = False
-                instance.save()
-                return instance, rating  # return rating along with instance
-            result = Result.objects.create(user=sender, trainer=trainer, **validated_data)
-            return result, rating  # return rating too
+        if new_trainer:
+            result = Result.objects.create(user=sender, **validated_data)
+            _, new_snapshot, result_data = self._handle_snapshot(result, validated_data)
 
-        elif archived_trainer_name:
-            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-            if is_update and instance:
-                instance.archived_trainer = archived_trainer
-                for attr, value in validated_data.items():
-                    setattr(instance, attr, value)
-                instance.save()
-                return instance, rating  # return rating too
-            result = Result.objects.create(
-                user=sender,
-                archived_trainer=archived_trainer,
-                tournament=tournament,
-                **validated_data
+            # Create result first
+            new_snapshot['score'] = str(score)
+            new_snapshot['id'] = str(result.id)
+            new_snapshot['rating'] = str(rating)
+
+            logger.info(f"New Snapshot: {new_snapshot}")  # LOGGING
+            # Create verification request
+            request_type = enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value
+            user_request, message, success = UserRequestService.create_request(
+                sender=sender,
+                receivers=User.objects.filter(id=new_trainer.user.id),
+                request_type=request_type,
+                old_data={},
+                new_data=new_snapshot,
+                message_from_sender=message_from_sender
             )
-            return result, rating  # return rating too
+            if not success:
+                raise_validation_error(message=message)
 
-        return None, rating  # return rating too
-
-    def _create_verification_request(self, sender, result, rating):
-        score = result.tournament.get_score(rating)
-        user_request, message, success = UserRequestService.create_request(
-            sender=sender,
-            receivers=[result.trainer.user],
-            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
-            data={
-                "result_id": str(result.id),
-                "requested_rating": rating,
-                "score": float(score),
-            }
-        )
-        if not success:
-            raise_validation_error(message=message)
+            return result
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -1314,6 +1297,35 @@ class SportsmanResultSerializer(serializers.ModelSerializer):
             "name": instance.archived_trainer.name,
         } if instance.archived_trainer else None
         return data
+
+    # ----------------------------
+    # Helpers
+    # ----------------------------
+    def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
+        filtered = {}
+        for k, v in data.items():
+            if isinstance(v, dict):
+                # Recursively filter nested dictionaries
+                filtered[k] = self._filter_critical_fields(v, critical_fields)
+            elif k not in critical_fields:
+                filtered[k] = v
+        return filtered
+
+    def _handle_snapshot(
+        self,
+        instance: Result,
+        result_data: dict
+    ) -> tuple[dict | None, dict | None, dict | None]:
+        critical_fields = SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
+
+        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
+            model=instance,
+            data=result_data,
+            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value
+        )
+        result_data = self._filter_critical_fields(result_data, critical_fields)
+
+        return old_snapshot, new_snapshot, result_data
 
 
 class RegionSerializer(serializers.ModelSerializer):

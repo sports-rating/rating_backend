@@ -25,8 +25,10 @@ from apps.shared.services.scoring_service import ScoringService
 from apps.shared.utils.payloads import (
     SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
     TRAINER_APPROVAL_REQUIRED_FIELDS,
-    TRAINER_FEDERATION_ADMIN_APPROVAL_REQUIRED_FIELDS
+    TRAINER_FEDERATION_ADMIN_APPROVAL_REQUIRED_FIELDS,
+    SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
 )
+from apps.shared.serializers import ResultSnapshotSerializer
 
 
 class SnapshotService:
@@ -69,6 +71,7 @@ class SnapshotService:
             "federation_admin_request": SnapshotService._build_user_federation_snapshot,
             "sportsman_trainer_request": SnapshotService._build_sportsman_snapshot,
             "trainer_federation_request": SnapshotService._build_trainer_snapshot,
+            "sportsman_result_verification_request": SnapshotService._build_sportsman_result_snapshot,
         }
         return function_mapping.get(request_type, lambda x, y: (None, None))(model, data)
 
@@ -123,9 +126,46 @@ class SnapshotService:
 
         return old_snapshot, new_snapshot
 
+    # @staticmethod
+    # def _build_sportsman_result_snapshot(result: Result, data: dict) -> tuple[dict | None, dict | None]:
+    #     """
+    #     Returns (new_snapshot) with all required fields included,
+    #     even if missing in validated_data.
+    #     """
+    #     new_snapshot = {}
+
+    #     for field in SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS:
+    #         old_value = getattr(result, field, None)
+    #         new_value = data.get(field, old_value)
+
+    #         new_snapshot[field] = SnapshotService._serialize_value(new_value)
+
+    #     return {}, new_snapshot
+
+    @staticmethod
+    def _build_sportsman_result_snapshot(result: Result, data: dict) -> dict:
+        """
+        Returns a validated snapshot dict using DRF serializer.
+        """
+        # Get all fields defined in serializer
+        serializer_fields = ResultSnapshotSerializer().get_fields().keys()
+
+        # Build a dict with either data-provided or fallback to model
+        snapshot_data = {
+            field: SnapshotService._serialize_value(data.get(field, getattr(result, field, None)))
+            for field in serializer_fields
+        }
+
+        # Validate and normalize using the serializer
+        serializer = ResultSnapshotSerializer(data=snapshot_data)
+        serializer.is_valid(raise_exception=True)
+
+        return {}, serializer.data
+
+
     @staticmethod
     def _serialize_value(value: t.Any) -> t.Union[dict, t.Any]:
         """Helper to make values JSON-serializable."""
         if hasattr(value, 'pk'):
-            return {'id': str(value.pk), 'name': str(value)}
+            return {'id': str(value.pk), 'name': str(value.get_name)}
         return str(value)

@@ -5,6 +5,7 @@ from uuid import UUID
 from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet, Model
 from django.utils.functional import Promise
+from django.db import IntegrityError, transaction
 
 from apps.user.models import (
     User,
@@ -22,6 +23,7 @@ from apps.shared.utils.logging import logger
 import apps.shared.utils.enums as enums
 from apps.sport.models import Result
 from apps.shared.services.scoring_service import ScoringService
+from apps.shared.serializers import ResultSnapshotSerializer
 
 
 class UserRequestService:
@@ -267,28 +269,26 @@ class UserRequestService:
             UserRequestService.decline_request(user_request, notification_body, notification_data)
         return _("Request handled successfully."), True
 
+    @transaction.atomic
     @staticmethod
     def _handle_result_verification_request(
             user_request: UserRequest,
             validated_data: dict,
             receiver: User
         ) -> tuple[t.Union[Promise, str], bool]:
+        sender: User = user_request.sender
         status = validated_data.get("status")
-        old_data: dict = user_request.old_data or {}
-        metadata: dict[str, t.Any] = user_request.metadata or {}
+        new_data: dict = user_request.new_data or {}
 
-        result_id: UUID = UUID(old_data.get('result_id'))
+        result_id: UUID = UUID(new_data.get('id'))
         sportsman_result: Result = t.cast(Result, Result.objects.filter(id=result_id).first())
 
         if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             # If the request is accepted, update the result for the sender
             if receiver:
-                sender = user_request.sender
 
                 # Applying the requested rating here
-
-                requested_rating: str | None = metadata.get("requested_rating")
-
+                requested_rating: str | None = new_data.get("rating")
                 logger.info(f"Requested rating: {requested_rating}")  # LOGGING
                 if requested_rating:
                     ScoringService.update_sportsman_points(
@@ -297,9 +297,15 @@ class UserRequestService:
                         tournament=sportsman_result.tournament,
                         rating=requested_rating
                     )
-                    sportsman_result.rating = int(requested_rating)
+
+                # --- APPLY SNAPSHOT FIELDS ---
+                new_snapshot = user_request.new_data or {}
+                if new_snapshot:
+                    # new_snapshot.pop("trainer", None) # Trainer is set separately below
+                    UserRequestService._apply_snapshot(sportsman_result, new_snapshot)
 
                 sender.sportsman_profile.save()
+                sportsman_result.trainer = receiver.trainer_profile
                 sportsman_result.is_verified = True
                 sportsman_result.status = enums.ResultVerificationStatus.VERIFIED.value
                 sportsman_result.save()
@@ -325,18 +331,22 @@ class UserRequestService:
         return _("Request handled successfully."), True
 
     @staticmethod
-    def _apply_snapshot(sender_profile: t.Union[Sportsman, Trainer], snapshot: dict) -> None:
-        for field, value in snapshot.items():
-            if value in (None, "None"):
-                setattr(sender_profile, field, None)
-                continue
+    def _apply_snapshot(instance: t.Union[Sportsman, Trainer, Result], snapshot: dict) -> None:
+        serializer_class_map = {
+            # Sportsman: SportsmanSnapshotSerializer,
+            # Trainer: TrainerSnapshotSerializer,
+            Result: ResultSnapshotSerializer,
+        }
+        serializer_class = serializer_class_map.get(type(instance))
+        serializer = serializer_class(data=snapshot, partial=True)
+        serializer.is_valid(raise_exception=True)
 
-            # Handling Foreignkey fields stored as dicts
+        for field, value in serializer.validated_data.items():
             if isinstance(value, dict) and 'id' in value:
-                id = UUID(value.get('id'))
-                setattr(sender_profile, field + "_id", id)
-
+                setattr(instance, f"{field}_id", value['id'])
             else:
-                setattr(sender_profile, field, value)
+                setattr(instance, field, None if value in (None, "None") else value)
 
-        sender_profile.save()
+        # Only save if not a Result instance
+        if not isinstance(instance, Result):
+            instance.save()

@@ -37,6 +37,10 @@ class Sport(BaseModel):
 
     repr_fields = ("name",)
 
+    @property
+    def get_name(self):
+        return self.name
+
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
         super().save(*args, **kwargs)
@@ -71,6 +75,10 @@ class Tournament(BaseModel):
         verbose_name_plural = "Tournaments"
 
     repr_fields = ("name", "federation")
+
+    @property
+    def get_name(self):
+        return self.name
 
     def get_score(self, position):
         scoring_policy = self.scoring_policies.filter(position=position).first()
@@ -133,6 +141,7 @@ class Result(BaseModel):
 
     class Meta:
         db_table = "result"
+        ordering = ["-created_time"]
 
     repr_fields = ("tournament", "year")
 

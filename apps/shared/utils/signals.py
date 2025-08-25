@@ -54,10 +54,10 @@ def handle_result_update(sender, instance, **kwargs):
     trainer_profile = instance.trainer
     tournament = instance.tournament
 
-    old_rating = old_instance.rating
-    new_rating = instance.rating
+    old_rating = int(old_instance.rating)
+    new_rating = int(instance.rating)
 
-    if old_rating != new_rating:
+    if (not old_instance.is_verified and instance.is_verified) or (old_instance.rating != instance.rating):
         logger.info(f"Old rating: {old_rating}, New rating: {new_rating}")
         if old_rating:
             _decrement_trainer_result(trainer_profile.user, tournament, old_rating)

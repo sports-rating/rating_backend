@@ -63,6 +63,10 @@ class Federation(BaseModel):
 
     repr_fields = ("name", "is_national")
 
+    @property
+    def get_name(self):
+        return self.name
+
     def save(self, *args, **kwargs):
         handle_file_update(self, 'logo')
         super().save(*args, **kwargs)
