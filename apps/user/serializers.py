@@ -342,7 +342,8 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
     @transaction.atomic
     def update(self, instance: Sportsman, validated_data: dict) -> Sportsman:
         sender: User = self.request.user  # type: ignore
-        trainer: User = validated_data.get("trainer", None)
+        new_trainer: User = validated_data.get("trainer", None)
+        old_trainer = instance.trainer.user if instance.trainer else None
         validated_data.pop("send_request", False)
         message_from_sender: str | None = validated_data.pop("message", None)
         sportsman_data: dict = validated_data
@@ -350,16 +351,18 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
         logger.info(f"Send request: {send_request}")  # LOGGING
         logger.info(f"Sender: {sender}")  # LOGGING
-        logger.info(f"Trainer: {trainer}")  # LOGGING
+        logger.info(f"Trainer: {new_trainer}")  # LOGGING
 
-        if send_request and trainer:
-            request_type: str = enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
+        if send_request and new_trainer:
             old_snapshot, new_snapshot, sportsman_data = self._handle_snapshot(instance, validated_data)
+            if old_trainer != new_trainer:
+                old_snapshot = None  # Reset old snapshot if trainer is changing
+            request_type: str = enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
             logger.info(f"Old Snapshot: {old_snapshot}")  # LOGGING
             logger.info(f"New Snapshot: {new_snapshot}")  # LOGGING
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
-                receivers=User.objects.filter(id=trainer.id),
+                receivers=User.objects.filter(id=new_trainer.id),
                 request_type=request_type,
                 old_data=old_snapshot,
                 new_data=new_snapshot,
@@ -367,8 +370,8 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             )
             if not success:
                 raise_validation_error(message=message)
-        elif trainer:
-            instance.trainer = trainer.trainer_profile
+        elif new_trainer:
+            instance.trainer = new_trainer.trainer_profile
 
         # Update other fields
         for attr, value in sportsman_data.items():

@@ -158,7 +158,7 @@ class UserRequestService:
                 new_snapshot = user_request.new_data or {}
                 if new_snapshot:
                     new_snapshot.pop("trainer", None)  # Trainer is set separately below
-                    UserRequestService._apply_trainer_snapshot(sender.sportsman_profile, new_snapshot)
+                    UserRequestService._apply_snapshot(sender.sportsman_profile, new_snapshot)
 
                 sender.sportsman_profile.trainer = receiver.trainer_profile
                 sender.sportsman_profile.is_sportsman_verified = True
@@ -198,7 +198,7 @@ class UserRequestService:
                 # --- APPLY SNAPSHOT FIELDS ---
                 new_snapshot = user_request.new_data or {}
                 if new_snapshot:
-                    UserRequestService._apply_trainer_snapshot(sender.trainer_profile, new_snapshot)
+                    UserRequestService._apply_snapshot(sender.trainer_profile, new_snapshot)
 
                 sender.trainer_profile.is_trainer_verified = True
                 sender.trainer_profile.save()
@@ -320,7 +320,7 @@ class UserRequestService:
         return _("Request handled successfully."), True
 
     @staticmethod
-    def _apply_trainer_snapshot(sender_profile: t.Union[Sportsman, Trainer], snapshot: dict) -> None:
+    def _apply_snapshot(sender_profile: t.Union[Sportsman, Trainer], snapshot: dict) -> None:
         for field, value in snapshot.items():
             if value in (None, "None"):
                 setattr(sender_profile, field, None)
