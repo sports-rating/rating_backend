@@ -198,4 +198,4 @@ class SnapshotService:
         """Helper to make values JSON-serializable."""
         if hasattr(value, 'pk'):
             return {'id': str(value.pk), 'name': str(value.get_name)}
-        return str(value)
+        return str(value) if value else None
