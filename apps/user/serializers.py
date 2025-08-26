@@ -250,8 +250,6 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
     statistics = serializers.SerializerMethodField()
     send_request = serializers.BooleanField(required=True, write_only=True)
     message = serializers.CharField(required=False, allow_blank=True, max_length=500)
-    height = serializers.FloatField(required=False)
-    weight = serializers.FloatField(required=False)
 
     class Meta:
         model = Sportsman
@@ -452,8 +450,6 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
     send_request = serializers.BooleanField(required=True, write_only=True)
     message = serializers.CharField(required=False, allow_blank=True, max_length=500)
-    height = serializers.FloatField(required=False)
-    weight = serializers.FloatField(required=False)
 
     class Meta:
         model = Trainer
