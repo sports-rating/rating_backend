@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 import typing as t
 
 from datetime import date
@@ -15,6 +16,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Sum, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext as _
+
 
 from fcm_django.models import DeviceType, FCMDevice
 
@@ -273,9 +275,12 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         read_only_fields = ["is_sportsman_verified", "statistics"]
 
     def validate(self, attrs: dict) -> dict:
-        validated_data = super().validate(attrs)
-        sport = validated_data.get("sport", None)
-        trainer = validated_data.get("trainer", None)
+        height = attrs.get("height", None)
+        weight = attrs.get("weight", None)
+        logger.info(f"Height type: {type(height)}")
+        logger.info(f"Weight type: {type(weight)}")
+        sport = attrs.get("sport", None)
+        trainer = attrs.get("trainer", None)
         if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:
             trainer_profile = trainer.trainer_profile
             if not sport:
@@ -283,7 +288,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             if trainer_profile.sport and trainer_profile.sport.id != sport.id:
                 raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
 
-        return validated_data
+        return super().validate(attrs)
 
     def create(self, validated_data: dict) -> Sportsman:
         sport: Sport = validated_data.pop("sport", None)
@@ -469,17 +474,16 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ["is_trainer_verified", "statistics"]
 
     def validate(self, attrs: dict) -> dict:
-        validated_data = super().validate(attrs)
-        sport = validated_data.get("sport", None)
-        send_request = validated_data.get("send_request", None)
-        federation = validated_data.get("federation", None)
+        sport = attrs.get("sport", None)
+        send_request = attrs.get("send_request", None)
+        federation = attrs.get("federation", None)
         if not sport:
             raise_validation_error(message=_("Sport is required."))
         if send_request and not federation:
             raise_validation_error(message=_("Federation is required to send request."))
         if sport not in federation.sports.all():
             raise_validation_error(message=_("Sport must be part of the federation sports."))
-        return validated_data
+        return super().validate(attrs)
 
     def create(self, validated_data: dict) -> Trainer:
         sport: Sport = validated_data.pop("sport", None)

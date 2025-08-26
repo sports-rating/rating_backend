@@ -137,10 +137,18 @@ class TournamentSerializer(serializers.ModelSerializer):
 
                 for scoring_policy in scoring_policies:
                     scoring_policy_id = scoring_policy.get("id", None)
+                    position = scoring_policy.get("position")
                     if scoring_policy_id:  # if id exists, update the existing scoring policy
                         ScoringPolicy.objects.filter(id=scoring_policy_id).update(**scoring_policy)
                         left_scoring_policies_id.append(scoring_policy_id)
                     else:  # if id does not exist, create a new scoring policy
+                        # Check if the same tournament/position already exists
+                        existing = ScoringPolicy.objects.filter(
+                            tournament=instance,
+                            position=position
+                        ).first()
+                        if existing:
+                            raise_validation_error(message=_(f"Score for position {position} already exists for this tournament."))
                         new_scoring_policy = ScoringPolicy.objects.create(tournament=instance, **scoring_policy)
                         left_scoring_policies_id.append(new_scoring_policy.id)
 
