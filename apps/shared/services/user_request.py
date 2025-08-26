@@ -212,6 +212,7 @@ class UserRequestService:
                 if new_snapshot:
                     SnapshotService.apply_snapshot(sender.trainer_profile, new_snapshot)
 
+                sender.trainer_profile.federation = new_federation
                 sender.trainer_profile.is_trainer_verified = True
                 sender.trainer_profile.save()
 
