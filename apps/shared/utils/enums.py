@@ -96,3 +96,24 @@ class ResultVerificationStatus(BaseEnum):
     PENDING = "pending"
     VERIFIED = "verified"
     REJECTED = "rejected"
+
+
+class ProviderTypes(BaseEnum):
+    PAYME = "payme"
+    CLICK = "click"
+    UZUM = "uzum"
+
+
+class TransactionStatus(BaseEnum):
+    DRAFT = "draft"
+    COMMITTED = "committed"
+    REFUNDED = "refunded"
+    REJECTED = "rejected"
+    # FAILED = "failed"
+    # CANCELED = "canceled"
+    TIMEOUT = "timeout"
+
+class TransactionTypes(BaseEnum):
+    RESULT_REQUEST = "result_request"
+    SUBSCRIPTION_SPORTSMAN = "subscription_sportsman"
+    SUBSCRIPTION_TRAINER = "subscription_trainer"
