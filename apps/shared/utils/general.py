@@ -54,6 +54,37 @@ def check_uniqueness(field_name, data, model, instance=None):
             raise_validation_error(message=_(f"{(model.__name__).capitalize()} with this {field_name.replace('_', ' ')} already exists!"))
 
 
+def check_m2m_uniqueness(field_name, data, model, instance=None, error_field_name=None):
+    """
+    Check if any of the M2M related objects already exist for another instance.
+
+    :param field_name: Name of the M2M field (e.g., "sports")
+    :param data: dict with input data (validated_data from serializer)
+    :param model: Model class (e.g., Federation)
+    :param instance: Current instance if update
+    :param error_field_name: Optional field name for error key (defaults to field_name)
+    """
+    if field_name not in data:
+        return
+
+    values = data[field_name]
+    if not values:
+        return
+
+    # Get IDs for comparison
+    ids = [v.id if hasattr(v, 'id') else v for v in values]
+    qs = model.objects.filter(**{f"{field_name}__in": ids})
+    if instance:
+        qs = qs.exclude(pk=instance.pk)
+
+    if qs.exists():
+        # Find which related objects conflict
+        related_model = model._meta.get_field(field_name).related_model
+        conflicting_objs = related_model.objects.filter(id__in=ids, **{model._meta.model_name + "s__in": qs}).distinct()
+        names = ", ".join(str(obj.get_name) for obj in conflicting_objs)
+        raise_validation_error(message=_(f"{model.__name__} already exists for {field_name}: {names}"))
+
+
 def request_type_theme_mapping(request_type):
     """
     Map user request types to their corresponding themes.

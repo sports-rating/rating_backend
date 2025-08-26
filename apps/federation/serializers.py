@@ -17,6 +17,7 @@ from apps.shared.utils.general import (
     get_file_full_url,
     calculate_file_size,
     check_uniqueness,
+    check_m2m_uniqueness,
     request_type_theme_mapping
 )
 from apps.shared.utils.mixins import RequestContextMixin
@@ -113,9 +114,12 @@ class FederationSerializer(RequestContextMixin, serializers.ModelSerializer):
         documents = attrs.get('documents', [])
         is_national = attrs.get("is_national", False)
         region = attrs.get("region", None)
-
+        sports: list[Sport] = attrs.get("sports", [])
+        logger.info(f"Sports type: {type(sports)}")
+        logger.info(f"Sports: {sports}")
         check_uniqueness("name", attrs, Federation, instance)
         check_uniqueness("phone_number", attrs, Federation, instance)
+        check_m2m_uniqueness("sports", attrs, Federation, instance)
 
         if is_national and region:
             raise_validation_error(message=_("National federations cannot have a region."))
