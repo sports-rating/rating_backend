@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 import typing as t
 
 from datetime import date
@@ -15,6 +16,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Sum, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext as _
+
 
 from fcm_django.models import DeviceType, FCMDevice
 
@@ -250,6 +252,8 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
     statistics = serializers.SerializerMethodField()
     send_request = serializers.BooleanField(required=True, write_only=True)
     message = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    height = serializers.CharField(required=False, allow_blank=True)
+    weight = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Sportsman
@@ -271,6 +275,22 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             "send_request"
         ]
         read_only_fields = ["is_sportsman_verified", "statistics"]
+
+    def validate_height(self, value):
+        if value:
+            try:
+                return Decimal(value)
+            except (ValueError, TypeError, InvalidOperation):
+                raise serializers.ValidationError("A valid number is required.")
+        return value
+
+    def validate_weight(self, value):
+        if value:
+            try:
+                return Decimal(value)
+            except (ValueError, TypeError, InvalidOperation):
+                raise serializers.ValidationError("A valid number is required.")
+        return value
 
     def validate(self, attrs: dict) -> dict:
         validated_data = super().validate(attrs)
@@ -450,6 +470,8 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
     send_request = serializers.BooleanField(required=True, write_only=True)
     message = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    height = serializers.CharField(required=False, allow_blank=True)
+    weight = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Trainer
@@ -471,6 +493,22 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "send_request"
         ]
         read_only_fields = ["is_trainer_verified", "statistics"]
+
+    def validate_height(self, value):
+        if value:
+            try:
+                return Decimal(value)
+            except (ValueError, TypeError, InvalidOperation):
+                raise serializers.ValidationError("A valid number is required.")
+        return value
+
+    def validate_weight(self, value):
+        if value:
+            try:
+                return Decimal(value)
+            except (ValueError, TypeError, InvalidOperation):
+                raise serializers.ValidationError("A valid number is required.")
+        return value
 
     def validate(self, attrs: dict) -> dict:
         validated_data = super().validate(attrs)
