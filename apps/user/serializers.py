@@ -279,6 +279,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
     def validate_height(self, value):
         if value:
             try:
+                logger.info(f"Validating height: {value} (type: {type(value)})")
                 return Decimal(value)
             except (ValueError, TypeError, InvalidOperation):
                 raise serializers.ValidationError("A valid number is required.")
@@ -287,19 +288,19 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
     def validate_weight(self, value):
         if value:
             try:
+                logger.info(f"Validating weight: {value} (type: {type(value)})")
                 return Decimal(value)
             except (ValueError, TypeError, InvalidOperation):
                 raise serializers.ValidationError("A valid number is required.")
         return value
 
     def validate(self, attrs: dict) -> dict:
-        validated_data = super().validate(attrs)
-        height = validated_data.get("height", None)
-        weight = validated_data.get("weight", None)
+        height = attrs.get("height", None)
+        weight = attrs.get("weight", None)
         logger.info(f"Height type: {type(height)}")
         logger.info(f"Weight type: {type(weight)}")
-        sport = validated_data.get("sport", None)
-        trainer = validated_data.get("trainer", None)
+        sport = attrs.get("sport", None)
+        trainer = attrs.get("trainer", None)
         if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:
             trainer_profile = trainer.trainer_profile
             if not sport:
@@ -307,7 +308,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             if trainer_profile.sport and trainer_profile.sport.id != sport.id:
                 raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
 
-        return validated_data
+        return super().validate(attrs)
 
     def create(self, validated_data: dict) -> Sportsman:
         sport: Sport = validated_data.pop("sport", None)

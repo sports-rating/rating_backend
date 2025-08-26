@@ -121,7 +121,9 @@ class SnapshotService:
         # Validate and normalize using serializer
         def validate(snapshot: dict) -> dict:
             s = SportsmanSnapshotSerializer(data=snapshot)
+            logger.info(f"Validating sportsman snapshot: {snapshot}")
             s.is_valid(raise_exception=True)
+            logger.info(f"Validated sportsman snapshot: {s.data}")
             return s.data
 
         return validate(old_snapshot), validate(new_snapshot)
