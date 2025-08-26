@@ -1,3 +1,7 @@
+import phonenumbers
+
+from phonenumbers.phonenumberutil import NumberParseException
+
 from django.db import models
 from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 
@@ -6,6 +10,7 @@ from rest_framework.exceptions import ValidationError
 from apps.shared.models import BaseModel, Region, District, BaseMedia
 from apps.shared.utils.enums import LanguageTypes, GenderChoices
 from apps.shared.utils.utils import handle_file_update, handle_file_delete, CorrectPath
+from apps.shared.utils.exceptions import raise_validation_error
 
 from apps.sport.models import Sport
 
@@ -68,12 +73,25 @@ class Federation(BaseModel):
         return self.name
 
     def save(self, *args, **kwargs):
+        self.clean()
         handle_file_update(self, 'logo')
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         handle_file_delete(self, 'logo')
         super().delete(*args, **kwargs)
+
+    def clean(self):
+        self.check_phone_valid()
+
+    def check_phone_valid(self):
+        if self.phone_number:
+            try:
+                parsed_number = phonenumbers.parse(self.phone_number)
+                if not phonenumbers.is_valid_number(parsed_number):
+                    raise_validation_error(message="Please enter a valid phone number.")
+            except NumberParseException:
+                raise_validation_error(message="Please enter a valid phone number.")
 
 
 class FederationDocument(BaseMedia):
