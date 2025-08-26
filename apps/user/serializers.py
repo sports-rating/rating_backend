@@ -276,6 +276,10 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
     def validate(self, attrs: dict) -> dict:
         validated_data = super().validate(attrs)
+        height = validated_data.get("height", None)
+        weight = validated_data.get("weight", None)
+        logger.info(f"Height type: {type(height)}")
+        logger.info(f"Weight type: {type(weight)}")
         sport = validated_data.get("sport", None)
         trainer = validated_data.get("trainer", None)
         if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:

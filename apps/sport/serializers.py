@@ -148,7 +148,7 @@ class TournamentSerializer(serializers.ModelSerializer):
                             position=position
                         ).first()
                         if existing:
-                            raise_validation_error(message=_(f"Scoring policy for position {position} already exists for this tournament."))
+                            raise_validation_error(message=_(f"Score for position {position} already exists for this tournament."))
                         new_scoring_policy = ScoringPolicy.objects.create(tournament=instance, **scoring_policy)
                         left_scoring_policies_id.append(new_scoring_policy.id)
 
