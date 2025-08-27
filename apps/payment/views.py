@@ -141,6 +141,16 @@ class PaymeWebhookAPIView(APIView):
 
         return True
 
+    def check_perform_transaction(self, params: dict) -> response.CheckPerformTransaction:
+        """
+        Handle pre_create_transaction action.
+        """
+        internal_transaction = self.fetch_account(params)
+        self.validate_amount(internal_transaction, params.get("amount", 0))
+
+        result = response.CheckPerformTransaction(allow=True)
+        return result.as_resp()
+
     def create_transaction(self, params: dict) -> dict:
         """
         Handle the create_transaction action.
