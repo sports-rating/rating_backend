@@ -290,16 +290,10 @@ class FederationUserListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_time"]
 
-    def _get_sport(self, instance: User) -> t.Union[Sport, None]:
-        if instance.user_role == "sportsman":
-            return instance.sportsman_profile.sport
-        elif instance.user_role == "trainer":
-            return instance.trainer_profile.sport
-        return None
-
     def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)
         sport: Sport | None = self._get_sport(instance)
+        trainer: User | None = self._get_trainer(instance)
         data["full_name"] = instance.full_name
         data["region"] = {
             "id": instance.region.id,
@@ -314,4 +308,22 @@ class FederationUserListSerializer(serializers.ModelSerializer):
             "name": sport.name,
             "logo": get_file_full_url(sport.logo.url) if sport.logo else None
         } if sport else None
+        data["trainer"] = {
+            "id": trainer.id,
+            "full_name": trainer.full_name,
+            "user_role": trainer.user_role,
+            "phone_number": trainer.phone_number,
+        }
         return data
+
+    def _get_sport(self, instance: User) -> t.Union[Sport, None]:
+        if instance.user_role == "sportsman":
+            return instance.sportsman_profile.sport
+        elif instance.user_role == "trainer":
+            return instance.trainer_profile.sport
+        return None
+
+    def _get_trainer(self, instance: User) -> t.Union[User, None]:
+        if instance.user_role == "sportsman":
+            return instance.sportsman_profile.trainer.user
+        return None
