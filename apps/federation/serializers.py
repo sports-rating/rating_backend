@@ -313,7 +313,7 @@ class FederationUserListSerializer(serializers.ModelSerializer):
             "full_name": trainer.full_name,
             "user_role": trainer.user_role,
             "phone_number": trainer.phone_number,
-        }
+        } if trainer else None
         return data
 
     def _get_sport(self, instance: User) -> t.Union[Sport, None]:
