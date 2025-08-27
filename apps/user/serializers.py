@@ -1229,6 +1229,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         tournament = attrs.get("tournament", None)
         trainer = attrs.get("trainer", None)
         rating = attrs.get("rating", None)
+        year = attrs.get("year", None)
         instance = self.instance
         # if instance and tournament:
         #     if instance.tournament != tournament:
@@ -1243,8 +1244,8 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
         if rating and not tournament.scoring_policies.filter(position=rating).exists():
             raise_validation_error(message=_("Invalid rating for this tournament."))
-        if instance and Result.objects.exclude(pk=instance.pk).filter(user=sportsman, tournament=tournament, trainer=trainer).exists():
-            raise_validation_error(message=_("You have already submitted a result for this tournament and trainer."))
+        if instance and Result.objects.exclude(pk=instance.pk).filter(user=sportsman, tournament=tournament, trainer=trainer, year=year).exists():
+            raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
         return super().validate(attrs)
 
     def create(self, validated_data):
