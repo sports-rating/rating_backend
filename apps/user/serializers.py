@@ -1234,6 +1234,8 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         # if instance and tournament:
         #     if instance.tournament != tournament:
         #         raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
+        if Result.objects.filter(user=sportsman, tournament=tournament, trainer=trainer, year=year).exists():
+            raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
         if not trainer:
             raise_validation_error(message=_("You must specify a trainer to submit results."))
         if not federation:
