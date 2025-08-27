@@ -25,7 +25,7 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
     id = serializers.UUIDField(required=False, allow_null=True)
     country = serializers.CharField(required=False, allow_null=True)
     year = serializers.IntegerField(required=False, allow_null=True)
-    currently_participating = serializers.BooleanField(required=False, allow_null=True)
+    # currently_participating = serializers.BooleanField(default=False)
     rating = serializers.IntegerField(required=False, allow_null=True)
     tournament = ChildTournamentSnapshotSerializer(required=False, allow_null=True)
 
