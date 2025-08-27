@@ -133,6 +133,7 @@ class Result(BaseModel):
     additional_attributes = models.JSONField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=ResultVerificationStatus.choices(), default=ResultVerificationStatus.PENDING.value)
+    transaction = models.OneToOneField("payment.Transaction", on_delete=models.SET_NULL, related_name="result", blank=True, null=True)
 
     rating = models.PositiveIntegerField(default=0)
     gold = models.PositiveIntegerField(default=0)

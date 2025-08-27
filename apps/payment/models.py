@@ -45,8 +45,8 @@ class Transaction(BaseModel):
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     cancel_reason = models.TextField(null=True, blank=True)
-    provider_data = models.JSONField(default=dict)
-    provider_type = models.CharField(
+    payment_details = models.JSONField(default=dict)
+    payment_method = models.CharField(
         max_length=20,
         choices=enums.ProviderTypes.choices(),
         default=enums.ProviderTypes.PAYME.value
@@ -60,7 +60,7 @@ class Transaction(BaseModel):
         verbose_name_plural = "Transactions"
         ordering = ['-created_time']
         indexes = [
-            models.Index(fields=['transaction_id', "status", "provider_type"])
+            models.Index(fields=['transaction_id', "status", "payment_method"])
         ]
 
     repr_fields = ("user", "transaction_id", "status")
