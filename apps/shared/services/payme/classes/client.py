@@ -18,10 +18,10 @@ class Payme:
     ) -> None:
         self.payme_id = payme_id
         self.fallback_id = fallback_id
-        self.payme_key = payme_key
+        self.payme_key = settings.PAYME_KEY if not is_test_mode else settings.PAYME_TEST_KEY
         self.is_test_mode = is_test_mode
 
-        self.url = settings.PAYME_PROD if not is_test_mode else settings.PAYME_TEST
+        # self.url = settings.PAYME_PROD_URL if not is_test_mode else settings.PAYME_TEST_URL
 
     def generate_payment_link(self, id: UUID, amount: float) -> str:
         """
@@ -31,10 +31,18 @@ class Payme:
         constructs a URL for the Payme checkout.
         """
         amount = amount * 100 # Convert amount to the smallest currency unit (tiyin)
-        params = f"m={self.payme_id};ac.{settings.PAYME_ACCOUN_FIELD}={id};a={amount};c={settings.PAYME_RETURN_URL}"
+        params = f"m={self.payme_id};ac.{settings.PAYME_ACCOUNT_FIELD}={id};a={amount};c={settings.PAYME_RETURN_URL}"
         params = base64.b64encode(params.encode("utf-8")).decode("utf-8")
 
         if self.is_test_mode:
             return f"https://test.paycom.uz/{params}"
 
         return f"https://checkout.paycom.uz/{params}"
+
+
+payme = Payme(
+    payme_id=settings.PAYME_ID,
+    is_test_mode=settings.PAYME_IS_TEST_MODE,
+)
+
+__all__ = ("payme",)

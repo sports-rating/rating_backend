@@ -43,9 +43,57 @@ from apps.shared.utils.utils import (
 from apps.payment.models import (
     Transaction
 )
+from apps.user.models import User
+
+from apps.payment.serializers import (
+    CheckoutSerializer
+)
+from apps.shared.utils import enums
+
+from apps.shared.services.payme import payme
+
+RESULT_REQUEST_AMOUNT = 20000  # sum
 
 
-class PaymeWebhookAPIView(APIView):
+class CreateCheckoutAPIView(generics.GenericAPIView):
+    """
+    API endpoint for creating a checkout url
+    """
+    serializer_class = CheckoutSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user: User = request.user
+        payment_method: str = t.cast(str, serializer.validated_data.get("payment_method"))
+
+        transaction: Transaction = Transaction.objects.create(
+            user=user,
+            transaction_type=enums.TransactionTypes.RESULT_REQUEST.value,
+            status=enums.TransactionStatus.DRAFT.value,
+            payment_method=payment_method,
+            amount=RESULT_REQUEST_AMOUNT * 100
+        )
+
+        if payment_method == "payme":
+            payment_link = payme.generate_payment_link(
+                id=transaction.id,
+                amount=transaction.amount
+            )
+
+        return success_response(
+            message=_("Successfully created payment link"),
+            data={
+                "payment_link": payment_link,
+                "transaction_id": transaction.id
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+
+class PaymeWebhookAPIView(generics.GenericAPIView):
     """
     A webhook view for Payme.
     """

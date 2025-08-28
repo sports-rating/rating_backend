@@ -452,6 +452,15 @@ cred = credentials.Certificate(BASE_DIR / "sportsrating-firebase.json")
 
 FIREBASE_APP = initialize_app(cred, {"projectId": "sportsrating"})
 
+# Payme
+PAYME_ID = os.getenv("PAYME_ID")
+PAYME_KEY = os.getenv("PAYME_KEY")
+PAYME_TEST_KEY = os.getenv("PAYME_TEST_KEY")
+PAYME_ACCOUNT_FIELD = os.getenv("PAYME_ACCOUNT_FIELD")
+PAYME_AMOUNT_FIELD = os.getenv("PAYME_AMOUNT_FIELD")
+PAYME_ONE_TIME_PAYMENT = os.getenv("PAYME_ONE_TIME_PAYMENT", default="False") == "True"
+PAYME_IS_TEST_MODE = os.getenv("PAYME_IS_TEST_MODE", default="False") == "True"
+
 # URLs
 BACKEND_URL = os.environ.get("BACKEND_URL", default="http://localhost:8000")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", default="http://localhost:5173")
