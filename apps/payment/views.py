@@ -281,7 +281,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
         """
         Handle the successful payment.
         """
-        internal_transaction = Transaction.objects.filter(transaction_id=params["id"])
+        internal_transaction = Transaction.objects.filter(transaction_id=params["id"]).first()
 
         if internal_transaction.is_performed():
             result = response.PerformTransaction(
@@ -318,7 +318,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
                 state=internal_transaction.payme_state,
                 cancel_time=time_to_payme(internal_transaction.cancelled_time)
             )
-            result.as_resp()
+            return result.as_resp()
 
         if internal_transaction.is_performed():
             internal_transaction.mark_as_cancelled(
@@ -336,11 +336,10 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
             state=internal_transaction.payme_state,
             cancel_time=time_to_payme(internal_transaction.cancelled_time)
         )
-        result.as_resp()
 
         self.handle_cancelled_payment(params, result)
 
-        return result
+        return result.as_resp()
 
     @exceptions.handle_exceptions
     def check_transaction(self, params: dict) -> response.CheckTransaction:

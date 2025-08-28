@@ -46,7 +46,7 @@ class Transaction(BaseModel):
         default=enums.TransactionStatus.DRAFT.value
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    cancel_reason = models.TextField(null=True, blank=True)
+    cancel_reason = models.IntegerField(null=True, blank=True)
     payment_details = models.JSONField(default=dict)
     payment_method = models.CharField(
         max_length=20,
@@ -116,6 +116,7 @@ class Transaction(BaseModel):
             return self
 
         self.payme_state = state
+        self.status = enums.TransactionStatus.CANCELED.value
         self.cancel_reason = cancel_reason
         self.cancelled_time = timezone.now()
         self.save()
@@ -131,6 +132,7 @@ class Transaction(BaseModel):
             return False
 
         self.payme_state = self.SUCCESSFULLY
+        self.status = enums.TransactionStatus.COMMITTED.value
         self.performed_time = timezone.now()
         self.save()
         return True

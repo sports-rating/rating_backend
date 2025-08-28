@@ -115,7 +115,7 @@ class TransactionStatus(BaseEnum):
     REFUNDED = "refunded"
     REJECTED = "rejected"
     # FAILED = "failed"
-    # CANCELED = "canceled"
+    CANCELED = "canceled"
     TIMEOUT = "timeout"
 
 class TransactionTypes(BaseEnum):
