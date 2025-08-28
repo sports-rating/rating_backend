@@ -75,7 +75,7 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
             transaction_type=enums.TransactionTypes.RESULT_REQUEST.value,
             status=enums.TransactionStatus.DRAFT.value,
             payment_method=payment_method,
-            amount=RESULT_REQUEST_AMOUNT * 100
+            amount=RESULT_REQUEST_AMOUNT
         )
 
         if payment_method == "payme":
@@ -98,6 +98,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
     """
     A webhook view for Payme.
     """
+    authentication_classes = []
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request, *args, **kwargs):
@@ -162,8 +163,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
         if settings.PAYME_IS_TEST_MODE:
             if payme_key != settings.PAYME_TEST_KEY:
                 raise exceptions.PermissionDenied("Invalid merchant key specified")
-
-        if payme_key != settings.PAYME_KEY:
+        elif payme_key != settings.PAYME_KEY:
             raise exceptions.PermissionDenied("Invalid merchant key specified")
 
     @exceptions.handle_exceptions
@@ -190,7 +190,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
 
         expected_amount = Decimal(getattr(internal_transaction, settings.PAYME_AMOUNT_FIELD)) * 100
         received_amount = Decimal(received_amount)
-
+        logger.info(f"Expected amount: {expected_amount}, Received amount: {received_amount}")  # LOGGING
         if expected_amount != received_amount:
             raise exceptions.IncorrectAmount(
                 f"Invalid amount. Expected: {expected_amount}, received: {received_amount}"
@@ -203,7 +203,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
         """
         Handle pre_create_transaction action.
         """
-        logger.info(f"Checking transaction for params: {params}")  # LOGGING
+        logger.info(f"CHECK PERFORM Params: {params}")  # LOGGING
         internal_transaction = self.fetch_account(params)
 
         self.validate_amount(internal_transaction, params.get("amount", 0))
@@ -217,38 +217,57 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
         Handle the create_transaction action.
         """
         # TODO CoderB7: Change account related fields and queryset
+        logger.info(f"CREATE TRANSACTION Params: {params}")  # LOGGING
         external_transaction_id = params["id"]
         received_amount = Decimal(params.get("amount", 0))
-        internal_transaction = self.fetch_account(params)
+        draft_tx = self.fetch_account(params)
+        logger.info(f"Draft Transaction: {draft_tx}")  # LOGGING
 
-        self.validate_amount(internal_transaction, received_amount)
+        self.validate_amount(draft_tx, received_amount)
 
-        defaults = {
-            "amount": received_amount,
-            "payme_state": Transaction.INITIATING,
-            "account_id": internal_transaction.pk,
-        }
+        tx: None = None
 
+        # Check if transaction already exists
+        existing_tx = Transaction.objects.filter(transaction_id=external_transaction_id).first()
+        if existing_tx:
+            logger.info(f"Transaction {external_transaction_id} already exists (Payme).")
+            return response.CreateTransaction(
+                transaction=existing_tx.transaction_id,
+                state=existing_tx.payme_state,
+                create_time=time_to_payme(existing_tx.created_time),
+            ).as_resp()
+
+        # Handle draft logic
         if settings.PAYME_ONE_TIME_PAYMENT:
-            # Check for an existing transaction with a different transaction_id for the given account
-            if (
-                Transaction.objects.filter(id=internal_transaction.pk)
-                .exclude(transaction_id=external_transaction_id)
-                .exists()
-            ):
-                message = f"Transaction {external_transaction_id} already exists (Payme)."
+            if draft_tx.transaction_id and draft_tx.transaction_id != external_transaction_id:
+                message = f"Transaction {draft_tx.transaction_id} already exists (Payme)."
                 logger.warning(message)
                 raise exceptions.TransactionAlreadyExists(message)
 
-        internal_transaction, _ = Transaction.objects.get_or_create(
-            transaction_id=external_transaction_id,
-            defaults=defaults
-        )
+            # If draft has no Payme ID yet → update it
+            if not draft_tx.transaction_id:
+                logger.info(f"Updating draft transaction {draft_tx.id} with Payme ID {external_transaction_id}.")
+                draft_tx.transaction_id = external_transaction_id
+                draft_tx.status = enums.TransactionStatus.INITIATING.value
+                draft_tx.payme_state = Transaction.INITIATING
+                draft_tx.save(update_fields=["transaction_id", "amount", "payme_state", "status"])
+
+                tx = draft_tx
+            else:
+                tx = draft_tx
+        else:
+            # Create fresh transaction
+            tx = Transaction.objects.create(
+                transaction_id=external_transaction_id,
+                amount=received_amount / 100,
+                account_id=draft_tx.pk,
+                payme_state=Transaction.INITIATING,
+            )
 
         result = response.CreateTransaction(
-            transaction=internal_transaction.transaction_id,
-            payme_state=internal_transaction.payme_state,
-            create_time=time_to_payme(internal_transaction.created_at),
+            transaction=tx.transaction_id,
+            state=tx.payme_state,
+            create_time=time_to_payme(tx.created_time),
         )
         result = result.as_resp()
 

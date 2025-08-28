@@ -110,6 +110,7 @@ class ProviderTypes(BaseEnum):
 
 class TransactionStatus(BaseEnum):
     DRAFT = "draft"
+    INITIATING = "initiating"
     COMMITTED = "committed"
     REFUNDED = "refunded"
     REJECTED = "rejected"
