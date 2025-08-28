@@ -45,40 +45,6 @@ from apps.payment.models import (
 )
 
 
-def handle_exceptions(func):
-    """
-    Decorator to handle exceptions and raise appropriate Payme exceptions.
-    """
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except KeyError as exc:
-            message = "Invalid parameters received."
-            logger.error(f"{message}: {exc}s {exc} {args} {kwargs}")
-            raise exceptions.InternalServiceError(message) from exc
-
-        except Transaction.DoesNotExist as exc:
-            logger.error(f"Transaction does not exist: {exc} {args} {kwargs}")
-            raise exceptions.AccountDoesNotExist(str(exc)) from exc
-
-        except ValidationError as exc:
-            logger.error(f"Invalid account identifier {exc}")
-            raise exceptions.AccountDoesNotExist("Invalid account identifier.")
-
-        # except Transaction.DoesNotExist as exc:
-        #     logger.error(f"Transaction does not exist: {exc} {args} {kwargs}")
-        #     raise exceptions.AccountDoesNotExist(str(exc)) from exc
-
-        except exceptions.__all__ as exc:
-            # No need to raise exception for exception whitelist
-            raise exc
-        except Exception as exc:
-            logger.error(f"Unexpected error: {exc} {args} {kwargs}")
-            raise exceptions.InternalServiceError(str(exc)) from exc
-
-    return wrapper
-
-
 class PaymeWebhookAPIView(APIView):
     """
     A webhook view for Payme.
@@ -99,12 +65,12 @@ class PaymeWebhookAPIView(APIView):
         self.check_authorize(request)
 
         payme_methods = {
-            "GetStatement": self.get_statement,
-            "CancelTransaction": self.cancel_transaction,
-            "PerformTransaction": self.perform_transaction,
-            "CreateTransaction": self.create_transaction,
-            "CheckTransaction": self.check_transaction,
             "CheckPerformTransaction": self.check_perform_transaction,
+            "CreateTransaction": self.create_transaction,
+            "PerformTransaction": self.perform_transaction,
+            "CancelTransaction": self.cancel_transaction,
+            "CheckTransaction": self.check_transaction,
+            "GetStatement": self.get_statement,
             "SetFiscalData": self.set_fiscal_data,
         }
 
@@ -121,8 +87,7 @@ class PaymeWebhookAPIView(APIView):
 
         raise exceptions.MethodNotFound("Method not supported yet!")
 
-    @staticmethod
-    def check_authorize(request: Request) -> None:
+    def check_authorize(self, request: Request) -> None:
         """
         Verify the integrity of the request using the merchant key.
         """
@@ -146,7 +111,7 @@ class PaymeWebhookAPIView(APIView):
         if payme_key != settings.PAYME_KEY:
             raise exceptions.PermissionDenied("Invalid merchant key specified")
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def fetch_account(self, params: dict):
         """
         Fetch account based on settings and params.
@@ -159,7 +124,7 @@ class PaymeWebhookAPIView(APIView):
 
         return internal_transaction
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def validate_amount(self, internal_transaction, received_amount):
         """
         Validates if the amount matches for one-time payment accounts.
@@ -178,7 +143,7 @@ class PaymeWebhookAPIView(APIView):
 
         return True
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def check_perform_transaction(self, params: dict) -> response.CheckPerformTransaction:
         """
         Handle pre_create_transaction action.
@@ -189,7 +154,7 @@ class PaymeWebhookAPIView(APIView):
         result = response.CheckPerformTransaction(allow=True)
         return result.as_resp()
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def create_transaction(self, params: dict) -> response.CreateTransaction:
         """
         Handle the create_transaction action.
@@ -235,7 +200,7 @@ class PaymeWebhookAPIView(APIView):
 
         return result
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def perform_transaction(self, params: dict) -> response.PerformTransaction:
         """
         Handle the successful payment.
@@ -264,7 +229,7 @@ class PaymeWebhookAPIView(APIView):
 
         return result
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def cancel_transaction(self, params) -> response.CancelTransaction:
         """
         Handle the cancelled payment.
@@ -301,7 +266,7 @@ class PaymeWebhookAPIView(APIView):
 
         return result
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def check_transaction(self, params: dict) -> response.CheckTransaction:
         """
         Handle check transaction request.
@@ -319,7 +284,7 @@ class PaymeWebhookAPIView(APIView):
 
         return result.as_resp()
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def get_statement(self, params: dict) -> response.GetStatement:
         """
         Retrieves a statement of transactions.
@@ -348,7 +313,7 @@ class PaymeWebhookAPIView(APIView):
 
         return result.as_resp()
 
-    @handle_exceptions
+    @exceptions.handle_exceptions
     def set_fiscal_data(self, params: dict) -> response.SetFiscalData:
         """
         Set fiscal data for the given transaction.

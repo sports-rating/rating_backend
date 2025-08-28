@@ -5,8 +5,12 @@ Init Payme base exception.
 import logging
 import typing as t
 
+from django.core.exceptions import ValidationError
+
 from rest_framework import status
 from rest_framework.exceptions import APIException
+
+from apps.payment.models import Transaction
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +25,8 @@ __all__ = [
     "IncorrectAmount",
     "TransactionAlreadyExists",
     "InvalidFiscalParams",
-    "InvalidAccount"
+    "InvalidAccount",
+    "handle_exceptions"
 ]
 
 
@@ -179,3 +184,41 @@ exception_whitelist = (
     InvalidFiscalParams,
     InvalidAccount,
 )
+
+
+######
+# -- Decorator --
+######
+
+def handle_exceptions(func):
+    """
+    Decorator to handle exceptions and raise appropriate Payme exceptions.
+    """
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except KeyError as exc:
+            message = "Invalid parameters received."
+            logger.error(f"{message}: {exc}s {exc} {args} {kwargs}")
+            raise InternalServiceError(message) from exc
+
+        except Transaction.DoesNotExist as exc:
+            logger.error(f"Transaction does not exist: {exc} {args} {kwargs}")
+            raise AccountDoesNotExist(str(exc)) from exc
+
+        except ValidationError as exc:
+            logger.error(f"Invalid account identifier {exc}")
+            raise AccountDoesNotExist("Invalid account identifier.")
+
+        # except Transaction.DoesNotExist as exc:
+        #     logger.error(f"Transaction does not exist: {exc} {args} {kwargs}")
+        #     raise exceptions.AccountDoesNotExist(str(exc)) from exc
+
+        except exception_whitelist as exc:
+            # No need to raise exception for exception whitelist
+            raise exc
+        except Exception as exc:
+            logger.error(f"Unexpected error: {exc} {args} {kwargs}")
+            raise InternalServiceError(str(exc)) from exc
+
+    return wrapper
