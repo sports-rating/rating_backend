@@ -21,7 +21,7 @@ __all__ = [
     "IncorrectAmount",
     "TransactionAlreadyExists",
     "InvalidFiscalParams",
-    "InvalidAccount",
+    "InvalidAccount"
 ]
 
 
@@ -167,3 +167,15 @@ class InvalidAccount(BasePaymeException):
         "ru": "Неверный номер счета.",
         "en": "Invalid account.",
     }
+
+
+exception_whitelist = (
+    PermissionDenied,
+    InternalServiceError,
+    MethodNotFound,
+    AccountDoesNotExist,
+    IncorrectAmount,
+    TransactionAlreadyExists,
+    InvalidFiscalParams,
+    InvalidAccount,
+)

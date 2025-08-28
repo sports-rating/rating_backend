@@ -16,6 +16,7 @@ from django.db.models import Q, Prefetch, QuerySet
 from django.contrib.auth.models import AnonymousUser
 from django.conf import settings
 from django.utils.module_loading import import_string
+from django.core.exceptions import ValidationError
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -32,7 +33,7 @@ from apps.shared.utils.logging import logger
 
 from apps.shared.services.payme import exceptions
 from apps.shared.services.payme import response
-from apps.shared.services.payme.utils import time_to_payme
+from apps.shared.services.payme.utils import time_to_payme, time_to_service
 
 from apps.shared.utils.utils import (
     success_response,
@@ -42,6 +43,40 @@ from apps.shared.utils.utils import (
 from apps.payment.models import (
     Transaction
 )
+
+
+def handle_exceptions(func):
+    """
+    Decorator to handle exceptions and raise appropriate Payme exceptions.
+    """
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except KeyError as exc:
+            message = "Invalid parameters received."
+            logger.error(f"{message}: {exc}s {exc} {args} {kwargs}")
+            raise exceptions.InternalServiceError(message) from exc
+
+        except Transaction.DoesNotExist as exc:
+            logger.error(f"Transaction does not exist: {exc} {args} {kwargs}")
+            raise exceptions.AccountDoesNotExist(str(exc)) from exc
+
+        except ValidationError as exc:
+            logger.error(f"Invalid account identifier {exc}")
+            raise exceptions.AccountDoesNotExist("Invalid account identifier.")
+
+        # except Transaction.DoesNotExist as exc:
+        #     logger.error(f"Transaction does not exist: {exc} {args} {kwargs}")
+        #     raise exceptions.AccountDoesNotExist(str(exc)) from exc
+
+        except exceptions.__all__ as exc:
+            # No need to raise exception for exception whitelist
+            raise exc
+        except Exception as exc:
+            logger.error(f"Unexpected error: {exc} {args} {kwargs}")
+            raise exceptions.InternalServiceError(str(exc)) from exc
+
+    return wrapper
 
 
 class PaymeWebhookAPIView(APIView):
@@ -111,6 +146,7 @@ class PaymeWebhookAPIView(APIView):
         if payme_key != settings.PAYME_KEY:
             raise exceptions.PermissionDenied("Invalid merchant key specified")
 
+    @handle_exceptions
     def fetch_account(self, params: dict):
         """
         Fetch account based on settings and params.
@@ -119,10 +155,11 @@ class PaymeWebhookAPIView(APIView):
         if not internal_transaction_id:
             raise exceptions.InvalidAccount("Missing account field in parameters.")
 
-        transaction = Transaction.objects.get(pk=internal_transaction_id)
+        internal_transaction = Transaction.objects.get(pk=internal_transaction_id)
 
-        return transaction
+        return internal_transaction
 
+    @handle_exceptions
     def validate_amount(self, internal_transaction, received_amount):
         """
         Validates if the amount matches for one-time payment accounts.
@@ -141,6 +178,7 @@ class PaymeWebhookAPIView(APIView):
 
         return True
 
+    @handle_exceptions
     def check_perform_transaction(self, params: dict) -> response.CheckPerformTransaction:
         """
         Handle pre_create_transaction action.
@@ -151,12 +189,13 @@ class PaymeWebhookAPIView(APIView):
         result = response.CheckPerformTransaction(allow=True)
         return result.as_resp()
 
-    def create_transaction(self, params: dict) -> dict:
+    @handle_exceptions
+    def create_transaction(self, params: dict) -> response.CreateTransaction:
         """
         Handle the create_transaction action.
         """
         # TODO CoderB7: Change account related fields and queryset
-        external_transaction_id = params.get("id")
+        external_transaction_id = params["id"]
         received_amount = Decimal(params.get("amount", 0))
         internal_transaction = self.fetch_account(params)
 
@@ -164,7 +203,7 @@ class PaymeWebhookAPIView(APIView):
 
         defaults = {
             "amount": received_amount,
-            "state": Transaction.INITIATING,
+            "payme_state": Transaction.INITIATING,
             "account_id": internal_transaction.pk,
         }
 
@@ -186,7 +225,7 @@ class PaymeWebhookAPIView(APIView):
 
         result = response.CreateTransaction(
             transaction=internal_transaction.transaction_id,
-            state=internal_transaction.state,
+            payme_state=internal_transaction.payme_state,
             create_time=time_to_payme(internal_transaction.created_at),
         )
         result = result.as_resp()
@@ -196,9 +235,165 @@ class PaymeWebhookAPIView(APIView):
 
         return result
 
+    @handle_exceptions
+    def perform_transaction(self, params: dict) -> response.PerformTransaction:
+        """
+        Handle the successful payment.
+        """
+        internal_transaction = Transaction.objects.filter(transaction_id=params["id"])
+
+        if internal_transaction.is_performed():
+            result = response.PerformTransaction(
+                transaction=internal_transaction.transaction_id,
+                state=internal_transaction.payme_state,
+                perform_time=time_to_payme(internal_transaction.performed_time),
+            )
+            return result.as_resp()
+
+        internal_transaction.mark_as_performed()
+
+        result = response.PerformTransaction(
+            transaction=internal_transaction.transaction_id,
+            state=internal_transaction.payme_state,
+            perform_time=time_to_payme(internal_transaction.performed_time),
+        )
+        result = result.as_resp()
+
+        # callback successful payment
+        self.handle_successful_payment(params, result)
+
+        return result
+
+    @handle_exceptions
+    def cancel_transaction(self, params) -> response.CancelTransaction:
+        """
+        Handle the cancelled payment.
+        """
+        internal_transaction = Transaction.objects.filter(transaction_id=params["id"]).first()
+
+        if internal_transaction.is_cancelled():
+            result = response.CancelTransaction(
+                transaction=internal_transaction.transaction_id,
+                state=internal_transaction.payme_state,
+                cancel_time=time_to_payme(internal_transaction.cancelled_time)
+            )
+            result.as_resp()
+
+        if internal_transaction.is_performed():
+            internal_transaction.mark_as_cancelled(
+                cancel_reason=params["reason"],
+                state=Transaction.CANCELLED
+            )
+        elif internal_transaction.is_created_in_payme():
+            internal_transaction.mark_as_cancelled(
+                cancel_reason=params["reason"],
+                state=Transaction.CANCELLED_DURING_INIT
+            )
+
+        result = response.CancelTransaction(
+            transaction=internal_transaction.transaction_id,
+            state=internal_transaction.payme_state,
+            cancel_time=time_to_payme(internal_transaction.cancelled_time)
+        )
+        result.as_resp()
+
+        self.handle_cancelled_payment(params, result)
+
+        return result
+
+    @handle_exceptions
+    def check_transaction(self, params: dict) -> response.CheckTransaction:
+        """
+        Handle check transaction request.
+        """
+        internal_transaction = Transaction.objects.filter(transaction_id=params["id"]).first()
+
+        result = response.CheckTransaction(
+            transaction=internal_transaction.transaction_id,
+            state=internal_transaction.payme_state,
+            reason=internal_transaction.cancel_reason,
+            create_time=time_to_payme(internal_transaction.created_time),
+            perform_time=time_to_payme(internal_transaction.performed_time),
+            cancel_time=time_to_payme(internal_transaction.cancelled_time),
+        )
+
+        return result.as_resp()
+
+    @handle_exceptions
+    def get_statement(self, params: dict) -> response.GetStatement:
+        """
+        Retrieves a statement of transactions.
+        """
+        date_range = [time_to_service(params['from']), time_to_service(params['to'])]
+
+        internal_transactions = Transaction.objects.filter(
+            created_time__range=date_range
+        ).order_by('-created_time')
+
+        result = response.GetStatement(transactions=[])
+
+        for transaction in internal_transactions:
+            result.transactions.append({
+                "transaction": transaction.transaction_id,
+                "amount": transaction.amount,
+                "account": {
+                    settings.PAYME_ACCOUNT_FIELD: transaction.id
+                },
+                "reason": transaction.cancel_reason,
+                "state": transaction.payme_state,
+                "created_time": time_to_payme(transaction.created_time),
+                "perform_time": time_to_payme(transaction.performed_time),
+                "cancel_time": time_to_payme(transaction.cancelled_time),
+            })
+
+        return result.as_resp()
+
+    @handle_exceptions
+    def set_fiscal_data(self, params: dict) -> response.SetFiscalData:
+        """
+        Set fiscal data for the given transaction.
+        """
+        internal_transaction = Transaction.objects.filter(transaction_id=params["id"]).first()
+
+        fiscal_data = params.get("fiscal_data")
+        if not fiscal_data:
+            raise exceptions.InvalidFiscalParams(
+                "Missing fiscal_data field in parameters."
+            )
+
+        fiscal_type = params.get("type")
+        if not fiscal_type:
+            raise exceptions.InvalidFiscalParams(
+                f"Invalid fiscal type. Expected 'PERFORM' or 'CANCEL', got: {fiscal_type}"
+            )
+
+        fiscal_data["type"] = fiscal_type
+        internal_transaction.payment_details = fiscal_data
+        internal_transaction.save()
+
+        result = response.SetFiscalData(success=True)
+        return result.as_resp()
+
+    def handle_pre_payment(self, params, result, *args, **kwargs):
+        """
+        Handle the pre_create_transaction action. You can override this method
+        """
+        print(f"Transaction pre_created for this params: {params} and pre_created_result: {result}")
 
     def handle_created_payment(self, params, result, *args, **kwargs):
         """
         Handle the successful payment. You can override this method
         """
         print(f"Transaction created for this params: {params} and cr_result: {result}")
+
+    def handle_successful_payment(self, params, result, *args, **kwargs):
+        """
+        Handle the successful payment. You can override this method
+        """
+        print(f"Payment successful for this params: {params} and result: {result}")
+
+    def handle_cancelled_payment(self, params, result, *args, **kwargs):
+        """
+        Handle the cancelled payment. You can override this method
+        """
+        print(f"Payment cancelled for this params: {params} and result: {result}")

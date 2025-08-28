@@ -4,6 +4,7 @@ from django.core.validators import (
     MaxValueValidator,
     FileExtensionValidator
 )
+from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
 
@@ -19,15 +20,15 @@ class Transaction(BaseModel):
     CREATED = 0
     INITIATING = 1
     SUCCESSFULLY = 2
-    CANCELED = -2
-    CANCELED_DURING_INIT = -1
+    CANCELLED = -2
+    CANCELLED_DURING_INIT = -1
 
-    STATE = [
+    PAYME_STATE = [
         (CREATED, "Created"),
         (INITIATING, "Initiating"),
         (SUCCESSFULLY, "Successfully"),
-        (CANCELED, "Canceled after successful performed"),
-        (CANCELED_DURING_INIT, "Canceled during initiation"),
+        (CANCELLED, "Canceled after successful performed"),
+        (CANCELLED_DURING_INIT, "Canceled during initiation"),
     ]
 
     user = models.ForeignKey(
@@ -38,6 +39,7 @@ class Transaction(BaseModel):
         max_length=50,
         choices=enums.TransactionTypes.choices(),
     )
+    payme_state = models.IntegerField(choices=PAYME_STATE, default=CREATED)
     status = models.CharField(
         max_length=50,
         choices=enums.TransactionStatus.choices(),
@@ -64,3 +66,71 @@ class Transaction(BaseModel):
         ]
 
     repr_fields = ("user", "transaction_id", "status")
+
+    def __str__(self):
+        return f"Transaction {self.transaction_id} - {self.status}"
+
+    def is_performed(self) -> bool:
+        """
+        Check if the transaction is completed.
+
+        :return: True if the transaction is completed, False otherwise.
+        """
+        return self.payme_state == self.SUCCESSFULLY
+
+    def is_cancelled(self) -> bool:
+        """
+        Check if the transaction is cancelled.
+
+        :return: True if the transaction is cancelled, False otherwise.
+        """
+        return self.payme_state in [
+            self.CANCELLED,
+            self.CANCELLED_DURING_INIT
+        ]
+
+    def is_created(self) -> bool:
+        """
+        Check if the transaction is created.
+
+        :return: True if the transaction is created, False otherwise.
+        """
+        return self.payme_state == self.CREATED
+
+    def is_created_in_payme(self) -> bool:
+        """
+        Check if the transaction was created in Payme.
+
+        :return: True if the transaction was created in Payme, False otherwise.
+        """
+        return self.payme_state == self.INITIATING
+
+    def mark_as_cancelled(self, cancel_reason: int, state: int) -> bool:
+        """
+        Mark the transaction as cancelled.
+
+        :param cancel_reason: The reason for cancelling the transaction.
+        :return: True if the transaction was successfully marked as cancelled, False otherwise.
+        """
+        if self.payme_state == state:
+            return self
+
+        self.payme_state = state
+        self.cancel_reason = cancel_reason
+        self.cancelled_time = timezone.now()
+        self.save()
+        return True
+
+    def mark_as_performed(self) -> bool:
+        """
+        Mark the transaction as performed.
+
+        :return: True if the transaction was successfully marked as performed, False otherwise.
+        """
+        if self.payme_state != self.INITIATING:
+            return False
+
+        self.payme_state = self.SUCCESSFULLY
+        self.performed_time = timezone.now()
+        self.save()
+        return True
