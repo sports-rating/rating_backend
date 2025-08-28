@@ -3,6 +3,7 @@ import base64
 from uuid import UUID
 
 from django.conf import settings
+from apps.shared.utils.logging import logger
 
 
 class Payme:
@@ -32,7 +33,10 @@ class Payme:
         """
         amount = amount * 100 # Convert amount to the smallest currency unit (tiyin)
         params = f"m={self.payme_id};ac.{settings.PAYME_ACCOUNT_FIELD}={id};a={amount};c={settings.PAYME_RETURN_URL}"
+        logger.info(f"Payme Params: {params}")  # LOGGING
+
         params = base64.b64encode(params.encode("utf-8")).decode("utf-8")
+
 
         if self.is_test_mode:
             return f"https://test.paycom.uz/{params}"

@@ -235,9 +235,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
+    # "DEFAULT_PERMISSION_CLASSES": [
+    #     "rest_framework.permissions.IsAuthenticated",
+    # ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.BasicAuthentication",
@@ -460,6 +460,7 @@ PAYME_ACCOUNT_FIELD = os.getenv("PAYME_ACCOUNT_FIELD")
 PAYME_AMOUNT_FIELD = os.getenv("PAYME_AMOUNT_FIELD")
 PAYME_ONE_TIME_PAYMENT = os.getenv("PAYME_ONE_TIME_PAYMENT", default="False") == "True"
 PAYME_IS_TEST_MODE = os.getenv("PAYME_IS_TEST_MODE", default="False") == "True"
+PAYME_RETURN_URL = os.getenv("PAYME_RETURN_URL", default="https://relieved-pika-perfect.ngrok-free.app")
 
 # URLs
 BACKEND_URL = os.environ.get("BACKEND_URL", default="http://localhost:8000")

@@ -29,6 +29,8 @@ class CheckoutSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(choices=enums.ProviderTypes.choices(), default=enums.ProviderTypes.PAYME.value)
 
     def validate_payment_method(self, value):
-        if value not in enums.ProviderTypes.choices():
-            raise_validation_error(_("Invalid payment method"))
+        logger.debug(f"Validating payment method: {value}")
+        logger.info(f"Available payment methods: {enums.ProviderTypes.values()}")
+        if value not in enums.ProviderTypes.values():
+            raise_validation_error(message=_("Invalid payment method"))
         return value

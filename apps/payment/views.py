@@ -68,6 +68,7 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
 
         user: User = request.user
         payment_method: str = t.cast(str, serializer.validated_data.get("payment_method"))
+        logger.info(f"Payment method: {payment_method}")
 
         transaction: Transaction = Transaction.objects.create(
             user=user,
@@ -89,7 +90,7 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
                 "payment_link": payment_link,
                 "transaction_id": transaction.id
             },
-            status=status.HTTP_201_CREATED
+            code=status.HTTP_201_CREATED
         )
 
 
@@ -97,6 +98,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
     """
     A webhook view for Payme.
     """
+    permission_classes = (permissions.AllowAny,)
 
     def post(self, request, *args, **kwargs):
         """
@@ -110,6 +112,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
         - internal_transaction_id
         - expected_amount
         """
+        logger.info(f"Received Payme webhook!")  # LOGGING
         self.check_authorize(request)
 
         payme_methods = {
@@ -156,6 +159,10 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
             message = "Invalid merchant key format in authentication credentials"
             raise exceptions.PermissionDenied(message) from exc
 
+        if settings.PAYME_IS_TEST_MODE:
+            if payme_key != settings.PAYME_TEST_KEY:
+                raise exceptions.PermissionDenied("Invalid merchant key specified")
+
         if payme_key != settings.PAYME_KEY:
             raise exceptions.PermissionDenied("Invalid merchant key specified")
 
@@ -196,7 +203,9 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
         """
         Handle pre_create_transaction action.
         """
+        logger.info(f"Checking transaction for params: {params}")  # LOGGING
         internal_transaction = self.fetch_account(params)
+
         self.validate_amount(internal_transaction, params.get("amount", 0))
 
         result = response.CheckPerformTransaction(allow=True)

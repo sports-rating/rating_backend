@@ -10,6 +10,10 @@ class BaseEnum(Enum):
     def choices(cls):
         return [(choice.value, choice.name) for choice in cls]
 
+    @classmethod
+    def values(cls):
+        return [choice.value for choice in cls]
+
 
 class SportsChoices(BaseEnum):
     FOOTBALL = "football"
