@@ -99,11 +99,10 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
         )
 
 
-class PaymeWebhookAPIView(generics.GenericAPIView):
+class PaymeWebhookAPIView(APIView):
     """
     A webhook view for Payme.
     """
-    serializer_class = None
     authentication_classes = []
     permission_classes = (permissions.AllowAny,)
 
