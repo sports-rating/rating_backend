@@ -52,7 +52,7 @@ from apps.shared.utils import enums
 
 from apps.shared.services.payme import payme
 
-RESULT_REQUEST_AMOUNT = 20000  # sum
+RESULT_REQUEST_AMOUNT = settings.RESULT_REQUEST_AMOUNT
 
 
 class CreateCheckoutAPIView(generics.GenericAPIView):
@@ -297,6 +297,7 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
             return result.as_resp()
 
         internal_transaction.mark_as_performed()
+
         # Mark user profile is_result_paid = True
         user = internal_transaction.user
         if user and user.sportsman_profile:
@@ -340,6 +341,12 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
                 cancel_reason=params["reason"],
                 state=Transaction.CANCELLED_DURING_INIT
             )
+
+        # Mark user profile is_result_paid = False, because of cancellation
+        user = internal_transaction.user
+        if user and user.sportsman_profile:
+            user.sportsman_profile.is_result_paid = False
+            user.sportsman_profile.save(update_fields=["is_result_paid"])
 
         result = response.CancelTransaction(
             transaction=internal_transaction.transaction_id,

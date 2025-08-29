@@ -273,7 +273,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             "statistics",
             "send_request"
         ]
-        read_only_fields = ["is_sportsman_verified", "statistics"]
+        read_only_fields = ["is_sportsman_verified", "is_result_paid", "statistics"]
 
     def validate(self, attrs: dict) -> dict:
         height = attrs.get("height", None)

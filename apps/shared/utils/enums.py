@@ -118,6 +118,7 @@ class TransactionStatus(BaseEnum):
     CANCELED = "canceled"
     TIMEOUT = "timeout"
 
+
 class TransactionTypes(BaseEnum):
     RESULT_REQUEST = "result_request"
     SUBSCRIPTION_SPORTSMAN = "subscription_sportsman"

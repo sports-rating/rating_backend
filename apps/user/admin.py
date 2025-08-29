@@ -120,6 +120,7 @@ class SportsmanAdmin(admin.ModelAdmin):
                     "sport_rank",
                     "points",
                     "bio",
+                    "is_result_paid",
                 )
             },
         ),

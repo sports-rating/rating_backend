@@ -462,6 +462,9 @@ PAYME_ONE_TIME_PAYMENT = os.getenv("PAYME_ONE_TIME_PAYMENT", default="False") ==
 PAYME_IS_TEST_MODE = os.getenv("PAYME_IS_TEST_MODE", default="False") == "True"
 PAYME_RETURN_URL = os.getenv("PAYME_RETURN_URL", default="https://relieved-pika-perfect.ngrok-free.app")
 
+# Payment amounts
+RESULT_REQUEST_AMOUNT = 2  # sum
+
 # URLs
 BACKEND_URL = os.environ.get("BACKEND_URL", default="http://localhost:8000")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", default="http://localhost:5173")
