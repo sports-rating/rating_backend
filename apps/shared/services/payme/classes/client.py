@@ -37,7 +37,6 @@ class Payme:
 
         params = base64.b64encode(params.encode("utf-8")).decode("utf-8")
 
-
         if self.is_test_mode:
             return f"https://test.paycom.uz/{params}"
 
