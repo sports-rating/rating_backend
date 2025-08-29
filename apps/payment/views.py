@@ -388,7 +388,13 @@ class PaymeWebhookAPIView(APIView):
         date_range = [time_to_service(params['from']), time_to_service(params['to'])]
 
         internal_transactions = Transaction.objects.filter(
-            created_time__range=date_range
+            created_time__range=date_range,
+            payme_state__in=[
+                Transaction.INITIATING,
+                Transaction.SUCCESSFULLY,
+                Transaction.CANCELLED,
+                Transaction.CANCELLED_DURING_INIT
+            ]
         ).order_by('-created_time')
 
         result = response.GetStatement(transactions=[])
@@ -396,6 +402,8 @@ class PaymeWebhookAPIView(APIView):
         for transaction in internal_transactions:
             logger.info(f"transaction_id: {transaction.transaction_id}")  # LOGGING
             result.transactions.append({
+                "id": transaction.transaction_id,
+                "time": time_to_payme(transaction.created_time),
                 "transaction": transaction.transaction_id,
                 "amount": int(transaction.amount * 100),
                 "account": {
@@ -403,7 +411,7 @@ class PaymeWebhookAPIView(APIView):
                 },
                 "reason": transaction.cancel_reason,
                 "state": transaction.payme_state,
-                "created_time": time_to_payme(transaction.created_time),
+                "create_time": time_to_payme(transaction.created_time),
                 "perform_time": time_to_payme(transaction.performed_time),
                 "cancel_time": time_to_payme(transaction.cancelled_time),
             })
