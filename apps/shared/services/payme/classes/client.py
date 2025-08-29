@@ -48,4 +48,5 @@ payme = Payme(
     is_test_mode=settings.PAYME_IS_TEST_MODE,
 )
 
+
 __all__ = ("payme",)
