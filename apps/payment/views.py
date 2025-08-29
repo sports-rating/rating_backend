@@ -62,6 +62,11 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
     serializer_class = CheckoutSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
     def post(self, request: Request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -292,6 +297,11 @@ class PaymeWebhookAPIView(generics.GenericAPIView):
             return result.as_resp()
 
         internal_transaction.mark_as_performed()
+        # Mark user profile is_result_paid = True
+        user = internal_transaction.user
+        if user and user.sportsman_profile:
+            user.sportsman_profile.is_result_paid = True
+            user.sportsman_profile.save(update_fields=["is_result_paid"])
 
         result = response.PerformTransaction(
             transaction=internal_transaction.transaction_id,

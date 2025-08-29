@@ -269,6 +269,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             "message",
             "social_media",
             "is_sportsman_verified",
+            "is_result_paid",
             "statistics",
             "send_request"
         ]

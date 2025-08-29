@@ -25,7 +25,7 @@ from apps.shared.utils import enums
 from apps.payment.models import Transaction
 
 
-class CheckoutSerializer(serializers.Serializer):
+class CheckoutSerializer(RequestContextMixin, serializers.Serializer):
     payment_method = serializers.ChoiceField(choices=enums.ProviderTypes.choices(), default=enums.ProviderTypes.PAYME.value)
 
     def validate_payment_method(self, value):
@@ -34,3 +34,12 @@ class CheckoutSerializer(serializers.Serializer):
         if value not in enums.ProviderTypes.values():
             raise_validation_error(message=_("Invalid payment method"))
         return value
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        if not user.sportsman_profile:
+            raise_validation_error(message=_("User does not have a sportsman profile!"))
+
+        if not user.sportsman_profile.is_sportsman_verified:
+            raise_validation_error(message=_("Sportsman is not verified!"))
+        return attrs
