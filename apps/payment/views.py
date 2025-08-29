@@ -140,6 +140,7 @@ class PaymeWebhookAPIView(APIView):
 
         if method in payme_methods:
             result = payme_methods[method](params)
+            logger.info(f"Payme method {method} processed with result: {result}")  # LOGGING
             return Response(result)
 
         raise exceptions.MethodNotFound("Method not supported yet!")
@@ -226,7 +227,7 @@ class PaymeWebhookAPIView(APIView):
         external_transaction_id = params["id"]
         received_amount = Decimal(params.get("amount", 0))
         draft_tx = self.fetch_account(params)
-        logger.info(f"Draft Transaction: {draft_tx}")  # LOGGING
+        # logger.info(f"Draft Transaction: {draft_tx}")  # LOGGING
 
         self.validate_amount(draft_tx, received_amount)
 
@@ -236,11 +237,13 @@ class PaymeWebhookAPIView(APIView):
         existing_tx = Transaction.objects.filter(transaction_id=external_transaction_id).first()
         if existing_tx:
             logger.info(f"Transaction {external_transaction_id} already exists (Payme).")
-            return response.CreateTransaction(
+            result = response.CreateTransaction(
                 transaction=existing_tx.transaction_id,
                 state=existing_tx.payme_state,
                 create_time=time_to_payme(existing_tx.created_time),
             ).as_resp()
+            # logger.info(f"Transaction already exists: {result}")  # LOGGING
+            return result
 
         # Handle draft logic
         if settings.PAYME_ONE_TIME_PAYMENT:
@@ -278,7 +281,7 @@ class PaymeWebhookAPIView(APIView):
 
         # callback event
         self.handle_created_payment(params, result)
-
+        # logger.info(f"Transaction created: {result}")  # LOGGING
         return result
 
     @exceptions.handle_exceptions
@@ -293,8 +296,9 @@ class PaymeWebhookAPIView(APIView):
                 transaction=internal_transaction.transaction_id,
                 state=internal_transaction.payme_state,
                 perform_time=time_to_payme(internal_transaction.performed_time),
-            )
-            return result.as_resp()
+            ).as_resp()
+            logger.info(f"Transaction already performed: {result}")  # LOGGING
+            return result
 
         internal_transaction.mark_as_performed()
 
@@ -313,7 +317,7 @@ class PaymeWebhookAPIView(APIView):
 
         # callback successful payment
         self.handle_successful_payment(params, result)
-
+        # logger.info(f"Payment successful: {result}")  # LOGGING
         return result
 
     @exceptions.handle_exceptions
@@ -390,9 +394,10 @@ class PaymeWebhookAPIView(APIView):
         result = response.GetStatement(transactions=[])
 
         for transaction in internal_transactions:
+            logger.info(f"transaction_id: {transaction.transaction_id}")  # LOGGING
             result.transactions.append({
                 "transaction": transaction.transaction_id,
-                "amount": transaction.amount,
+                "amount": int(transaction.amount * 100),
                 "account": {
                     settings.PAYME_ACCOUNT_FIELD: transaction.id
                 },
