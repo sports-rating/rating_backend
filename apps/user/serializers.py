@@ -240,6 +240,8 @@ class SportsmanListSerializer(serializers.ModelSerializer):
         if instance.sportsman_profile.trainer:
             data["trainer_id"] = instance.sportsman_profile.trainer.user_id
             data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
+        if getattr(instance, "sportsman_profile", None):
+            data["points"] = instance.sportsman_profile.points
         return data
 
     def get_statistics(self, obj) -> Dict[str, Any]:
@@ -441,6 +443,8 @@ class TrainerListSerializer(serializers.ModelSerializer):
             data["sport"] = instance.trainer_profile.sport.name
             if instance.trainer_profile.sport.logo:
                 data["logo"] = get_file_full_url(instance.trainer_profile.sport.logo.url) if instance.trainer_profile.sport.logo else None
+        if getattr(instance, "trainer_profile", None):
+            data["points"] = instance.trainer_profile.points
         return data
 
     def get_statistics(self, obj) ->  List[Dict[str, Any]]:
