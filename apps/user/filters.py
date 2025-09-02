@@ -21,7 +21,8 @@ from apps.federation.models import Federation
 
 
 class SportsmanFilter(BaseFilterSet):
-    sport = filters.CharFilter(method='filter_sport')
+    # sport = filters.CharFilter(method='filter_sport')
+    sport = filters.CharFilter(field_name="sportsman_profile__sport__id")
 
     class Meta:
         model = User
@@ -32,7 +33,8 @@ class SportsmanFilter(BaseFilterSet):
 
 
 class TrainerFilter(BaseFilterSet):
-    sport = filters.CharFilter(method='filter_sport')
+    # sport = filters.CharFilter(method='filter_sport')
+    sport = filters.CharFilter(field_name="trainer_profile__sport__id")
     verified = filters.BooleanFilter(field_name='trainer_profile__is_trainer_verified')
 
     class Meta:
