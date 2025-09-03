@@ -193,7 +193,7 @@ class FederationSerializer(RequestContextMixin, serializers.ModelSerializer):
                 FederationAgeGroup.objects.filter(federation=instance).exclude(age_group__id__in=left_age_groups_id).delete()
                 # Delete orphan AgeGroups (those that no longer belong to any federation)
                 AgeGroup.objects.filter(
-                    federationagegroup__isnull=True  # no federation links
+                    federation_links__isnull=True  # no federation links
                 ).delete()
         return instance
 
