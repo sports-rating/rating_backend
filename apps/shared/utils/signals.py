@@ -5,8 +5,39 @@ from django.dispatch import receiver
 from apps.shared.utils.logging import logger
 
 from apps.user.models import Sportsman, Trainer
-from apps.sport.models import Result
+from apps.sport.models import Result, Tournament
 from apps.shared.utils import enums
+
+
+def recalculate_points_for_tournament(tournament: Tournament):
+    logger.info(f"Recalculating points for tournament: {tournament.name} (ID: {tournament.id})")
+    from user.models import Sportsman, Trainer
+
+    results = Result.objects.filter(tournament=tournament, is_verified=True)
+
+    # Reset all scores
+    sportsman_scores = {}
+    trainer_scores = {}
+
+    for result in results:
+        sportsman_id = result.user.id
+        trainer_id = result.trainer.user.id if result.trainer else None
+
+        rating = result.rating
+        score = tournament.get_score(rating)
+
+        sportsman_scores[sportsman_id] = sportsman_scores.get(sportsman_id, 0) + score
+        trainer_scores[trainer_id] = trainer_scores.get(trainer_id, 0) + score
+
+    # Bulk update Sportsman
+    Sportsman.objects.filter(id__in=sportsman_scores.keys()).update(points=0)
+    for s_id, s_score in sportsman_scores.items():
+        Sportsman.objects.filter(user_id=s_id).update(points=s_score)
+
+    # Bulk update Trainer
+    Trainer.objects.filter(id__in=trainer_scores.keys()).update(points=0)
+    for t_id, t_score in trainer_scores.items():
+        Trainer.objects.filter(user_id=t_id).update(points=t_score)
 
 
 # -----------------------

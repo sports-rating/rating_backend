@@ -140,6 +140,7 @@ class FederationSerializer(RequestContextMixin, serializers.ModelSerializer):
         admin_users: QuerySet[User] = User.objects.filter(user_role__in=[enums.UserRoles.ADMIN.value, enums.UserRoles.SUPER_ADMIN.value])
         sports = validated_data.pop("sports", [])
         documents = validated_data.pop("documents", [])
+        validated_data.pop("users", None)  # we will set users after creation
 
         with transaction.atomic():
             federation: Federation = Federation.objects.create(**validated_data)
