@@ -127,7 +127,6 @@ class AgeGroup(BaseModel):
             models.Index(fields=['name']),
             models.Index(fields=['gender'])
         ]
-        unique_together = ('name', 'sport')
         verbose_name = "Age Group"
         verbose_name_plural = "Age Groups"
 
