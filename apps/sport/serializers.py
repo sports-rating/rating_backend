@@ -39,6 +39,7 @@ from apps.user.models import (
 from apps.dashboard.serializers import (
     UserListSerializer
 )
+from apps.user.tasks import recalculate_user_points_task
 
 
 class SportSerializer(serializers.ModelSerializer):
@@ -154,6 +155,9 @@ class TournamentSerializer(serializers.ModelSerializer):
 
                 # Delete scoring policies that are no longer present
                 ScoringPolicy.objects.filter(tournament=instance).exclude(id__in=left_scoring_policies_id).delete()
+
+        # Recalculate user points asynchronously
+        recalculate_user_points_task.delay(instance.id)
         return instance
 
     def to_representation(self, instance):
