@@ -350,6 +350,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             "id": instance.trainer.user_id,
             "name": f'{instance.trainer.user}',
             "sport": instance.trainer.sport.name if instance.trainer.sport else None,
+            "full_name": instance.trainer.user.full_name,
         } if instance.trainer else None
         data["federation"] = {
             "id": instance.trainer.federation.id,
