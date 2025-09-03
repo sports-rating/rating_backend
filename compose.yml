@@ -37,6 +37,11 @@ services:
     env_file: .env
     command: celery -A config beat --loglevel=info
     restart: unless-stopped
+    networks:
+      - backend
+    depends_on:
+      - redis
+      - postgres
 
   celery_worker:
     build:
@@ -45,6 +50,11 @@ services:
     env_file: .env
     command: celery -A config worker --loglevel=info
     restart: unless-stopped
+    networks:
+      - backend
+    depends_on:
+      - redis
+      - postgres
 
   redis:
     expose:
