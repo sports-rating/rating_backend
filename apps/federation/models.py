@@ -104,12 +104,26 @@ class FederationDocument(BaseMedia):
 
 
 class AgeGroup(BaseModel):
+    MAX = "-"
+    MIN = "+"
+
+    AGE_SIGN_CHOICES = [
+        (MAX, "(-) Max age (≤)"),
+        (MIN, "(+) Min age (≥)"),
+    ]
+
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='age_groups')
     name = models.CharField(max_length=255)
     age = models.PositiveIntegerField(
         validators=[MinValueValidator(0)],
         default=0,
         help_text="Exact age for this age group"
+    )
+    sign = models.CharField(
+        max_length=2,
+        choices=AGE_SIGN_CHOICES,
+        default=MAX,
+        help_text="Interpretation of age"
     )
     weights = models.JSONField(
         default=list,

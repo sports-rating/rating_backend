@@ -53,12 +53,19 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "name",
             "sport",
             "age",
+            "sign",
             "weights",
             "gender",
             "created_time"
         )
-        validators: list = []
 
+    def to_representation(self, instance: AgeGroup) -> dict:
+        data = super().to_representation(instance)
+        if instance.sign == AgeGroup.MAX:
+            data["name"] = data['name']
+        elif instance.sign == AgeGroup.MIN:
+            data["name"] = f"+{data['name'].split('-')[-1]}"
+        return data
 
 class FederationDocumentSerializer(serializers.ModelSerializer):
     class Meta:
