@@ -30,6 +30,22 @@ services:
     networks:
       - backend
 
+  celery_beat:
+    build:
+      dockerfile: deployment/Dockerfile
+      context: .
+    env_file: .env
+    command: celery -A config beat --loglevel=info
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      dockerfile: deployment/Dockerfile
+      context: .
+    env_file: .env
+    command: celery -A config worker --loglevel=info
+    restart: unless-stopped
+
   redis:
     expose:
       - 6379
