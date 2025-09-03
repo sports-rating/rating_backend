@@ -11,19 +11,16 @@ from apps.shared.services.scoring_service import ScoringService
 from apps.user.tasks import recalculate_user_points_task
 
 
-# @receiver(post_delete, sender=ScoringPolicy)
+# -----------------------
+# Scoring Policy Change → pre_save
+# -----------------------
 @receiver(pre_save, sender=ScoringPolicy)
 def handle_scoring_policy_change(sender, instance, **kwargs):
     recalculate_user_points_task.delay(instance.tournament.id)
 
 
-# @receiver(pre_save, sender=Tournament)
-# def handle_tournament_update(sender, instance, **kwargs):
-#     recalculate_user_points_task.delay(instance.id)
-
-
 # -----------------------
-# CREATE → post_save
+# Result CREATE → post_save
 # -----------------------
 @receiver(post_save, sender=Result)
 def handle_result_creation(sender, instance, created, **kwargs):
@@ -45,41 +42,7 @@ def handle_result_creation(sender, instance, created, **kwargs):
 
 
 # -----------------------
-# UPDATE → pre_save
-# -----------------------
-@receiver(pre_save, sender=Result)
-def handle_result_update(sender, instance, **kwargs):
-    if not instance.pk:
-        # Skip new objects (handled by post_save)
-        return
-
-    try:
-        old_instance = Result.objects.get(pk=instance.pk)
-    except Result.DoesNotExist:
-        return
-
-    if not instance.trainer or not instance.user:
-        return
-
-    if not instance.is_verified:
-        logger.info(f"Skipping update for {instance} because result is not verified yet")
-        return
-
-    trainer_profile = instance.trainer
-    tournament = instance.tournament
-
-    old_rating = int(old_instance.rating)
-    new_rating = int(instance.rating)
-
-    if (not old_instance.is_verified and instance.is_verified) or (old_instance.rating != instance.rating):
-        logger.info(f"Old rating: {old_rating}, New rating: {new_rating}")
-        if old_rating:
-            _decrement_trainer_result(trainer_profile.user, tournament, old_rating)
-        _increment_trainer_result(trainer_profile.user, tournament, new_rating, instance)
-
-
-# -----------------------
-# DELETE → pre_delete
+# Result DELETE → pre_delete
 # -----------------------
 @receiver(pre_delete, sender=Result)
 def update_or_delete_trainer_result(sender, instance, **kwargs):
@@ -167,31 +130,63 @@ def _decrement_trainer_result(trainer_user, tournament, rating):
 
     trainer_result.save()
 
-    ScoringService.update_trainer_points(trainer_user, tournament, rating)
+
+# # -- Calculate Trainer Points --
+# def _calculate_trainer_points(trainer_user):
+#     """
+#     Calculates and updates the trainer's average points based on the tournament and rating.
+#     """
+#     qs = trainer_user.trainer_profile.sportsmen.all()
+#     result = qs.aggregate(total_points=Sum('points'), count=Count('user_id'))
+
+#     total_points = result["total_points"] or 0
+#     count = result["count"] or 0
+
+#     trainer_user.trainer_profile.points = (
+#         total_points / count if count > 0 else 0
+#     )
+
+#     # all_scores = sum(
+#     #     (s.points or 0) for s in trainer_user.trainer_profile.sportsmen.all()
+#     # )
+#     # sportsmans_count = trainer_user.trainer_profile.sportsmen.count()
+
+#     # trainer_user.trainer_profile.points = (
+#     #     all_scores / sportsmans_count if sportsmans_count > 0 else 0
+#     # )
+
+#     trainer_user.trainer_profile.save(update_fields=["points"])
 
 
-# -- Calculate Trainer Points --
-def _calculate_trainer_points(trainer_user):
-    """
-    Calculates and updates the trainer's average points based on the tournament and rating.
-    """
-    qs = trainer_user.trainer_profile.sportsmen.all()
-    result = qs.aggregate(total_points=Sum('points'), count=Count('user_id'))
+# # -----------------------
+# # UPDATE → pre_save
+# # -----------------------
+# @receiver(pre_save, sender=Result)
+# def handle_result_update(sender, instance, **kwargs):
+#     if not instance.pk:
+#         # Skip new objects (handled by post_save)
+#         return
 
-    total_points = result["total_points"] or 0
-    count = result["count"] or 0
+#     try:
+#         old_instance = Result.objects.get(pk=instance.pk)
+#     except Result.DoesNotExist:
+#         return
 
-    trainer_user.trainer_profile.points = (
-        total_points / count if count > 0 else 0
-    )
+#     if not instance.trainer or not instance.user:
+#         return
 
-    # all_scores = sum(
-    #     (s.points or 0) for s in trainer_user.trainer_profile.sportsmen.all()
-    # )
-    # sportsmans_count = trainer_user.trainer_profile.sportsmen.count()
+#     if not instance.is_verified:
+#         logger.info(f"Skipping update for {instance} because result is not verified yet")
+#         return
 
-    # trainer_user.trainer_profile.points = (
-    #     all_scores / sportsmans_count if sportsmans_count > 0 else 0
-    # )
+#     trainer_profile = instance.trainer
+#     tournament = instance.tournament
 
-    trainer_user.trainer_profile.save(update_fields=["points"])
+#     old_rating = int(old_instance.rating)
+#     new_rating = int(instance.rating)
+
+#     if (not old_instance.is_verified and instance.is_verified) or (old_instance.rating != instance.rating):
+#         logger.info(f"Old rating: {old_rating}, New rating: {new_rating}")
+#         if old_rating:
+#             _decrement_trainer_result(trainer_profile.user, tournament, old_rating)
+#         _increment_trainer_result(trainer_profile.user, tournament, new_rating, instance)

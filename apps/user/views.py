@@ -56,6 +56,7 @@ from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
 from apps.shared.utils import enums
 from apps.shared.utils.permissions import IsAdminOrSuperAdmin
+from apps.user.tasks import recalculate_user_points_task
 
 
 redis_connection = get_redis_connection()
@@ -540,7 +541,11 @@ class SportsmanResultRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyA
 
     def delete(self, request, *args, **kwargs):
         result = self.get_object()
+        tournament_id = result.tournament.id
         result.delete()
+
+        # Recalculate user points asynchronously
+        recalculate_user_points_task.delay(tournament_id)
         return success_response(
             message=_("Sportsman Result deleted successfully"),
             code=status.HTTP_204_NO_CONTENT
