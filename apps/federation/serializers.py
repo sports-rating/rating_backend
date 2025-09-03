@@ -6,7 +6,7 @@ from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
 from django.contrib.auth.models import update_last_login
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, QuerySet
 from django.conf import settings
 
 from rest_framework import serializers
@@ -41,6 +41,7 @@ from apps.dashboard.serializers import (
     UserListSerializer
 )
 from apps.sport.serializers import SportSerializer
+from apps.shared.utils import enums
 
 
 class AgeGroupSerializer(serializers.ModelSerializer):
@@ -136,16 +137,15 @@ class FederationSerializer(RequestContextMixin, serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> Federation:
         age_groups_data = validated_data.pop("age_groups", [])
-        user: User = self.request.user  # type: ignore
-        users = validated_data.pop("users", [])
-
+        admin_users: QuerySet[User] = User.objects.filter(user_role__in=[enums.UserRoles.ADMIN.value, enums.UserRoles.SUPER_ADMIN.value])
         sports = validated_data.pop("sports", [])
         documents = validated_data.pop("documents", [])
+
         with transaction.atomic():
             federation: Federation = Federation.objects.create(**validated_data)
             for doc in documents:
                 FederationDocument.objects.create(federation=federation, **doc).save()
-            federation.users.set([user])
+            federation.users.set(admin_users)
             federation.sports.set(sports)
             for age_group_data in age_groups_data:
                 age_group = AgeGroup.objects.create(**age_group_data)
