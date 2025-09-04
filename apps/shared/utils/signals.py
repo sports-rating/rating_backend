@@ -16,16 +16,17 @@ from apps.user.tasks import recalculate_user_points_task
 # -----------------------
 @receiver(pre_save, sender=ScoringPolicy)
 def handle_scoring_policy_change(sender, instance, **kwargs):
-    recalculate_user_points_task.delay(instance.tournament.id)
-
+    # recalculate_user_points_task.delay(instance.tournament.id)
+    ScoringService.recalculate_points_for_tournament(instance.tournament.id)
 
 # -----------------------
 # Result CREATE → post_save
 # -----------------------
 @receiver(post_save, sender=Result)
 def handle_result_creation(sender, instance, created, **kwargs):
-    if not created:
-        return
+    # if not created:
+    #     return
+    logger.info(f"Signal triggered for {instance.id} - {instance.is_verified} with created={created}")
 
     if not instance.trainer or not instance.user:
         return
@@ -33,7 +34,6 @@ def handle_result_creation(sender, instance, created, **kwargs):
     if not instance.is_verified:
         logger.info(f"Skipping creation for {instance} because result is not verified yet")
         return
-    logger.info(f"Signal triggered for {instance} with created={created}")
     trainer_profile = instance.trainer
     tournament = instance.tournament
 
@@ -106,9 +106,12 @@ def _increment_trainer_result(trainer_user, tournament, rating, sportsman_result
     elif rating == 3:
         trainer_result.bronze += 1
 
+    # disable signal → save → re-enable
+    post_save.disconnect(handle_result_creation, sender=Result)
     trainer_result.save()
+    post_save.connect(handle_result_creation, sender=Result)
 
-    ScoringService.update_trainer_points(trainer_user, tournament, rating)
+    # ScoringService.update_trainer_points(trainer_user, tournament, rating)
 
 # -- Decrement Trainer Result --
 def _decrement_trainer_result(trainer_user, tournament, rating):
@@ -128,8 +131,9 @@ def _decrement_trainer_result(trainer_user, tournament, rating):
     elif rating == 3 and trainer_result.bronze > 0:
         trainer_result.bronze -= 1
 
+    post_save.disconnect(handle_result_creation, sender=Result)
     trainer_result.save()
-
+    post_save.connect(handle_result_creation, sender=Result)
 
 # # -- Calculate Trainer Points --
 # def _calculate_trainer_points(trainer_user):

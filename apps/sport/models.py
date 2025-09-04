@@ -143,7 +143,7 @@ class Result(BaseModel):
         db_table = "result"
         ordering = ["-created_time"]
 
-    repr_fields = ("tournament", "year")
+    repr_fields = ("tournament", "is_verified")
 
 
 class Team(BaseModel):

@@ -9,19 +9,34 @@ from apps.sport.models import Result, Tournament
 
 
 class ScoringService:
+
     @staticmethod
-    def update_sportsman_points(sportsman, instance, tournament, rating):
+    def update_points(sportsman, old_rating, new_rating, tournament):
+        """
+        Update points for both sportsman and their trainer when result is created or updated.
+        """
+        ScoringService.update_sportsman_points(sportsman, old_rating, new_rating, tournament)
+
+        sportsman_profile = sportsman.sportsman_profile
+        trainer_profile = sportsman_profile.trainer
+
+        if trainer_profile:
+            logger.info(f"Updating trainer points for {trainer_profile.user.username}")
+            ScoringService.update_trainer_points(trainer_profile.user, tournament, new_rating)
+
+    @staticmethod
+    def update_sportsman_points(sportsman, old_rating, new_rating, tournament):
         """
         Update sportsman's points when result is firstly created.
         Subtracts old score and adds new score.
         """
         # --- Step 1: old score ---
-        old_score = instance.tournament.get_score(instance.rating)
+        old_score = tournament.get_score(old_rating)
         logger.info(f"Old score: {old_score}")  # LOGGING
 
         # --- Step 2: new score ---
-        logger.info(f"Rating: {rating}")  # LOGGING
-        new_score = tournament.get_score(rating)
+        logger.info(f"Rating: {new_rating}")  # LOGGING
+        new_score = tournament.get_score(new_rating)
         logger.info(f"New score: {new_score}")  # LOGGING
 
         sportsman.sportsman_profile.points = F("points") - old_score + new_score
@@ -46,6 +61,7 @@ class ScoringService:
         trainer.trainer_profile.points = (
             total_points / count if count > 0 else 0
         )
+        logger.info(f"Updated points for trainer {trainer}: {trainer.trainer_profile.points}")  # LOGGING
         trainer.trainer_profile.save(update_fields=['points'])
 
     @staticmethod

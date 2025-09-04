@@ -297,11 +297,11 @@ class UserRequestService:
                 requested_rating: str | None = new_data.get("rating")
                 logger.info(f"Requested rating: {requested_rating}")  # LOGGING
                 if requested_rating:
-                    ScoringService.update_sportsman_points(
+                    ScoringService.update_points(
                         sportsman=sender,
-                        instance=sportsman_result,
+                        old_rating=sportsman_result.rating,
                         tournament=sportsman_result.tournament,
-                        rating=requested_rating
+                        new_rating=requested_rating
                     )
 
                 # --- APPLY SNAPSHOT FIELDS ---
