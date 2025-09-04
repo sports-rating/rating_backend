@@ -2,7 +2,8 @@ from uuid import UUID
 
 from django.utils.translation import gettext_lazy as _
 from django.db.models import F, Count, Sum
-
+from django.db import transaction
+from collections import defaultdict
 
 from apps.shared.utils.logging import logger
 from apps.sport.models import Result, Tournament
@@ -67,51 +68,65 @@ class ScoringService:
     @staticmethod
     def recalculate_points_for_tournament(tournament_id: UUID) -> None:
         """
-        Recalculates points for all sportsmen and their trainers in a tournament.
-        Trainer points = average of their sportsmen's points.
+        Recalculate points for sportsmen who have results in the given tournament.
+        For each impacted sportsman, recompute their TOTAL points across ALL tournaments.
+        Then recompute points for their trainers (average of sportsmen points).
         """
-        tournament: Tournament = Tournament.objects.filter(id=tournament_id).first()
-        logger.info(f"Recalculating points for tournament: {tournament.name} (ID: {tournament.id})")
         from apps.user.models import Sportsman, Trainer
+        from apps.sport.models import Result, Tournament  # adjust import paths
 
-        results = Result.objects.filter(tournament=tournament, is_verified=True)
-
-        sportsman_scores: dict[int, int] = {}   # {sportsman_user_id: points}
-        trainer_sportsmen: dict[int, list[int]] = {}  # {trainer_user_id: [sportsman_user_id, ...]}
-
-        # --- 1. Calculate sportsman scores
-        for result in results:
-            sportsman_user_id = result.user_id
-            trainer_user_id = result.trainer.user_id if result.trainer else None
-
-            score = tournament.get_score(result.rating)
-            sportsman_scores[sportsman_user_id] = sportsman_scores.get(sportsman_user_id, 0) + score
-
-            if trainer_user_id:
-                trainer_sportsmen.setdefault(trainer_user_id, []).append(sportsman_user_id)
-
-        # --- 2. Bulk update Sportsman
-        sportsmen = list(Sportsman.objects.filter(user_id__in=sportsman_scores.keys()))
-        for s in sportsmen:
-            s.points = sportsman_scores[s.user_id]
-        Sportsman.objects.bulk_update(sportsmen, ["points"])
-
-        # --- 3. Calculate trainer averages
-        trainers = (
-            Trainer.objects
-            .filter(user_id__in=trainer_sportsmen.keys())
-            .annotate(
-                total_points=Sum('sportsmen__points'),
-                count=Count('sportsmen__user_id')
+        with transaction.atomic():
+            # 1) Who is impacted by this tournament's policy change?
+            impacted_user_ids = list(
+                Result.objects
+                    .filter(tournament_id=tournament_id, is_verified=True)
+                    .values_list("user_id", flat=True)
+                    .distinct()
             )
-        )
+            if not impacted_user_ids:
+                return
 
-        for t in trainers:
-            total = t.total_points or 0
-            count = t.count or 0
-            logger.info(f"Trainer {t.user.username} - Total Points: {total}, Count: {count}")
-            t.points = total / count if count > 0 else 0
+            # 2) Pull ALL verified results for these sportsmen (across ALL tournaments)
+            results = (
+                Result.objects
+                    .filter(user_id__in=impacted_user_ids, is_verified=True)
+                    .select_related("tournament")  # so get_score can use policy without extra queries
+            )
 
-        Trainer.objects.bulk_update(trainers, ['points'])
+            # 3) Sum points per sportsman using each result's tournament policy
+            points_by_user = defaultdict(float)
+            for r in results:
+                # tournament.get_score(r.rating) should return the configured score for that rating
+                score = r.tournament.get_score(r.rating)
+                # If your get_score returns Decimal, cast to float if you keep Sportsman.points as FloatField
+                points_by_user[r.user_id] += float(score)
 
-        logger.info(f"Recalculated {len(sportsmen)} sportsmen and {len(trainers)} trainers")
+            # 4) Bulk update Sportsman.points for impacted users
+            sportsmen = list(Sportsman.objects.filter(user_id__in=points_by_user.keys()))
+            for s in sportsmen:
+                s.points = points_by_user.get(s.user_id, 0.0)
+            Sportsman.objects.bulk_update(sportsmen, ["points"])
+
+            # 5) Recompute trainer averages ONLY for trainers of impacted sportsmen
+            trainer_ids = list(
+                Sportsman.objects
+                        .filter(user_id__in=points_by_user.keys(), trainer__isnull=False)
+                        .values_list("trainer_id", flat=True)
+                        .distinct()
+            )
+
+            if trainer_ids:
+                trainers = (
+                    Trainer.objects
+                        .filter(user_id__in=trainer_ids)
+                        .annotate(
+                            total_points=Sum("sportsmen__points"),
+                            count=Count("sportsmen__user_id"),
+                        )
+                )
+                trainers_to_update = []
+                for t in trainers:
+                    t.points = (t.total_points or 0) / (t.count or 1) if t.count else 0
+                    trainers_to_update.append(t)
+                if trainers_to_update:
+                    Trainer.objects.bulk_update(trainers_to_update, ["points"])

@@ -157,8 +157,7 @@ class TournamentSerializer(serializers.ModelSerializer):
                 # Delete scoring policies that are no longer present
                 ScoringPolicy.objects.filter(tournament=instance).exclude(id__in=left_scoring_policies_id).delete()
 
-        # Recalculate user points asynchronously
-        # recalculate_user_points_task.delay(instance.id)
+        # Recalculate user points after scoring policy changes
         ScoringService.recalculate_points_for_tournament(instance.id)
         return instance
 

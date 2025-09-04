@@ -12,11 +12,12 @@ from apps.user.tasks import recalculate_user_points_task
 
 
 # -----------------------
-# Scoring Policy Change → pre_save
+# Scoring Policy Change → post_save
 # -----------------------
-@receiver(pre_save, sender=ScoringPolicy)
+@receiver(post_save, sender=ScoringPolicy)
 def handle_scoring_policy_change(sender, instance, **kwargs):
     # recalculate_user_points_task.delay(instance.tournament.id)
+    logger.info(f"{instance.score} for position {instance.position} in {instance.tournament.name} changed.")
     ScoringService.recalculate_points_for_tournament(instance.tournament.id)
 
 # -----------------------
