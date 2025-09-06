@@ -1,4 +1,5 @@
 import typing as t
+import re
 
 from uuid import UUID
 
@@ -47,26 +48,54 @@ from apps.shared.utils import enums
 class AgeGroupSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(required=False)
 
+    PATTERN_1 = "U-17"
+    PATTERN_2 = "+45"
+    PATTERN_3 = "U-18-35"
+
     class Meta:
         model = AgeGroup
         fields = (
             "id",
             "name",
             "sport",
-            "age",
-            "sign",
+            "min_age",
+            "max_age",
             "weights",
             "gender",
             "created_time"
         )
 
-    def to_representation(self, instance: AgeGroup) -> dict:
-        data = super().to_representation(instance)
-        if instance.sign == AgeGroup.MAX:
-            data["name"] = data['name']
-        elif instance.sign == AgeGroup.MIN:
-            data["name"] = f"+{data['name'].split('-')[-1]}"
-        return data
+    def validate(self, attrs):
+        """
+        Parse `name` into min_age and max_age:
+        - U-17
+        - +45
+        - U-17-45
+        """
+        name = attrs.get("name", "")
+
+        # Match patterns like U-17, U-17-45, +45
+        u_match = re.match(r'^U-(\d+)(?:-(\d+))?$', name)
+        plus_match = re.match(r'^\+(\d+)$', name)
+
+        logger.info(f"U-match: {u_match}, Plus-match: {plus_match}")
+
+        if u_match:
+            attrs["max_age"] = int(u_match.group(1))
+            if u_match.group(2):
+                attrs["min_age"] = int(u_match.group(1))
+                attrs["max_age"] = int(u_match.group(2))
+            else:
+                attrs["min_age"] = None
+
+        elif plus_match:
+            attrs["min_age"] = int(plus_match.group(1))
+            attrs["max_age"] = None
+
+        else:
+            raise_validation_error(message=_(f"Invalid age group name format. Use {self.PATTERN_1}, {self.PATTERN_3}, or {self.PATTERN_2}."))
+        return attrs
+
 
 class FederationDocumentSerializer(serializers.ModelSerializer):
     class Meta:

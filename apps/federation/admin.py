@@ -50,6 +50,6 @@ class FederationAdmin(admin.ModelAdmin):
 
 @admin.register(AgeGroup)
 class AgeGroupAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "sport", "age"]
+    list_display = ["id", "name", "sport", "min_age", "max_age"]
     search_fields = ["name", "sport__name"]
     list_filter = ["sport"]
