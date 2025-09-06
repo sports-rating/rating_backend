@@ -25,20 +25,36 @@ class School(BaseModel):
     address = models.JSONField() # address, district, region,...
     type = models.CharField(max_length=50, choices=SchoolChoices.choices(), default=SchoolChoices.ORDINARY.value)
     sports = models.ManyToManyField(Sport, related_name='schools')
+    # federation = models.ForeignKey(
+    #     "federation.Federation",
+    #     on_delete=models.SET_NULL,
+    #     related_name="federation_schools",
+    #     blank=True,
+    #     null=True
+    # )
+    # trainers = models.ManyToManyField(
+    #     User,
+    #     related_name="trainer_schools",
+    #     blank=True
+    # ) # ?
 
     class Meta:
         db_table = "school"
+        verbose_name = "School"
+        verbose_name_plural = "Schools"
 
     repr_fields = ("name", "phone_number")
 
 
 class Education(BaseModel):
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
+    # TODO:CoderB7 remove start_year and end_year
     start_year = models.DateField()
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)
 
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
+    # trainer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="trainer_educations", blank=True, null=True) # ?
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
 
     class Meta:

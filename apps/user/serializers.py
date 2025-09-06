@@ -357,6 +357,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             "name": instance.trainer.federation.name,
             "logo": get_file_full_url(instance.trainer.federation.logo.url) if instance.trainer.federation.logo else None
         } if instance.trainer and instance.trainer.federation else None
+        data["sport_rank"] = _(instance.sport_rank) if instance.sport_rank else None
         return data
 
     # ----------------------------
