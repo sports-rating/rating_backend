@@ -94,6 +94,12 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
                 amount=transaction.amount
             )
 
+        elif payment_method == "click":
+            payment_link = click.generate_payment_link(
+                id=transaction.id,
+                amount=transaction.amount
+            )
+
         return success_response(
             message=_("Successfully created payment link"),
             data={
