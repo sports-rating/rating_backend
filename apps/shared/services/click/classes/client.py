@@ -29,6 +29,15 @@ class Click:
         self.invoice_url = "https://api.click.uz/v2/merchant"
         self.payment_url = "https://my.click.uz/services/pay"
 
+    class ACTION:
+        PREPARE = '0'
+        COMPLETE = '1'
+
+        ALLOWED_ACTIONS = [
+            PREPARE,
+            COMPLETE
+        ]
+
     def _post(self, url: str, headers: dict, body: dict, timeout=10) -> dict:
         """
         Internal method to send a POST request.
@@ -109,4 +118,6 @@ click = Click(
     merchant_user_id=settings.CLICK_MERCHANT_USER_ID,
 )
 
-__all__ = ("click",)
+Action = Click.ACTION
+
+__all__ = ("click", "Action")

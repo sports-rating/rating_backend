@@ -31,9 +31,13 @@ from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.logging import logger
 
-from apps.shared.services.payme import exceptions
+from apps.shared.services.payme import exceptions as payme_exceptions
 from apps.shared.services.payme import response
 from apps.shared.services.payme.utils import time_to_payme, time_to_service
+
+from apps.shared.services.click import exceptions as click_exceptions
+from apps.shared.services.click.request import ClickRequest
+from apps.shared.services.click import Action
 
 from apps.shared.utils.utils import (
     success_response,
@@ -51,6 +55,7 @@ from apps.payment.serializers import (
 from apps.shared.utils import enums
 
 from apps.shared.services.payme import payme
+from apps.shared.services.click import click
 
 RESULT_REQUEST_AMOUNT = settings.RESULT_REQUEST_AMOUNT
 
@@ -136,14 +141,14 @@ class PaymeWebhookAPIView(APIView):
             params = request.data.get("params")
         except KeyError as exc:
             message = f"Error processing webhook: {exc}"
-            raise exceptions.InternalServiceError(message) from exc
+            raise payme_exceptions.InternalServiceError(message) from exc
 
         if method in payme_methods:
             result = payme_methods[method](params)
             logger.info(f"Payme method {method} processed with result: {result}")  # LOGGING
             return Response(result)
 
-        raise exceptions.MethodNotFound("Method not supported yet!")
+        raise payme_exceptions.MethodNotFound("Method not supported yet!")
 
     def check_authorize(self, request: Request) -> None:
         """
@@ -151,41 +156,41 @@ class PaymeWebhookAPIView(APIView):
         """
         password = request.META.get("HTTP_AUTHORIZATION")
         if not password:
-            raise exceptions.PermissionDenied("Missing authentication credentials")
+            raise payme_exceptions.PermissionDenied("Missing authentication credentials")
 
         password = password.split(" ")[1]
 
         try:
             password = base64.b64decode(password).decode("utf-8")
         except (binascii.Error, UnicodeDecodeError) as exc:
-            raise exceptions.PermissionDenied("Decoding error in authentication credentials") from exc
+            raise payme_exceptions.PermissionDenied("Decoding error in authentication credentials") from exc
 
         try:
             payme_key = password.split(':')[-1]
         except IndexError as exc:
             message = "Invalid merchant key format in authentication credentials"
-            raise exceptions.PermissionDenied(message) from exc
+            raise payme_exceptions.PermissionDenied(message) from exc
 
         if settings.PAYME_IS_TEST_MODE:
             if payme_key != settings.PAYME_TEST_KEY:
-                raise exceptions.PermissionDenied("Invalid merchant key specified")
+                raise payme_exceptions.PermissionDenied("Invalid merchant key specified")
         elif payme_key != settings.PAYME_KEY:
-            raise exceptions.PermissionDenied("Invalid merchant key specified")
+            raise payme_exceptions.PermissionDenied("Invalid merchant key specified")
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def fetch_account(self, params: dict):
         """
-        Fetch account based on settings and params.
+        Fetching internal_transaction based on internal_transaction_id
         """
         internal_transaction_id = params["account"].get(settings.PAYME_ACCOUNT_FIELD)
         if not internal_transaction_id:
-            raise exceptions.InvalidAccount("Missing account field in parameters.")
+            raise payme_exceptions.InvalidAccount("Missing account field in parameters.")
 
         internal_transaction = Transaction.objects.get(pk=internal_transaction_id)
 
         return internal_transaction
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def validate_amount(self, internal_transaction, received_amount):
         """
         Validates if the amount matches for one-time payment accounts.
@@ -198,13 +203,13 @@ class PaymeWebhookAPIView(APIView):
         received_amount = Decimal(received_amount)
         logger.info(f"Expected amount: {expected_amount}, Received amount: {received_amount}")  # LOGGING
         if expected_amount != received_amount:
-            raise exceptions.IncorrectAmount(
+            raise payme_exceptions.IncorrectAmount(
                 f"Invalid amount. Expected: {expected_amount}, received: {received_amount}"
             )
 
         return True
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def check_perform_transaction(self, params: dict) -> response.CheckPerformTransaction:
         """
         Handle pre_create_transaction action.
@@ -217,7 +222,7 @@ class PaymeWebhookAPIView(APIView):
         result = response.CheckPerformTransaction(allow=True)
         return result.as_resp()
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def create_transaction(self, params: dict) -> response.CreateTransaction:
         """
         Handle the create_transaction action.
@@ -250,7 +255,7 @@ class PaymeWebhookAPIView(APIView):
             if draft_tx.transaction_id and draft_tx.transaction_id != external_transaction_id:
                 message = f"Transaction {draft_tx.transaction_id} already exists (Payme)."
                 logger.warning(message)
-                raise exceptions.TransactionAlreadyExists(message)
+                raise payme_exceptions.TransactionAlreadyExists(message)
 
             # If draft has no Payme ID yet → update it
             if not draft_tx.transaction_id:
@@ -284,7 +289,7 @@ class PaymeWebhookAPIView(APIView):
         # logger.info(f"Transaction created: {result}")  # LOGGING
         return result
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def perform_transaction(self, params: dict) -> response.PerformTransaction:
         """
         Handle the successful payment.
@@ -320,7 +325,7 @@ class PaymeWebhookAPIView(APIView):
         # logger.info(f"Payment successful: {result}")  # LOGGING
         return result
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def cancel_transaction(self, params) -> response.CancelTransaction:
         """
         Handle the cancelled payment.
@@ -362,7 +367,7 @@ class PaymeWebhookAPIView(APIView):
 
         return result.as_resp()
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def check_transaction(self, params: dict) -> response.CheckTransaction:
         """
         Handle check transaction request.
@@ -380,7 +385,7 @@ class PaymeWebhookAPIView(APIView):
 
         return result.as_resp()
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def get_statement(self, params: dict) -> response.GetStatement:
         """
         Retrieves a statement of transactions.
@@ -418,7 +423,7 @@ class PaymeWebhookAPIView(APIView):
 
         return result.as_resp()
 
-    @exceptions.handle_exceptions
+    @payme_exceptions.handle_exceptions
     def set_fiscal_data(self, params: dict) -> response.SetFiscalData:
         """
         Set fiscal data for the given transaction.
@@ -427,13 +432,13 @@ class PaymeWebhookAPIView(APIView):
 
         fiscal_data = params.get("fiscal_data")
         if not fiscal_data:
-            raise exceptions.InvalidFiscalParams(
+            raise payme_exceptions.InvalidFiscalParams(
                 "Missing fiscal_data field in parameters."
             )
 
         fiscal_type = params.get("type")
         if not fiscal_type:
-            raise exceptions.InvalidFiscalParams(
+            raise payme_exceptions.InvalidFiscalParams(
                 f"Invalid fiscal type. Expected 'PERFORM' or 'CANCEL', got: {fiscal_type}"
             )
 
@@ -480,4 +485,109 @@ class ClickWebhookAPIView(APIView):
         """
         Handle the incoming webhook request.
         """
-        pass
+        result = None
+        logger.info(f"Received CLICK webhook: {request.POST}")
+        params: ClickRequest = self.serialize(request)
+        internal_transaction = self.fetch_transaction(params)
+
+        self.check_perform_transaction(internal_transaction, params)
+
+        if params.action == Action.PREPARE:
+            result = self.create_transaction(internal_transaction, params)
+
+        elif params.action == Action.COMPLETE:
+            result = self.perform_transaction(internal_transaction, params)
+
+        return Response(result)
+
+    def serialize(self, request: Request) -> ClickRequest:
+        """
+        Serialize request data
+        """
+        request_data = {
+            'click_trans_id': request.POST.get('click_trans_id'),
+            'service_id': request.POST.get('service_id'),
+            'click_paydoc_id': request.POST.get('click_paydoc_id'),
+            'merchant_trans_id': request.POST.get('merchant_trans_id'),
+            'amount': request.POST.get('amount'),
+            'action': request.POST.get('action'),
+            'error': request.POST.get('error'),
+            'sign_time': request.POST.get('sign_time'),
+            'sign_string': request.POST.get('sign_string'),
+            'error_note': request.POST.get('error_note'),
+            'merchant_prepare_id': request.POST.get('merchant_prepare_id'),
+        }
+
+        try:
+            request_data = ClickRequest(**request_data)
+
+            request_data.check_auth()
+            request_data.is_valid()
+
+            return request_data
+
+        except click_exceptions.errors_whitelist as exc:
+            raise exc
+
+        except Exception as exc:
+            logger.error(f"error in request data: {exc}")
+            raise click_exceptions.BadRequest("error in request from click")
+
+    def fetch_transaction(self, params: ClickRequest) -> Transaction:
+        """
+        Fetching internal_transaction based on internal_transaction_id
+        """
+        try:
+            internal_transaction_id = params.merchant_trans_id
+            return Transaction.objects.get(pk=internal_transaction_id)
+
+        except Transaction.DoesNotExist as exc:
+            raise click_exceptions.AccountNotFound("Transaction not found") from exc
+
+    def check_perform_transaction(
+        self,
+        internal_transaction: Transaction,
+        params: ClickRequest
+    ) -> None:
+        """
+        Check perform transaction with CLICK system
+        """
+        self._check_amount(internal_transaction, params)
+        self._check_duplicate_transaction(params)
+        self._check_transaction_cancelled(params)
+
+    def _check_amount(
+        self,
+        internal_transaction: Transaction,
+        params: ClickRequest
+    ) -> None:
+        """
+        Validate the received amount, considering optional commission percent.
+        """
+        received_amount = Decimal(params.amount)
+        expected_amount = internal_transaction.amount
+
+        if expected_amount != received_amount:
+            raise click_exceptions.IncorrectAmount(
+                f"Incorrect parameter amount"
+            )
+
+    def _check_duplicate_transaction(self, params: ClickRequest) -> None:
+        """
+        Check if transaction already exist
+        """
+        if Transaction.objects.filter(
+            transaction_id=params.merchant_trans_id,
+            state=Transaction.SUCCESSFULLY
+        ).exists():
+            raise click_exceptions.AlreadyPaid("Transaction already paid")
+
+    def _check_transaction_cancelled(self, params: ClickRequest) -> None:
+        """
+        Check if transaction cancelled
+        """
+        if Transaction.objects.filter(
+            transaction_id=params.merchant_trans_id,
+            state=Transaction.CANCELLED
+        ).exists() or int(params.error) < 0:
+            raise click_exceptions.TransactionCancelled("Transaction cancelled")
