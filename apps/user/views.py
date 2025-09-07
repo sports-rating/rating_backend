@@ -1,6 +1,8 @@
+import typing as t
+
 from django.utils.translation import gettext as _, get_language
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet, Model
 from fcm_django.models import FCMDevice
 
 import rest_framework_simplejwt.views as simplejwt_views
@@ -21,7 +23,8 @@ from apps.user.filters import (
     UserNotificationFilter,
     UserRequestFilter,
     DistrictFilter,
-    NeighborhoodFilter
+    NeighborhoodFilter,
+    UserMediaFilter
 )
 from apps.user.models import (
     User,
@@ -561,33 +564,37 @@ class MediaUploadView(generics.CreateAPIView):
     queryset = UserMedia.objects.all()
     serializer_class = serializers.BaseMediaSerializer
 
-    def get_queryset(self):
-        model_type = self.request.data.get("type")
-        model = self.get_model(model_type=model_type)
+    def get_queryset(self) -> QuerySet:
+        model_type: str = self.request.data.get("type")
+        model: t.Optional[t.Type[Model]] = self._get_model(model_type=model_type)
         return model.objects.all() if model else UserMedia.objects.none()
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
-        model_type = self.request.data.get("type") # user, sportcomplex #
+        model_type: str = self.request.data.get("type")  # user, sportcomplex
         if model_type:
-            context["model"] = self.get_model(model_type=model_type)
+            context["model"] = self._get_model(model_type=model_type)
         self.request.data.pop("type")
         return context
 
     def create(self, request, *args, **kwargs):
-        data = request.data
-        is_profile_photo = data.get("is_profile_photo", "false").lower() == "true"
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        self._handle_media(request, serializer)
         return success_response(
             data=serializer.data,
             message="Media uploaded successfully",
             code=200
         )
 
-    def get_model(self, model_type):
+    def _handle_media(self, request, serializer):
+        user = request.user if request.user.is_authenticated else None
+        if user.user_role == "admin" or user.user_role == "superadmin":
+            user = None
+        serializer.save(user=user)
+
+    def _get_model(self, model_type: str) -> t.Optional[t.Type[Model]]:
         """
         Returns the appropriate model based on the media type
         """
@@ -599,7 +606,7 @@ class MediaUploadView(generics.CreateAPIView):
 
 
 class MediaDeleteView(generics.DestroyAPIView):
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.IsAuthenticated,)
     queryset = UserMedia.objects.all()
     serializer_class = serializers.BaseMediaSerializer
 
@@ -862,5 +869,40 @@ class NeighborhoodListView(generics.ListAPIView):
         return success_response(
             data=response.data,
             message=_("Neighborhood list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+@extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="user_id",
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.QUERY,
+                description="Filter by user ID"
+            )
+        ]
+    )
+class UserMediaListView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = UserMedia.objects.all()
+    serializer_class = serializers.BaseMediaSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = UserMediaFilter
+
+    def get_queryset(self):
+        user = self.request.user
+        user_id = self.request.query_params.get("user_id")
+        if user.is_authenticated:
+            return self.queryset.filter(user=user)
+        elif user_id:
+            return self.queryset.filter(user__id=user_id)
+        return UserMedia.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("User media list retrieved successfully"),
             code=status.HTTP_200_OK
         )

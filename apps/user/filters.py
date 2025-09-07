@@ -10,7 +10,8 @@ from apps.user.models import (
 )
 from apps.shared.utils.enums import (
     UserRequestStatus,
-    UserRequestTypes
+    UserRequestTypes,
+    MediaChoices
 )
 from apps.shared.utils.filters import BaseFilterSet
 from apps.shared.models import (
@@ -92,3 +93,7 @@ class NeighborhoodFilter(BaseFilterSet):
     class Meta:
         model = Neighborhood
         fields = ["district", "start_created_time", "end_created_time", "start_updated_time", "end_updated_time"]
+
+
+class UserMediaFilter(BaseFilterSet):
+    media_type = filters.ChoiceFilter(choices=MediaChoices.choices())
