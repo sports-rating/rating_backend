@@ -31,6 +31,13 @@ class Transaction(BaseModel):
         (CANCELLED_DURING_INIT, "Canceled during initiation"),
     ]
 
+    CLICK_STATE = [
+        (CREATED, "Created"),
+        (INITIATING, "Initiating"),
+        (SUCCESSFULLY, "Successfully"),
+        (CANCELLED, "Canceled after successful performed"),
+    ]
+
     user = models.ForeignKey(
         "user.User", on_delete=models.CASCADE, related_name="transactions"
     )
@@ -39,7 +46,10 @@ class Transaction(BaseModel):
         max_length=50,
         choices=enums.TransactionTypes.choices(),
     )
+
     payme_state = models.IntegerField(choices=PAYME_STATE, default=CREATED)
+    click_state = models.IntegerField(choices=CLICK_STATE, default=CREATED)
+
     status = models.CharField(
         max_length=50,
         choices=enums.TransactionStatus.choices(),

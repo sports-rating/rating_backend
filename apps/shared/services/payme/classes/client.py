@@ -26,10 +26,13 @@ class Payme:
 
     def generate_payment_link(self, id: UUID, amount: float) -> str:
         """
-        Generate a payment link for a specific order.
+        Generate a payment link for Payme.
 
         This method encodes the payment parameters into a base64 string and
         constructs a URL for the Payme checkout.
+
+        :param id: The internal transaction id.
+        :param amount: The amount to be paid.
         """
         amount = amount * 100 # Convert amount to the smallest currency unit (tiyin)
         params = f"m={self.payme_id};ac.{settings.PAYME_ACCOUNT_FIELD}={id};a={amount};c={settings.PAYME_RETURN_URL}"

@@ -462,6 +462,12 @@ PAYME_ONE_TIME_PAYMENT = os.getenv("PAYME_ONE_TIME_PAYMENT", default="False") ==
 PAYME_IS_TEST_MODE = os.getenv("PAYME_IS_TEST_MODE", default="False") == "True"
 PAYME_RETURN_URL = os.getenv("PAYME_RETURN_URL", default="https://relieved-pika-perfect.ngrok-free.app")
 
+# CLICK
+CLICK_SERVICE_ID = int(os.getenv("CLICK_SERVICE_ID"))
+CLICK_MERCHANT_ID = int(os.getenv("CLICK_MERCHANT_ID"))
+CLICK_SECRET_KEY = os.getenv("CLICK_SECRET_KEY")
+CLICK_MERCHANT_USER_ID = int(os.getenv("CLICK_MERCHANT_USER_ID"))
+
 # Payment amounts
 RESULT_REQUEST_AMOUNT = 2  # sum
 

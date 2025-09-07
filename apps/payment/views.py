@@ -467,3 +467,17 @@ class PaymeWebhookAPIView(APIView):
         Handle the cancelled payment. You can override this method
         """
         print(f"Payment cancelled for this params: {params} and result: {result}")
+
+
+class ClickWebhookAPIView(APIView):
+    """
+    A webhook view for CLICK.
+    """
+    authentication_classes = []
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Handle the incoming webhook request.
+        """
+        pass
