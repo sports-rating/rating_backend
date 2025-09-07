@@ -591,3 +591,79 @@ class ClickWebhookAPIView(APIView):
             state=Transaction.CANCELLED
         ).exists() or int(params.error) < 0:
             raise click_exceptions.TransactionCancelled("Transaction cancelled")
+
+    def create_transaction(
+        self,
+        internal_transaction: Transaction,
+        params: ClickRequest
+    ) -> dict:
+        """
+        Handle the create transaction action.
+        """
+        internal_transaction = Transaction.objects.get_or_create(
+            id=internal_transaction.id,
+            amount=params.amount,
+            transaction_id=params.click_trans_id
+        )
+
+        self.created_payment(params)
+
+        return {
+            "click_trans_id": params.click_trans_id,
+            "merchant_trans_id": internal_transaction.id,
+            "merchant_prepare_id": internal_transaction.id,
+            "error": 0,
+            "error_note": "success"
+        }
+
+    def perform_transaction(
+        self,
+        internal_transaction: Transaction,
+        params: ClickRequest
+    ) -> dict:
+        state = Transaction.SUCCESSFULLY
+
+        if params.error is not None:
+            if int(params.error) < 0:
+                state = Transaction.CANCELLED
+
+        internal_transaction, _ = Transaction.objects.update_or_create(
+            id=internal_transaction.id,
+            amount=params.amount,
+            transaction_id=params.click_trans_id,
+            state=state
+        )
+
+        # callback event
+        if state == Transaction.SUCCESSFULLY:
+            self.successfully_payment(params)
+
+        elif state == Transaction.CANCELLED:
+            self.cancelled_payment(params)
+
+        return {
+            "click_trans_id": params.click_trans_id,
+            "merchant_trans_id": internal_transaction.id,
+            "merchant_prepare_id": internal_transaction.id,
+            "error": params.error,
+            "error_note": params.error_note
+        }
+
+
+    def created_payment(self, params):
+        """
+        created payment method process you can ovveride it
+        """
+        logger.info(f"Transaction created for this params: {params}")
+
+    def successfully_payment(self, params):
+        """
+        successfully payment method process you can ovveride it
+        """
+        print(f"payment successful params: {params}")
+
+    def cancelled_payment(self, params):
+        """
+        cancelled payment method process you can ovveride it
+        """
+        print(f"payment cancelled params: {params}")
