@@ -146,3 +146,9 @@ class Transaction(BaseModel):
         self.performed_time = timezone.now()
         self.save()
         return True
+
+
+# class SectionFee(BaseModel):
+#     """
+#     Model to store section fees.
+#     """

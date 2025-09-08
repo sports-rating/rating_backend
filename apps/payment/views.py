@@ -58,6 +58,7 @@ from apps.shared.services.payme import payme
 from apps.shared.services.click import click
 
 RESULT_REQUEST_AMOUNT = settings.RESULT_REQUEST_AMOUNT
+CLICK_RESULT_REQUEST_AMOUNT = int(1000)
 
 
 class CreateCheckoutAPIView(generics.GenericAPIView):
@@ -85,7 +86,7 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
             transaction_type=enums.TransactionTypes.RESULT_REQUEST.value,
             status=enums.TransactionStatus.DRAFT.value,
             payment_method=payment_method,
-            amount=RESULT_REQUEST_AMOUNT
+            amount=CLICK_RESULT_REQUEST_AMOUNT if payment_method == "click" else RESULT_REQUEST_AMOUNT
         )
 
         if payment_method == "payme":
@@ -642,10 +643,10 @@ class ClickWebhookAPIView(APIView):
 
         # callback event
         if state == Transaction.SUCCESSFULLY:
-            self.successfully_payment(params)
+            self.successfully_payment(params, internal_transaction)
 
         elif state == Transaction.CANCELLED:
-            self.cancelled_payment(params)
+            self.cancelled_payment(params, internal_transaction)
 
         return {
             "click_trans_id": params.click_trans_id,
@@ -662,14 +663,18 @@ class ClickWebhookAPIView(APIView):
         """
         logger.info(f"Transaction created for this params: {params}")
 
-    def successfully_payment(self, params):
+    def successfully_payment(self, params: ClickRequest, internal_transaction: Transaction) -> None:
         """
         successfully payment method process you can ovveride it
         """
-        print(f"payment successful params: {params}")
+        logger.info(f"Transaction successful for this params: {params}")
+        user: User = internal_transaction.user
+        if user and user.sportsman_profile:
+            user.sportsman_profile.is_result_paid = True
+            user.sportsman_profile.save(update_fields=["is_result_paid"])
 
-    def cancelled_payment(self, params):
+    def cancelled_payment(self, params: ClickRequest, internal_transaction: Transaction) -> None:
         """
         cancelled payment method process you can ovveride it
         """
-        print(f"payment cancelled params: {params}")
+        logger.info(f"Transaction cancelled for this params: {params}")
