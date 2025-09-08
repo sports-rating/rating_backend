@@ -148,7 +148,62 @@ class Transaction(BaseModel):
         return True
 
 
-# class SectionFee(BaseModel):
-#     """
-#     Model to store section fees.
-#     """
+class SectionFee(BaseModel):
+    """
+    Model to store section fees.
+    """
+    section = models.CharField(
+        max_length=50,
+        choices=enums.SectionTypes.choices(),
+        default=enums.SectionTypes.RESULT.value
+    )
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        default=0
+    )
+    currency = models.CharField(
+        max_length=10,
+        choices=enums.CurrencyTypes.choices(),
+        default=enums.CurrencyTypes.UZS.value
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "section_fee"
+        verbose_name = "Section Fee"
+        verbose_name_plural = "Section Fees"
+        ordering = ['-created_time']
+        indexes = [
+            models.Index(fields=['section', 'is_active'])
+        ]
+
+    repr_fields = ("section", "amount")
+
+
+class SectionPayment(BaseModel):
+    """
+    Model to store section payments.
+    """
+    user = models.ForeignKey(
+        "user.User", on_delete=models.CASCADE, related_name="section_payments"
+    )
+    section_fee = models.ForeignKey(
+        SectionFee,
+        on_delete=models.CASCADE,
+        related_name="payments"
+    )
+    is_paid = models.BooleanField(default=False)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "section_payment"
+        verbose_name = "Section Payment"
+        verbose_name_plural = "Section Payments"
+        ordering = ['-created_time']
+        indexes = [
+            models.Index(fields=['user', 'section_fee', 'is_paid'])
+        ]
+
+    repr_fields = ("user", "section_fee", "is_paid")

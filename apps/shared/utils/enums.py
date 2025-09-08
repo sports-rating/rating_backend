@@ -123,3 +123,15 @@ class TransactionTypes(BaseEnum):
     RESULT_REQUEST = "result_request"
     SUBSCRIPTION_SPORTSMAN = "subscription_sportsman"
     SUBSCRIPTION_TRAINER = "subscription_trainer"
+
+
+class SectionTypes(BaseEnum):
+    RESULT = "result"
+    EDUCATION = "education"
+    WORK_PLACE = "work_place"
+
+
+class CurrencyTypes(BaseEnum):
+    UZS = "UZS"
+    USD = "USD"
+    RUB = "RUB"
