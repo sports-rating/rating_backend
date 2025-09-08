@@ -487,6 +487,7 @@ class PaymeWebhookAPIView(APIView):
         Handle the successful payment. You can override this method
         """
         logger.info(f"Payment successful for this params: {params} and result: {result}")
+        result = result.get("result", {})
         internal_transaction = Transaction.objects.filter(transaction_id=result.get("transaction")).first()
         user: User = internal_transaction.user
         if user and user.sportsman_profile:
