@@ -328,11 +328,11 @@ class PaymeWebhookAPIView(APIView):
 
         internal_transaction.mark_as_performed()
 
-        # Mark user profile is_result_paid = True
-        user = internal_transaction.user
-        if user and user.sportsman_profile:
-            user.sportsman_profile.is_result_paid = True
-            user.sportsman_profile.save(update_fields=["is_result_paid"])
+        # # Mark user profile is_result_paid = True
+        # user = internal_transaction.user
+        # if user and user.sportsman_profile:
+        #     user.sportsman_profile.is_result_paid = True
+        #     user.sportsman_profile.save(update_fields=["is_result_paid"])
 
         result = response.PerformTransaction(
             transaction=internal_transaction.transaction_id,
@@ -482,11 +482,16 @@ class PaymeWebhookAPIView(APIView):
         """
         print(f"Transaction created for this params: {params} and cr_result: {result}")
 
-    def handle_successful_payment(self, params, result, *args, **kwargs):
+    def handle_successful_payment(self, params: dict, result: response.PerformTransaction, *args, **kwargs) -> None:
         """
         Handle the successful payment. You can override this method
         """
-        print(f"Payment successful for this params: {params} and result: {result}")
+        logger.info(f"Payment successful for this params: {params} and result: {result}")
+        internal_transaction = Transaction.objects.filter(transaction_id=result.get("transaction")).first()
+        user: User = internal_transaction.user
+        if user and user.sportsman_profile:
+            user.sportsman_profile.is_result_paid = True
+            user.sportsman_profile.save(update_fields=["is_result_paid"])
 
     def handle_cancelled_payment(self, params, result, *args, **kwargs):
         """
