@@ -121,6 +121,8 @@ class TransactionStatus(BaseEnum):
 
 class TransactionTypes(BaseEnum):
     RESULT_REQUEST = "result_request"
+    EDUCATION_REQUEST = "education_request"
+    WORK_PLACE_REQUEST = "work_place_request"
     SUBSCRIPTION_SPORTSMAN = "subscription_sportsman"
     SUBSCRIPTION_TRAINER = "subscription_trainer"
 

@@ -27,6 +27,7 @@ from apps.payment.models import Transaction
 
 class CheckoutSerializer(RequestContextMixin, serializers.Serializer):
     payment_method = serializers.ChoiceField(choices=enums.ProviderTypes.choices(), default=enums.ProviderTypes.PAYME.value)
+    section_type = serializers.ChoiceField(choices=enums.SectionTypes.choices(), required=True)
 
     def validate_payment_method(self, value):
         logger.debug(f"Validating payment method: {value}")

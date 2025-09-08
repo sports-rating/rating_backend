@@ -45,7 +45,9 @@ from apps.shared.utils.utils import (
 )
 
 from apps.payment.models import (
-    Transaction
+    Transaction,
+    SectionFee,
+    SectionPayment
 )
 from apps.user.models import User
 
@@ -68,6 +70,14 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
     serializer_class = CheckoutSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
+    def section_transaction_type_mapper(self, section_type: str) -> str:
+        mapping = {
+            enums.SectionTypes.RESULT.value: enums.TransactionTypes.RESULT_REQUEST.value,
+            enums.SectionTypes.EDUCATION.value: enums.TransactionTypes.EDUCATION_REQUEST.value,
+            enums.SectionTypes.WORK_PLACE.value: enums.TransactionTypes.WORK_PLACE_REQUEST.value,
+        }
+        return mapping.get(section_type, enums.TransactionTypes.RESULT_REQUEST.value)
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request
@@ -79,14 +89,18 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
 
         user: User = request.user
         payment_method: str = t.cast(str, serializer.validated_data.get("payment_method"))
-        logger.info(f"Payment method: {payment_method}")
+        section_type: str = t.cast(str, serializer.validated_data.get("section_type", enums.SectionTypes.RESULT.value))
+
+        section_fee = SectionFee.objects.filter(section=section_type).first()
+        if not section_fee:
+            raise_validation_error(message=_("Section fee not found! Please contact support."))
 
         transaction: Transaction = Transaction.objects.create(
             user=user,
-            transaction_type=enums.TransactionTypes.RESULT_REQUEST.value,
+            transaction_type=self.section_transaction_type_mapper(section_type),
             status=enums.TransactionStatus.DRAFT.value,
             payment_method=payment_method,
-            amount=CLICK_RESULT_REQUEST_AMOUNT if payment_method == "click" else RESULT_REQUEST_AMOUNT
+            amount=section_fee.amount
         )
 
         if payment_method == "payme":
