@@ -17,6 +17,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.conf import settings
 from django.utils.module_loading import import_string
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -679,26 +680,42 @@ class ClickWebhookAPIView(APIView):
             if int(params.error) < 0:
                 click_state = Transaction.CANCELLED
 
-        internal_tx, _ = Transaction.objects.update_or_create(
-            id=internal_transaction.id,
-            amount=params.amount,
-            transaction_id=params.click_trans_id,
-            click_state=click_state
-        )
+        if internal_transaction.click_state == Transaction.SUCCESSFULLY:
+            logger.info(f"Transaction already performed: {internal_transaction.id} (Click).")
+            return {
+                "click_trans_id": params.click_trans_id,
+                "merchant_trans_id": internal_transaction.id,
+                "merchant_prepare_id": internal_transaction.id,
+                "error": 0,
+                "error_note": "success"
+            }
 
         # callback event
         if click_state == Transaction.SUCCESSFULLY:
-            logger.info(f"Handling successful payment for transaction {internal_tx.id}")  # LOGGING
-            self.successfully_payment(params, internal_tx)
+            internal_transaction.click_state = click_state
+            internal_transaction.status = enums.TransactionStatus.COMPLETED.value
+            internal_transaction.performed_time = timezone.now()
+            internal_transaction.save(update_fields=[
+                "amount", "transaction_id", "click_state", "status", "performed_time"
+            ])
+            logger.info(f"Handling successful payment for transaction {internal_transaction.id}")  # LOGGING
+            self.successfully_payment(params, internal_transaction)
 
         elif click_state == Transaction.CANCELLED:
-            logger.info(f"Handling cancelled payment for transaction {internal_tx.id}")  # LOGGING
-            self.cancelled_payment(params, internal_tx)
+            internal_transaction.click_state = click_state
+            internal_transaction.status = enums.TransactionStatus.CANCELED.value
+            internal_transaction.cancel_reason = abs(int(params.error)) if params.error else 0
+            internal_transaction.cancelled_time = timezone.now()
+            internal_transaction.save(update_fields=[
+                "click_state", "status", "cancel_reason", "cancelled_time"
+            ])
+            logger.info(f"Handling cancelled payment for transaction {internal_transaction.id}")  # LOGGING
+            self.cancelled_payment(params, internal_transaction)
 
         return {
             "click_trans_id": params.click_trans_id,
-            "merchant_trans_id": internal_tx.id,
-            "merchant_prepare_id": internal_tx.id,
+            "merchant_trans_id": internal_transaction.id,
+            "merchant_prepare_id": internal_transaction.id,
             "error": params.error,
             "error_note": params.error_note
         }
