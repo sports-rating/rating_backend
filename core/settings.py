@@ -424,6 +424,7 @@ LOGGING = {
         "api": {
             "level": "DEBUG",
             "handlers": ["console"],
+            "propagate": False,  # prevents double logging
         },
     },
 }
