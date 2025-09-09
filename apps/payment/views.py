@@ -604,7 +604,7 @@ class ClickWebhookAPIView(APIView):
         Check if transaction already exist
         """
         if Transaction.objects.filter(
-            transaction_id=params.merchant_trans_id,
+            pk=params.merchant_trans_id,
             click_state=Transaction.SUCCESSFULLY
         ).exists():
             raise click_exceptions.AlreadyPaid("Transaction already paid")
@@ -614,10 +614,16 @@ class ClickWebhookAPIView(APIView):
         Check if transaction cancelled
         """
         if Transaction.objects.filter(
-            transaction_id=params.merchant_trans_id,
+            pk=params.merchant_trans_id,
             click_state=Transaction.CANCELLED
         ).exists() or int(params.error) < 0:
             raise click_exceptions.TransactionCancelled("Transaction cancelled")
+
+    def _fetch_existing_transaction(self, params: ClickRequest) -> t.Optional[Transaction]:
+        """
+        Fetch existing transaction by params.merchant_trans_id
+        """
+        return Transaction.objects.filter(pk=params.merchant_trans_id).first()
 
     def create_transaction(
         self,
@@ -627,12 +633,31 @@ class ClickWebhookAPIView(APIView):
         """
         Handle the create transaction action.
         """
-        internal_transaction = Transaction.objects.get_or_create(
-            id=internal_transaction.id,
-            amount=params.amount,
-            transaction_id=params.click_trans_id
-        )
-        logger.info(f"Transaction created or fetched: {internal_transaction}")  # LOGGING
+        external_transaction_id = params.click_trans_id
+
+        existing_tx = Transaction.objects.filter(transaction_id=external_transaction_id).first()
+        if existing_tx:
+            logger.info(f"Transaction {external_transaction_id} already exists (Click).")
+            return {
+                "click_trans_id": external_transaction_id,
+                "merchant_trans_id": existing_tx.id,
+                "merchant_prepare_id": existing_tx.id,
+                "error": 0,
+                "error_note": "Transaction already exists"
+            }
+
+        if internal_transaction.transaction_id and internal_transaction.transaction_id != external_transaction_id:
+            message = f"Transaction {internal_transaction.transaction_id} already exists (Click)."
+            logger.warning(message)
+            raise click_exceptions.AlreadyPaid(message)
+
+        if not internal_transaction.transaction_id:
+            logger.info(f"Updating draft transaction {internal_transaction.id}")
+            internal_transaction.transaction_id = external_transaction_id
+            internal_transaction.status = enums.TransactionStatus.INITIATING.value
+            internal_transaction.click_state = Transaction.INITIATING
+            internal_transaction.save(update_fields=["transaction_id", "amount", "click_state", "status"])
+
         self.created_payment(params)
 
         return {
@@ -654,7 +679,7 @@ class ClickWebhookAPIView(APIView):
             if int(params.error) < 0:
                 click_state = Transaction.CANCELLED
 
-        internal_transaction, _ = Transaction.objects.update_or_create(
+        internal_tx, _ = Transaction.objects.update_or_create(
             id=internal_transaction.id,
             amount=params.amount,
             transaction_id=params.click_trans_id,
@@ -663,17 +688,17 @@ class ClickWebhookAPIView(APIView):
 
         # callback event
         if click_state == Transaction.SUCCESSFULLY:
-            logger.info(f"Handling successful payment for transaction {internal_transaction.id}")  # LOGGING
-            self.successfully_payment(params, internal_transaction)
+            logger.info(f"Handling successful payment for transaction {internal_tx.id}")  # LOGGING
+            self.successfully_payment(params, internal_tx)
 
         elif click_state == Transaction.CANCELLED:
-            logger.info(f"Handling cancelled payment for transaction {internal_transaction.id}")  # LOGGING
-            self.cancelled_payment(params, internal_transaction)
+            logger.info(f"Handling cancelled payment for transaction {internal_tx.id}")  # LOGGING
+            self.cancelled_payment(params, internal_tx)
 
         return {
             "click_trans_id": params.click_trans_id,
-            "merchant_trans_id": internal_transaction.id,
-            "merchant_prepare_id": internal_transaction.id,
+            "merchant_trans_id": internal_tx.id,
+            "merchant_prepare_id": internal_tx.id,
             "error": params.error,
             "error_note": params.error_note
         }
