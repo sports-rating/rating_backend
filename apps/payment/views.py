@@ -691,6 +691,7 @@ class ClickWebhookAPIView(APIView):
         user: User = internal_transaction.user
         if user and user.sportsman_profile:
             user.sportsman_profile.is_result_paid = True
+            logger.info(f"Marking user {user.id} as result paid. {user.sportsman_profile.is_result_paid}")
             user.sportsman_profile.save(update_fields=["is_result_paid"])
 
     def cancelled_payment(self, params: ClickRequest, internal_transaction: Transaction) -> None:
