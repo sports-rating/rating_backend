@@ -72,7 +72,7 @@ class Click:
         """
         payment_link = (
             f"{self.payment_url}?service_id={self.service_id}&merchant_id={self.merchant_id}"
-            f"&amount={amount}&transaction_param={id}"
+            f"&merchant_user_id={self.merchant_user_id}&amount={amount}&transaction_param={id}"
             f"&return_url={settings.PAYME_RETURN_URL}"
         )
         logger.info(f"Click Payment Link: {payment_link}")
