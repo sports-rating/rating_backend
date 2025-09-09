@@ -693,7 +693,7 @@ class ClickWebhookAPIView(APIView):
         # callback event
         if click_state == Transaction.SUCCESSFULLY:
             internal_transaction.click_state = click_state
-            internal_transaction.status = enums.TransactionStatus.COMPLETED.value
+            internal_transaction.status = enums.TransactionStatus.COMMITTED.value
             internal_transaction.performed_time = timezone.now()
             internal_transaction.save(update_fields=[
                 "amount", "transaction_id", "click_state", "status", "performed_time"
