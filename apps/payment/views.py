@@ -100,6 +100,8 @@ class CreateCheckoutAPIView(generics.GenericAPIView):
             user=user,
             transaction_type=self.section_transaction_type_mapper(section_type),
             status=enums.TransactionStatus.DRAFT.value,
+            payme_state=Transaction.CREATED if payment_method == "payme" else None,
+            click_state=Transaction.CREATED if payment_method == "click" else None,
             payment_method=payment_method,
             amount=section_fee.amount
         )
@@ -704,7 +706,7 @@ class ClickWebhookAPIView(APIView):
         elif click_state == Transaction.CANCELLED:
             internal_transaction.click_state = click_state
             internal_transaction.status = enums.TransactionStatus.CANCELED.value
-            internal_transaction.cancel_reason = abs(int(params.error)) if params.error else 0
+            internal_transaction.cancel_reason = params.error if params.error else 0
             internal_transaction.cancelled_time = timezone.now()
             internal_transaction.save(update_fields=[
                 "click_state", "status", "cancel_reason", "cancelled_time"

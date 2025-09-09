@@ -47,8 +47,8 @@ class Transaction(BaseModel):
         choices=enums.TransactionTypes.choices(),
     )
 
-    payme_state = models.IntegerField(choices=PAYME_STATE, default=CREATED)
-    click_state = models.IntegerField(choices=CLICK_STATE, default=CREATED)
+    payme_state = models.IntegerField(choices=PAYME_STATE, default=None, null=True, blank=True)
+    click_state = models.IntegerField(choices=CLICK_STATE, default=None, null=True, blank=True)
 
     status = models.CharField(
         max_length=50,
