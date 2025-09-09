@@ -605,7 +605,7 @@ class ClickWebhookAPIView(APIView):
         """
         if Transaction.objects.filter(
             transaction_id=params.merchant_trans_id,
-            state=Transaction.SUCCESSFULLY
+            click_state=Transaction.SUCCESSFULLY
         ).exists():
             raise click_exceptions.AlreadyPaid("Transaction already paid")
 
