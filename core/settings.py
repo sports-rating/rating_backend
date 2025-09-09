@@ -426,6 +426,15 @@ LOGGING = {
             "handlers": ["console"],
             "propagate": False,  # prevents double logging
         },
+        "django": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+    "root": {  # 👈 root logger override
+        "handlers": ["console"],
+        "level": "WARNING",  # root will only log WARNING+ messages
     },
 }
 
