@@ -513,8 +513,8 @@ class ClickWebhookAPIView(APIView):
         Handle the incoming webhook request.
         """
         result = None
-        logger.info(f"Received CLICK webhook: {request.POST}")
         params: ClickRequest = self.serialize(request)
+        logger.info(f"Serialized CLICK request: {params}") # LOGGING
         internal_transaction = self.fetch_transaction(params)
 
         self.check_perform_transaction(internal_transaction, params)
@@ -615,7 +615,7 @@ class ClickWebhookAPIView(APIView):
         """
         if Transaction.objects.filter(
             transaction_id=params.merchant_trans_id,
-            state=Transaction.CANCELLED
+            click_state=Transaction.CANCELLED
         ).exists() or int(params.error) < 0:
             raise click_exceptions.TransactionCancelled("Transaction cancelled")
 
@@ -632,7 +632,7 @@ class ClickWebhookAPIView(APIView):
             amount=params.amount,
             transaction_id=params.click_trans_id
         )
-
+        logger.info(f"Transaction created or fetched: {internal_transaction}")  # LOGGING
         self.created_payment(params)
 
         return {
@@ -648,24 +648,26 @@ class ClickWebhookAPIView(APIView):
         internal_transaction: Transaction,
         params: ClickRequest
     ) -> dict:
-        state = Transaction.SUCCESSFULLY
+        click_state = Transaction.SUCCESSFULLY
 
         if params.error is not None:
             if int(params.error) < 0:
-                state = Transaction.CANCELLED
+                click_state = Transaction.CANCELLED
 
         internal_transaction, _ = Transaction.objects.update_or_create(
             id=internal_transaction.id,
             amount=params.amount,
             transaction_id=params.click_trans_id,
-            state=state
+            click_state=click_state
         )
 
         # callback event
-        if state == Transaction.SUCCESSFULLY:
+        if click_state == Transaction.SUCCESSFULLY:
+            logger.info(f"Handling successful payment for transaction {internal_transaction.id}")  # LOGGING
             self.successfully_payment(params, internal_transaction)
 
-        elif state == Transaction.CANCELLED:
+        elif click_state == Transaction.CANCELLED:
+            logger.info(f"Handling cancelled payment for transaction {internal_transaction.id}")  # LOGGING
             self.cancelled_payment(params, internal_transaction)
 
         return {
