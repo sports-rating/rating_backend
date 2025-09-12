@@ -7,13 +7,13 @@ from django.core.validators import FileExtensionValidator
 from rest_framework.exceptions import ValidationError
 
 from apps.shared.models import BaseModel
-from apps.shared.utils.enums import LanguageTypes
+from apps.shared.utils import enums
 
 
 class PrivacyPolicy(BaseModel):
     title = models.CharField(max_length=255)
     language = models.CharField(
-        max_length=15, choices=LanguageTypes.choices(), default=LanguageTypes.EN.value
+        max_length=15, choices=enums.LanguageTypes.choices(), default=enums.LanguageTypes.EN.value
     )
     text = models.TextField()
 
@@ -23,13 +23,13 @@ class PrivacyPolicy(BaseModel):
     class Meta:
         db_table = "privacy_policy"
         verbose_name = "Privacy Policy"
-        verbose_name_plural = "Privacy Policy"
+        verbose_name_plural = "Privacy Policies"
 
 
 class TermsOfCondition(BaseModel):
     title = models.CharField(max_length=255)
     language = models.CharField(
-        max_length=15, choices=LanguageTypes.choices(), default=LanguageTypes.EN.value
+        max_length=15, choices=enums.LanguageTypes.choices(), default=enums.LanguageTypes.EN.value
     )
     text = models.TextField()
 
