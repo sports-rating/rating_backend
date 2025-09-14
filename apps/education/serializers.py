@@ -2,7 +2,7 @@ from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
 from django.contrib.auth.models import update_last_login
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, QuerySet
 from django.conf import settings
 
 from rest_framework import serializers
@@ -10,6 +10,10 @@ from rest_framework.generics import get_object_or_404
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.general import (
+    check_uniqueness,
+    check_m2m_uniqueness
+)
 
 from apps.education.models import (
     Education,
@@ -88,8 +92,6 @@ class EducationSerializer(serializers.ModelSerializer):
 
 
 class SchoolSerializer(serializers.ModelSerializer):
-    sport_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=True)
-    sports = SportSerializer(many=True, write_only=True, required=False)
 
     class Meta:
         model = School
@@ -100,43 +102,64 @@ class SchoolSerializer(serializers.ModelSerializer):
             "director",
             "type",
             "address",
-            "sport_ids",
-            "sports"
+            "latitude",
+            "longitude",
+            "region",
+            "district",
+            "federation",
+            "sports",
+            "created_time",
         ]
-        extra_kwargs = {"id": {"read_only": True},}
+        read_only_fields = ["id", "created_time"]
 
-    def validate(self, attrs):
-        phone_number = attrs.get("phone_number")
+    def validate(self, attrs: dict) -> dict:
+        instance = getattr(self, 'instance', None)
 
-        if School.objects.filter(phone_number=phone_number).exists():
-            raise_validation_error(message=_("Phone number is already registered"))
+        check_uniqueness("name", attrs, School, instance)
+        check_uniqueness("phone_number", attrs, School, instance)
 
         return attrs
 
-    def create(self, validated_data):
-        sport_ids = validated_data.pop("sport_ids", None)
+    def create(self, validated_data: dict) -> School:
+        sports: list[Sport] = validated_data.pop("sports", None)
 
         with transaction.atomic():
             school = School.objects.create(**validated_data)
 
-            if sport_ids:
-                sport_objects = Sport.objects.filter(id__in=sport_ids)
-                if not sport_objects.exists():
-                    raise_validation_error(message=_(f"At least one sport must be included"))
-                school.sports.set(sport_objects)
+            if sports:
+                school.sports.set(sports)
 
         return school
 
-    def update(self, instance, validated_data):
-        sport_ids = validated_data.pop("sport_ids", None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+    def update(self, instance: School, validated_data: dict) -> School:
+        sports: list[Sport] = validated_data.pop("sports", [])
 
-        if sport_ids:
-            sport_objects = Sport.objects.filter(id__in=sport_ids)
-            if not sport_objects.exists():
-                raise_validation_error(message=_("At least one sport must be included"))
-            instance.sports.set(sport_objects)
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            if sports:
+                instance.sports.set(sports)
 
         return instance
+
+    def to_representation(self, instance: School) -> dict:
+        data =  super().to_representation(instance)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        data["federation"] = {
+            "id": instance.federation.id,
+            "name": instance.federation.name
+        } if instance.federation else None
+        data["sports"] = SportSerializer(
+            instance.sports.all(),
+            many=True
+        ).data
+        return data
