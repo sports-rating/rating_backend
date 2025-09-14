@@ -21,29 +21,45 @@ class School(BaseModel):
     name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=13)
     director = models.CharField(max_length=255, blank=True, null=True)
-
-    address = models.JSONField() # address, district, region,...
     type = models.CharField(max_length=50, choices=SchoolChoices.choices(), default=SchoolChoices.ORDINARY.value)
+
+    address = models.TextField(null=True, blank=True)
+    latitude = models.FloatField(default="0.0")
+    longitude = models.FloatField(default="0.0")
+    region = models.ForeignKey(
+        "shared.Region",
+        on_delete=models.SET_NULL,
+        related_name="region_schools",
+        null=True,
+        blank=True
+    )
+    district = models.ForeignKey(
+        "shared.District",
+        on_delete=models.SET_NULL,
+        related_name="district_schools",
+        null=True,
+        blank=True
+    )
+
     sports = models.ManyToManyField(Sport, related_name='schools')
-    # federation = models.ForeignKey(
-    #     "federation.Federation",
-    #     on_delete=models.SET_NULL,
-    #     related_name="federation_schools",
-    #     blank=True,
-    #     null=True
-    # )
-    # trainers = models.ManyToManyField(
-    #     User,
-    #     related_name="trainer_schools",
-    #     blank=True
-    # ) # ?
+    federation = models.ForeignKey(
+        "federation.Federation",
+        on_delete=models.SET_NULL,
+        related_name="federation_schools",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         db_table = "school"
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["phone_number"])
+        ]
         verbose_name = "School"
         verbose_name_plural = "Schools"
 
-    repr_fields = ("name", "phone_number")
+    repr_fields = ("name",)
 
 
 class Education(BaseModel):

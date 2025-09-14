@@ -14,4 +14,4 @@ class EducationAdmin(admin.ModelAdmin):
 @admin.register(School)
 class SchoolAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "director", "phone_number"]
-    search_fields = ["name", ]
+    search_fields = ["name", "phone_number"]
