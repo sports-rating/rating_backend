@@ -12,6 +12,7 @@ from apps.education.models import (
 class SchoolFilter(filters.FilterSet):
     type = filters.CharFilter(method="filter_type")
     sport = filters.CharFilter(method="filter_sport")
+    federation = filters.CharFilter(field_name="federation__id")
 
     class Meta:
         model = School
