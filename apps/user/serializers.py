@@ -795,12 +795,6 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
             if User.objects.only("id").filter(phone_number=phone_number).exists() :
                 raise_validation_error(message=_("Phone number is already registered"))
 
-        # Ism va familiya faqat bitta so‘zdan iborat bo‘lishi kerakligini tekshirish
-        if len(first_name.split()) > 1:
-            raise_validation_error(message=_("Ism faqat bitta so'z bo'lishi kerak"))
-        if len(last_name.split()) > 1:
-            raise_validation_error(message=_("Familiya faqat bitta so'z bo'lishi kerak"))
-
         if User.objects.only("id").filter(
             first_name=first_name, last_name=last_name, phone_number=phone_number
         ).exists():
