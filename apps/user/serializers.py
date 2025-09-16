@@ -1392,7 +1392,7 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
     def create(self, validated_data: dict) -> WorkPlace:
         trainer: Trainer = self.request.user.trainer_profile  # type: ignore
         message_from_sender: str | None = validated_data.pop("message", None)
-        logger.info(f"Trainer type: {type(trainer)}")
+        logger.info(f"Trainer type: {type(trainer)}")  # LOGGING
         federation: Federation = trainer.federation
         receivers: QuerySet[User] = federation.users.filter(user_role="federation")
 
@@ -1400,12 +1400,14 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
 
         user_request: UserRequest = UserRequest.objects.create(
             sender=trainer.user,
-            receivers=receivers,
             request_type=enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
             old_data={},
             new_data=new_snapshot,
             message_from_sender=message_from_sender
         )
+        user_request.receivers.set(receivers)
+        user_request.save()
+        logger.info(f"UserRequest created: {user_request}")  # LOGGING
         return user_request
 
     def to_representation(self, instance: WorkPlace) -> t.Optional[dict]:
