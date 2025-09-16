@@ -1371,11 +1371,22 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
             "federation",
             "school",
             "sport",
+            "message",
             "created_time"
         ]
         read_only_fields = ["id", "created_time"]
 
     def validate(self, attrs: dict) -> dict:
+        federation: Federation = attrs.get("federation")
+        school: School = attrs.get("school")
+        sport: Sport = attrs.get("sport")
+
+        if not federation.federation_schools.filter(id=school.id).exists():
+            raise_validation_error(message=_("This school does not belong to the selected federation."))
+
+        if not school.sports.filter(id=sport.id).exists():
+            raise_validation_error(message=_("This sport is not offered by the selected school."))
+
         return super().validate(attrs)
 
     def create(self, validated_data: dict) -> WorkPlace:
@@ -1385,9 +1396,9 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         federation: Federation = trainer.federation
         receivers: QuerySet[User] = federation.users.filter(user_role="federation")
 
-        new_snapshot = TrainerWorkPlaceSnapshotSerializer().to_new_snapshot(validated_data)
+        new_snapshot: dict = TrainerWorkPlaceSnapshotSerializer().to_new_snapshot(validated_data)
 
-        user_request = UserRequest.objects.create(
+        user_request: UserRequest = UserRequest.objects.create(
             sender=trainer.user,
             receivers=receivers,
             request_type=enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
@@ -1397,7 +1408,7 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         )
         return user_request
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: WorkPlace) -> t.Optional[dict]:
         if isinstance(instance, UserRequest):
             return None
         data = super().to_representation(instance)
