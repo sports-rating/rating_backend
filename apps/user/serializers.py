@@ -33,8 +33,12 @@ from apps.shared.utils.utils import CorrectPath
 from apps.sport.models import Result, Sport, Tournament
 from apps.federation.models import Federation
 from apps.sport.serializers import ResultCreateSerializer, SportSerializer
-from apps.user.models import (ArchivedTrainer, Sportsman, Trainer, User,
-                              UserMedia, UserNotification, UserRequest)
+from apps.user.models import (
+    ArchivedTrainer, Sportsman, Trainer, User,
+    UserMedia, UserNotification, UserRequest,
+    WorkPlace
+)
+from apps.education.models import School
 from apps.user.utils import (
     calculate_sportsman_statistics,
     calculate_trainer_statistics
@@ -48,6 +52,10 @@ from apps.shared.utils.payloads import (
     TRAINER_APPROVAL_REQUIRED_FIELDS,
     SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
 )
+from apps.shared.serializers import (
+    TrainerWorkPlaceSnapshotSerializer,
+)
+
 
 SEND_VERIFICATION_ACTION = (
     ("signup", "signup"),
@@ -1351,6 +1359,61 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         result_data = self._filter_critical_fields(result_data, critical_fields)
 
         return old_snapshot, new_snapshot, result_data
+
+
+class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerializer):
+    message = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+    class Meta:
+        model = WorkPlace
+        fields = [
+            "id",
+            "federation",
+            "school",
+            "sport",
+            "created_time"
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def validate(self, attrs: dict) -> dict:
+        return super().validate(attrs)
+
+    def create(self, validated_data: dict) -> WorkPlace:
+        trainer: Trainer = self.request.user.trainer_profile  # type: ignore
+        message_from_sender: str | None = validated_data.pop("message", None)
+        logger.info(f"Trainer type: {type(trainer)}")
+        federation: Federation = trainer.federation
+        receivers: QuerySet[User] = federation.users.filter(user_role="federation")
+
+        new_snapshot = TrainerWorkPlaceSnapshotSerializer().to_new_snapshot(validated_data)
+
+        user_request = UserRequest.objects.create(
+            sender=trainer.user,
+            receivers=receivers,
+            request_type=enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
+            old_data={},
+            new_data=new_snapshot,
+            message_from_sender=message_from_sender
+        )
+        return user_request
+
+    def to_representation(self, instance):
+        if isinstance(instance, UserRequest):
+            return None
+        data = super().to_representation(instance)
+        data["federation"] = {
+            "id": instance.federation.id,
+            "name": instance.federation.name,
+        } if instance.federation else None
+        data["school"] = {
+            "id": instance.school.id,
+            "name": instance.school.name,
+        } if instance.school else None
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+        } if instance.sport else None
+        return data
 
 
 class RegionSerializer(serializers.ModelSerializer):

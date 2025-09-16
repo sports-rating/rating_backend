@@ -7,7 +7,13 @@ import rest_framework_simplejwt.serializers as jwt_serializers
 import rest_framework_simplejwt.tokens as jwt_tokens
 from rest_framework.generics import get_object_or_404
 from rest_framework import serializers
+
+from django.apps import apps
+
 from apps.shared.utils.enums import SportRankEnum
+from apps.federation.models import Federation
+from apps.education.models import School
+from apps.sport.models import Sport
 
 
 class ChildTournamentSnapshotSerializer(serializers.Serializer):
@@ -44,3 +50,29 @@ class TrainerSnapshotSerializer(serializers.Serializer):
     weight = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
     skill_level = serializers.CharField(required=False, allow_null=True, max_length=100)
     sport = ChildSportSnapshotSerializer(required=False, allow_null=True)
+
+
+# -- Trainer WorkPlace Snapshot Serializers --
+class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
+    federation = serializers.PrimaryKeyRelatedField(queryset=Federation.objects.all(), required=True)
+    school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), required=True)
+    sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=True)
+
+    def to_new_snapshot(self, validated_data: dict) -> dict:
+        federation: Federation = validated_data.get("federation")
+        school: School = validated_data.get("school")
+        sport: Sport = validated_data.get("sport")
+        return {
+            "federation": {
+                "id": str(federation.id),
+                "name": federation.name
+            } if federation else None,
+            "school": {
+                "id": str(school.id),
+                "name": school.name
+            } if school else None,
+            "sport": {
+                "id": str(sport.id),
+                "name": sport.name
+            } if sport else None,
+        }

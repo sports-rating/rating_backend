@@ -308,3 +308,45 @@ class UserNotification(BaseModel):
         verbose_name_plural = "User Notifications"
 
     repr_fields = ("user", "title", "is_read")
+
+
+class WorkPlace(BaseModel):
+    trainer = models.ForeignKey(
+        Trainer,
+        on_delete=models.CASCADE,
+        related_name="work_places"
+    )
+    federation = models.ForeignKey(
+        "federation.Federation",
+        on_delete=models.CASCADE,
+        related_name="federation_trainer_work_places"
+    )
+    school = models.ForeignKey(
+        "education.School",
+        on_delete=models.CASCADE,
+        related_name="school_trainer_work_places",
+        null=True,
+        blank=True
+    )
+    sport = models.ForeignKey(
+        "sport.Sport",
+        on_delete=models.SET_NULL,
+        related_name="sport_trainer_work_places",
+        null=True,
+        blank=True
+    )
+    request = models.OneToOneField(
+        UserRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="trainer_work_place"
+    )
+
+
+    class Meta:
+        db_table = "work_place"
+        verbose_name = "Work Place"
+        verbose_name_plural = "Work Places"
+
+    repr_fields = ("trainer", "federation")

@@ -77,6 +77,7 @@ class UserRequestTypes(BaseEnum):
     # TRAINER_TO_FEDERATION = "trainer_to_federation"
     FEDERATION_ADMIN_REQUEST = "federation_admin_request"
     SPORTSMAN_RESULT_VERIFICATION_REQUEST = "sportsman_result_verification_request"
+    TRAINER_WORKPLACE_VERIFICATION_REQUEST = "trainer_workplace_verification_request"
 
 
 class UserRequestStatus(BaseEnum):
