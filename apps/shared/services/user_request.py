@@ -27,8 +27,10 @@ from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
     SportsmanSnapshotSerializer,
-    TrainerSnapshotSerializer
+    TrainerSnapshotSerializer,
+    TrainerWorkPlaceSnapshotSerializer
 )
+from apps.user.models import WorkPlace
 
 
 class UserRequestService:
@@ -145,6 +147,8 @@ class UserRequestService:
             return UserRequestService._handle_federation_admin_request(user_request, validated_data, receiver)
         elif request_type == enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value:
             return UserRequestService._handle_result_verification_request(user_request, validated_data, receiver)
+        elif request_type == enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value:
+            return UserRequestService._handle_trainer_workplace_verification_request(user_request, validated_data, receiver)
         return _("Invalid request type!"), False
 
     @staticmethod
@@ -334,4 +338,42 @@ class UserRequestService:
                 "result_id": str(result_id),
             }
             UserRequestService.decline_request(user_request, notification_body, notification_data)
+        return _("Request handled successfully."), True
+
+    def _handle_trainer_workplace_verification_request(
+            user_request: UserRequest,
+            validated_data: dict,
+            receiver: User
+    ) -> tuple[t.Union[Promise, str], bool]:
+        status: t.Union[str, None] = validated_data.get("status")
+        sender: User = user_request.sender
+        message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
+
+        if status == enums.UserRequestStatus.REJECTED.value:
+            notification_body = f"Your workplace verification request has been rejected."
+            notification_data = {
+                "request_type": "trainer_workplace_verification_request",
+                "message_from_receiver": message_from_receiver,
+            }
+            UserRequestService.decline_request(user_request, notification_body, notification_data)
+
+        elif user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+            serializer = TrainerWorkPlaceSnapshotSerializer(data=user_request.new_data)
+            serializer.is_valid(raise_exception=True)
+            work_place_data = serializer.validated_data
+
+            work_place = WorkPlace.objects.create(
+                request=user_request,
+                trainer=sender.trainer_profile,
+                **work_place_data
+            )
+
+            notification_body = f"Your workplace verification request has been accepted."
+            notification_data = {
+                "request_type": "trainer_workplace_verification_request",
+                "work_place_id": str(work_place.id),
+                "message_from_receiver": message_from_receiver,
+            }
+            UserRequestService.accept_request(user_request, notification_body, notification_data)
+
         return _("Request handled successfully."), True
