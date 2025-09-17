@@ -46,9 +46,12 @@ class FederationUserListFilter(BaseFilterSet):
 
 
 class FederationUserRequestFilter(BaseFilterSet):
+    # TODO: CoderB7:
+    # Change the mapping to use "federation_admin" instead of "admin"
     REQUEST_ROLE_MAPPING = {
-        "admin": UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
-        "trainer": UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
+        "admin": UserRequestTypes.FEDERATION_ADMIN_REQUEST.value, # change to federation_admin
+        "trainer": UserRequestTypes.TRAINER_FEDERATION_REQUEST.value,
+        "trainer_workplace_verification": UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
     }
 
     status = filters.ChoiceFilter(choices=UserRequestStatus.choices())

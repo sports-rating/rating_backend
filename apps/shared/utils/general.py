@@ -92,5 +92,6 @@ def request_type_theme_mapping(request_type):
     mapping = {
         UserRequestTypes.FEDERATION_ADMIN_REQUEST.value: "Join Federation as Admin",
         UserRequestTypes.TRAINER_FEDERATION_REQUEST.value: "Join Federation as Trainer",
+        UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value: "Trainer Workplace Verification",
     }
     return mapping.get(request_type, "Unknown Request Type")
