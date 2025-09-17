@@ -88,7 +88,7 @@ class UserRequestService:
         notification_body: t.Union[str, Promise],
         notification_data: dict
     ) -> None:
-        user_request.accepted_by = receiver
+        user_request.processed_by = receiver
         user_request.status = enums.UserRequestStatus.ACCEPTED.value
         user_request.save()
 
@@ -120,9 +120,11 @@ class UserRequestService:
     @staticmethod
     def decline_request(
         user_request: UserRequest,
+        receiver: User,
         notification_body: t.Union[str, Promise],
         notification_data: dict
     ) -> None:
+        user_request.processed_by = receiver
         user_request.status = enums.UserRequestStatus.REJECTED.value
         user_request.save()
 
@@ -182,7 +184,7 @@ class UserRequestService:
                     "request_type": "sportsman_trainer_request",
                     "trainer_id": str(receiver.id),
                 }
-                UserRequestService.accept_request(user_request, notification_body, notification_data)
+                UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
             else:
                 return _("Receiver must be a valid trainer!"), False
         else:
@@ -191,7 +193,7 @@ class UserRequestService:
                 "request_type": "sportsman_trainer_request",
                 "trainer_id": str(receiver.id),
             }
-            UserRequestService.decline_request(user_request, notification_body, notification_data)
+            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
         return _("Request handled successfully."), True
 
     @staticmethod
@@ -227,7 +229,7 @@ class UserRequestService:
                     "request_type": "trainer_federation_request",
                     "federation_id": str(federation.id),
                 }
-                UserRequestService.accept_request(user_request, notification_body, notification_data)
+                UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
             else:
                 return _("Receiver must be a valid federation!"), False
         else:
@@ -236,7 +238,7 @@ class UserRequestService:
                 "request_type": "trainer_federation_request",
                 "federation_id": str(federation.id),
             }
-            UserRequestService.decline_request(user_request, notification_body, notification_data)
+            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
         return _("Request handled successfully."), True
 
     @staticmethod
@@ -261,7 +263,7 @@ class UserRequestService:
                     "message_from_receiver": validated_data.get("message_from_receiver"),
                     "federation_id": str(federation.id),
                 }
-                UserRequestService.accept_request(user_request, notification_body, notification_data)
+                UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
             else:
                 return _("Receiver must be a valid federation!"), False
         elif status == enums.UserRequestStatus.CANCELLED.value:
@@ -278,7 +280,7 @@ class UserRequestService:
                 "request_type": "federation_admin_request",
                 "federation_id": str(federation.id),
             }
-            UserRequestService.decline_request(user_request, notification_body, notification_data)
+            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
         return _("Request handled successfully."), True
 
     @transaction.atomic
@@ -327,7 +329,7 @@ class UserRequestService:
                     "request_type": "sportsman_result_verification_request",
                     "result_id": str(result_id),
                 }
-                UserRequestService.accept_request(user_request, notification_body, notification_data)
+                UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
             else:
                 return _("Receiver must be a valid trainer!"), False
         else:
@@ -339,7 +341,7 @@ class UserRequestService:
                 "request_type": "sportsman_result_verification_request",
                 "result_id": str(result_id),
             }
-            UserRequestService.decline_request(user_request, notification_body, notification_data)
+            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
         return _("Request handled successfully."), True
 
     def _handle_trainer_workplace_verification_request(
@@ -357,7 +359,7 @@ class UserRequestService:
                 "request_type": "trainer_workplace_verification_request",
                 "message_from_receiver": message_from_receiver,
             }
-            UserRequestService.decline_request(user_request, notification_body, notification_data)
+            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
 
         elif user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
             serializer = TrainerWorkPlaceSnapshotSerializer(data=user_request.new_data)
@@ -365,8 +367,8 @@ class UserRequestService:
             work_place_data = serializer.validated_data
 
             work_place = WorkPlace.objects.create(
-                request=user_request,
                 trainer=sender.trainer_profile,
+                request=user_request,
                 **work_place_data
             )
 
