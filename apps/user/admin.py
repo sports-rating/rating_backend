@@ -178,15 +178,16 @@ class UserRequestAdmin(admin.ModelAdmin):
     search_fields = ['sender__first_name', 'sender__last_name']
     list_per_page = 10
     ordering = ['-created_time']
-    readonly_fields = ["sender_obj", "receivers_obj"]
+    readonly_fields = ["sender_obj", "receivers_obj", "approved_by_obj", "created_time", "updated_time"]
 
+    @admin.display(description="Sender")
     def sender_obj(self, obj):
         if obj.sender:
             url = reverse("admin:user_user_change", args=[obj.sender.id])
             return format_html('<a href="{}">{}</a>', url, obj.sender.username)
         return "N/A"
-    sender_obj.short_description = "Sender"
 
+    @admin.display(description="Receivers")
     def receivers_obj(self, obj):
         if obj.receivers.exists():
             urls = [
@@ -195,8 +196,13 @@ class UserRequestAdmin(admin.ModelAdmin):
             ]
             return format_html('<br>'.join(f'<a href="{url}">{receiver.username}</a>' for url, receiver in zip(urls, obj.receivers.all())))
         return "N/A"
-    receivers_obj.short_description = "Receivers"
 
+    @admin.display(description="Approved By")
+    def approved_by_obj(self, obj):
+        if obj.accepted_by:
+            url = reverse("admin:user_user_change", args=[obj.accepted_by.id])
+            return format_html('<a href="{}">{}</a>', url, obj.accepted_by.full_name)
+        return "N/A"
 
 @admin.register(UserNotification)
 class UserNotificationAdmin(admin.ModelAdmin):
