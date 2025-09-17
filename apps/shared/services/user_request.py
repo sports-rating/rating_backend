@@ -84,9 +84,11 @@ class UserRequestService:
     @staticmethod
     def accept_request(
         user_request: UserRequest,
+        receiver: User,
         notification_body: t.Union[str, Promise],
         notification_data: dict
     ) -> None:
+        user_request.accepted_by = receiver
         user_request.status = enums.UserRequestStatus.ACCEPTED.value
         user_request.save()
 
@@ -374,6 +376,6 @@ class UserRequestService:
                 "work_place_id": str(work_place.id),
                 "message_from_receiver": message_from_receiver,
             }
-            UserRequestService.accept_request(user_request, notification_body, notification_data)
+            UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
         return _("Request handled successfully."), True

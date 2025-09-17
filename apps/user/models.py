@@ -256,12 +256,12 @@ class UserRequest(BaseModel):
         null=True, blank=True,
         help_text="The federation this request is related to"
     )
-    accepted_by = models.ForeignKey(
+    processed_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
-        related_name='approved_requests',
+        related_name='processed_requests',
         null=True, blank=True,
-        help_text="The user who accepted this request"
+        help_text="The user who processed this request"
     )
 
     request_type = models.CharField(max_length=100, choices=enums.UserRequestTypes.choices(), default=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value)

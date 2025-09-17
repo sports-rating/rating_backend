@@ -178,7 +178,7 @@ class UserRequestAdmin(admin.ModelAdmin):
     search_fields = ['sender__first_name', 'sender__last_name']
     list_per_page = 10
     ordering = ['-created_time']
-    readonly_fields = ["sender_obj", "receivers_obj", "approved_by_obj", "created_time", "updated_time"]
+    readonly_fields = ["sender_obj", "receivers_obj", "processed_by_obj", "created_time", "updated_time"]
 
     @admin.display(description="Sender")
     def sender_obj(self, obj):
@@ -197,11 +197,11 @@ class UserRequestAdmin(admin.ModelAdmin):
             return format_html('<br>'.join(f'<a href="{url}">{receiver.username}</a>' for url, receiver in zip(urls, obj.receivers.all())))
         return "N/A"
 
-    @admin.display(description="Approved By")
-    def approved_by_obj(self, obj):
-        if obj.accepted_by:
-            url = reverse("admin:user_user_change", args=[obj.accepted_by.id])
-            return format_html('<a href="{}">{}</a>', url, obj.accepted_by.full_name)
+    @admin.display(description="Processed By")
+    def processed_by_obj(self, obj):
+        if obj.processed_by:
+            url = reverse("admin:user_user_change", args=[obj.processed_by.id])
+            return format_html('<a href="{}">{}</a>', url, obj.processed_by.full_name)
         return "N/A"
 
 @admin.register(UserNotification)
