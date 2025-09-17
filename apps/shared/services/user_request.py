@@ -1,4 +1,5 @@
 import typing as t
+import copy
 
 from uuid import UUID
 
@@ -362,7 +363,9 @@ class UserRequestService:
             UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
 
         elif user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-            serializer = TrainerWorkPlaceSnapshotSerializer(data=user_request.new_data)
+            new_data: dict = copy.deepcopy(user_request.new_data)
+            logger.info(f"New data as snapshot 0: {new_data}")  # LOGGING
+            serializer = TrainerWorkPlaceSnapshotSerializer(data=new_data)
             serializer.is_valid(raise_exception=True)
             work_place_data = serializer.validated_data
 
@@ -371,7 +374,7 @@ class UserRequestService:
                 request=user_request,
                 **work_place_data
             )
-
+            logger.info(f"New data as snapshot 1: {user_request.new_data}")  # LOGGING
             notification_body = f"Your workplace verification request has been accepted."
             notification_data = {
                 "request_type": "trainer_workplace_verification_request",
@@ -380,4 +383,5 @@ class UserRequestService:
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
+        logger.info(f"New data as snapshot 2: {user_request.new_data}")  # LOGGING
         return _("Request handled successfully."), True

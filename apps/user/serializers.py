@@ -1165,6 +1165,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
         sender: User = instance.sender
         logger.info(f"Sender: {sender}")  # LOGGING
         receiver: User = self.request.user  # type: ignore
+        logger.info(f"New data: {instance.new_data}")  # LOGGING
         message, success = UserRequestService.handle_request(instance, validated_data, receiver)
         if success:
             logger.info(f"{message}")

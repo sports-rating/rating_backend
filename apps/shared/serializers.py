@@ -11,6 +11,7 @@ from rest_framework import serializers
 from django.apps import apps
 
 from apps.shared.utils.enums import SportRankEnum
+from apps.shared.utils.logging import logger
 from apps.federation.models import Federation
 from apps.education.models import School
 from apps.sport.models import Sport
@@ -57,6 +58,21 @@ class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
     federation = serializers.PrimaryKeyRelatedField(queryset=Federation.objects.all(), required=True)
     school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), required=True)
     sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=True)
+
+    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Allow deserialization from both:
+        - {"federation": "uuid", "school": "uuid", "sport": "uuid"}
+        - {"federation": {"id": "uuid", ...}, "school": {"id": "uuid", ...}, "sport": {"id": "uuid", ...}}
+        """
+        if isinstance(data.get("federation"), dict):
+            data["federation"] = data["federation"].get("id")
+        if isinstance(data.get("school"), dict):
+            data["school"] = data["school"].get("id")
+        if isinstance(data.get("sport"), dict):
+            data["sport"] = data["sport"].get("id")
+        logger.debug(f"Deserialized Internal data: {data}")
+        return super().to_internal_value(data)
 
     def to_new_snapshot(self, validated_data: dict) -> dict:
         federation: Federation = validated_data.get("federation")

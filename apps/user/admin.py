@@ -204,6 +204,7 @@ class UserRequestAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">{}</a>', url, obj.processed_by.full_name)
         return "N/A"
 
+
 @admin.register(UserNotification)
 class UserNotificationAdmin(admin.ModelAdmin):
     list_display = ["id", "user_obj", "title", "text", "created_time"]
@@ -244,7 +245,7 @@ class WorkPlaceAdmin(admin.ModelAdmin):
     @admin.display(description="School")
     def school_obj(self, obj: WorkPlace) -> str:
         if obj.school:
-            url = reverse("admin:school_school_change", args=[obj.school.id])
+            url = reverse("admin:education_school_change", args=[obj.school.id])
             return format_html('<a href="{}">{}</a>', url, obj.school.name)
         return "N/A"
 
