@@ -940,10 +940,11 @@ class UserMediaListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         user_id = self.request.query_params.get("user_id")
+        queryset = self.queryset.filter(is_profile_photo=False).select_related("user")
         if user.is_authenticated:
-            return self.queryset.filter(user=user)
+            return queryset.filter(user=user)
         elif user_id:
-            return self.queryset.filter(user__id=user_id)
+            return queryset.filter(user__id=user_id)
         return UserMedia.objects.none()
 
     def list(self, request, *args, **kwargs):
