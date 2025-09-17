@@ -1380,12 +1380,20 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         federation: Federation = attrs.get("federation")
         school: School = attrs.get("school")
         sport: Sport = attrs.get("sport")
+        user = self.request.user  # type: ignore
 
         if not federation.federation_schools.filter(id=school.id).exists():
             raise_validation_error(message=_("This school does not belong to the selected federation."))
 
         if not school.sports.filter(id=sport.id).exists():
             raise_validation_error(message=_("This sport is not offered by the selected school."))
+
+        if UserRequest.objects.filter(
+            sender=user,
+            request_type=enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
+            status=enums.UserRequestStatus.PENDING.value
+        ).exists():
+            raise_validation_error(message=_("You already have a pending workplace verification request."))
 
         return super().validate(attrs)
 
