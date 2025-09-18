@@ -56,7 +56,7 @@ class UserListView(generics.ListAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self) -> QuerySet[User]:
-        queryset = User.objects.exclude(user_role__in=["ordinary", "admin"]).select_related(
+        queryset = User.objects.exclude(user_role__in=["ordinary", "admin", "super_admin"]).select_related(
             "sportsman_profile", "trainer_profile"
         ).prefetch_related(
             "sportsman_profile__trainer"
