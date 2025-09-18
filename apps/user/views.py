@@ -179,6 +179,39 @@ class LogoutView(APIView):
             )
 
 
+class DeleteAccountAPIView(generics.DestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = serializers.UsersMeSerializer
+    permission_classes = [permissions.IsAuthenticated,]
+
+    def get_object(self):
+        user_id = self.request.query_params.get("user_id", None)
+
+        if user_id and self.request.user.user_role in [
+            enums.UserRoles.ADMIN.value,
+            enums.UserRoles.SUPER_ADMIN.value
+        ]:
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                raise_validation_error(message=_("User not found"), code=status.HTTP_404_NOT_FOUND)
+            logger.info(f"User {self.request.user} is deleting user {user}")
+            return user
+        else:
+            # For now only admins can delete user accounts
+            raise_validation_error(message=_("You do not have permission to delete this user"), code=status.HTTP_403_FORBIDDEN)
+
+        logger.info(f"User {self.request.user} is deleting self account")
+        return self.request.user
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("User deleted successfully"),
+            code=status.HTTP_204_NO_CONTENT
+        )
+
+
 class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
     serializer_class = serializers.UserUpdateSerializer

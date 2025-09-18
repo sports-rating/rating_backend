@@ -11,6 +11,7 @@ urlpatterns = [
     path("auth/register/", views.RegistrationView.as_view(), name='registration'),
     path("auth/logout/", views.LogoutView.as_view(), name='logout'),
     path("auth/refresh-token/", views.LoginRefreshView.as_view(), name='refresh-token'),
+    path("auth/delete-account/", views.DeleteAccountAPIView.as_view(), name='delete-account'),
 
     path("profile/", views.UserRetrieveUpdateView.as_view(), name='profile-retrieve-update'),
     path("profile/results/", views.SportsmanResultListCreateAPIView.as_view(), name='result-list-create'),
