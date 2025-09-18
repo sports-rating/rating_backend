@@ -278,7 +278,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
     serializer_class = serializers.RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = SportsmanFilter
-    #pagination_class = CustomPagination
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -383,7 +383,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
     serializer_class = serializers.RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = TrainerFilter
-    #pagination_class = CustomPagination
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":

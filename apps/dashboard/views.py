@@ -1,3 +1,4 @@
+from flask import request
 import pandas
 from datetime import datetime
 
@@ -6,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
 from django.http import HttpResponse
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, QuerySet
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -54,7 +55,7 @@ class UserListView(generics.ListAPIView):
     filterset_class = UserFilter
     pagination_class = CustomPagination
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[User]:
         queryset = User.objects.exclude(user_role__in=["ordinary", "admin"]).select_related(
             "sportsman_profile", "trainer_profile"
         ).prefetch_related(
