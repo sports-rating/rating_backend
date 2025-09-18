@@ -106,7 +106,6 @@ class SchoolSerializer(serializers.ModelSerializer):
             "longitude",
             "region",
             "district",
-            "federation",
             "sports",
             "created_time",
         ]
@@ -154,10 +153,6 @@ class SchoolSerializer(serializers.ModelSerializer):
             "id": instance.district.id,
             "name": instance.district.name
         } if instance.district else None
-        data["federation"] = {
-            "id": instance.federation.id,
-            "name": instance.federation.name
-        } if instance.federation else None
         data["sports"] = SportSerializer(
             instance.sports.all(),
             many=True

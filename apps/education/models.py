@@ -42,13 +42,6 @@ class School(BaseModel):
     )
 
     sports = models.ManyToManyField(Sport, related_name='schools')
-    federation = models.ForeignKey(
-        "federation.Federation",
-        on_delete=models.SET_NULL,
-        related_name="federation_schools",
-        null=True,
-        blank=True,
-    )
 
     class Meta:
         db_table = "school"

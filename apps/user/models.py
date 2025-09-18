@@ -323,11 +323,11 @@ class WorkPlace(BaseModel):
         on_delete=models.CASCADE,
         related_name="work_places"
     )
-    federation = models.ForeignKey(
-        "federation.Federation",
-        on_delete=models.CASCADE,
-        related_name="federation_trainer_work_places"
-    )
+    # federation = models.ForeignKey(
+    #     "federation.Federation",
+    #     on_delete=models.CASCADE,
+    #     related_name="federation_trainer_work_places"
+    # )
     school = models.ForeignKey(
         "education.School",
         on_delete=models.CASCADE,
