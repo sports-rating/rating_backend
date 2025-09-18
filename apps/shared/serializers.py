@@ -55,18 +55,15 @@ class TrainerSnapshotSerializer(serializers.Serializer):
 
 # -- Trainer WorkPlace Snapshot Serializers --
 class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
-    federation = serializers.PrimaryKeyRelatedField(queryset=Federation.objects.all(), required=True)
     school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), required=True)
     sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=True)
 
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Allow deserialization from both:
-        - {"federation": "uuid", "school": "uuid", "sport": "uuid"}
-        - {"federation": {"id": "uuid", ...}, "school": {"id": "uuid", ...}, "sport": {"id": "uuid", ...}}
+        - {"school": "uuid", "sport": "uuid"}
+        - {"school": {"id": "uuid", ...}, "sport": {"id": "uuid", ...}}
         """
-        if isinstance(data.get("federation"), dict):
-            data["federation"] = data["federation"].get("id")
         if isinstance(data.get("school"), dict):
             data["school"] = data["school"].get("id")
         if isinstance(data.get("sport"), dict):
@@ -75,14 +72,9 @@ class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
         return super().to_internal_value(data)
 
     def to_new_snapshot(self, validated_data: dict) -> dict:
-        federation: Federation = validated_data.get("federation")
         school: School = validated_data.get("school")
         sport: Sport = validated_data.get("sport")
         return {
-            "federation": {
-                "id": str(federation.id),
-                "name": federation.name
-            } if federation else None,
             "school": {
                 "id": str(school.id),
                 "name": school.name

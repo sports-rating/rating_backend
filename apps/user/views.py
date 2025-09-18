@@ -575,17 +575,7 @@ class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return self.queryset.filter(trainer__user=user).select_related("federation", "school", "sport", "request")
-
-    # def get_queryset(self):
-    #     user = self.request.user
-    #     return self.queryset.filter(id=user.id).prefetch_related(
-    #         Prefetch(
-    #             "user_requests",
-    #             queryset=UserRequest.objects.filter(request_type=enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value).order_by("-created_time"),
-    #             to_attr="trainer_workplace_requests"
-    #         )
-    #     )
+        return self.queryset.filter(trainer__user=user).select_related("school", "sport", "request")
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

@@ -1369,7 +1369,6 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         model = WorkPlace
         fields = [
             "id",
-            "federation",
             "school",
             "sport",
             "message",
@@ -1378,13 +1377,9 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         read_only_fields = ["id", "created_time"]
 
     def validate(self, attrs: dict) -> dict:
-        federation: Federation = attrs.get("federation")
         school: School = attrs.get("school")
         sport: Sport = attrs.get("sport")
         user = self.request.user  # type: ignore
-
-        if not federation.federation_schools.filter(id=school.id).exists():
-            raise_validation_error(message=_("This school does not belong to the selected federation."))
 
         if not school.sports.filter(id=sport.id).exists():
             raise_validation_error(message=_("This sport is not offered by the selected school."))
@@ -1401,7 +1396,7 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
     def create(self, validated_data: dict) -> WorkPlace:
         trainer: Trainer = self.request.user.trainer_profile  # type: ignore
         message_from_sender: str | None = validated_data.pop("message", None)
-        federation: Federation = validated_data.get("federation")
+        federation: Federation = trainer.federation
         receivers: QuerySet[User] = federation.users.filter(user_role="federation")
 
         new_snapshot: dict = TrainerWorkPlaceSnapshotSerializer().to_new_snapshot(validated_data)
@@ -1423,10 +1418,6 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         if isinstance(instance, UserRequest):
             return UserRequestSerializer(instance).data
         data = super().to_representation(instance)
-        data["federation"] = {
-            "id": instance.federation.id,
-            "name": instance.federation.name,
-        } if instance.federation else None
         data["school"] = {
             "id": instance.school.id,
             "name": instance.school.name,
@@ -1435,6 +1426,11 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
             "id": instance.sport.id,
             "name": instance.sport.name,
         } if instance.sport else None
+        processed_federation = instance.request.federation if instance.request else None
+        data["processed_by"] = {
+            "id": processed_federation.id if processed_federation else None,
+            "name": processed_federation.name if processed_federation else None
+        }
         return data
 
 
