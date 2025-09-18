@@ -18,6 +18,7 @@ from apps.shared.models import (
     District,
     Neighborhood,
 )
+from apps.shared.utils.general import get_file_full_url
 
 
 @admin.register(User)
@@ -34,7 +35,7 @@ class UserAdmin(admin.ModelAdmin):
     ]
     search_fields = ["username", "phone_number", "first_name", "last_name", "pinfl"]
     list_filter = ["is_verified",]
-    readonly_fields = ["created_time", "educations", "results", "profile", "federation"]
+    readonly_fields = ["created_time", "educations", "results", "profile", "federation", "profile_picture"]
     list_filter = ["user_role", "gender", "region", "district"]
     fieldsets = (
         (
@@ -52,6 +53,7 @@ class UserAdmin(admin.ModelAdmin):
                     "user_role",
                     "region",
                     "district",
+                    "profile_picture",
                     "educations",
                     "results",
                     "profile",
@@ -110,6 +112,18 @@ class UserAdmin(admin.ModelAdmin):
         if hasattr(obj, 'federation') and obj.federation:
             url = reverse("admin:federation_federation_change", args=[obj.federation.id])
             return format_html('<a href="{}">{}</a>', url, obj.federation.name)
+        return "N/A"
+
+    @admin.display(description="Profile Picture")
+    def profile_picture(self, obj):
+        if hasattr(obj, 'media') and obj.media:
+            profile_pic = obj.media.filter(is_profile_photo=True).first()
+            if profile_pic:
+                return format_html(
+                    '<a href="{}" target="_blank">{}</a>',
+                    get_file_full_url(profile_pic.file),
+                    get_file_full_url(profile_pic.file)
+                )
         return "N/A"
 
 
