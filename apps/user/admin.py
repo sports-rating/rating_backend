@@ -32,9 +32,9 @@ class UserAdmin(admin.ModelAdmin):
         "is_verified",
         "created_time",
     ]
-    search_fields = ["username", "phone_number"]
+    search_fields = ["username", "phone_number", "first_name", "last_name", "pinfl"]
     list_filter = ["is_verified",]
-    readonly_fields = ["created_time", "educations", "results", "profile"]
+    readonly_fields = ["created_time", "educations", "results", "profile", "federation"]
     list_filter = ["user_role", "gender", "region", "district"]
     fieldsets = (
         (
@@ -55,6 +55,7 @@ class UserAdmin(admin.ModelAdmin):
                     "educations",
                     "results",
                     "profile",
+                    "federation",
                 )
             },
         ),
@@ -63,6 +64,7 @@ class UserAdmin(admin.ModelAdmin):
     filter_horizontal = ("user_permissions",)
     list_per_page = 10
 
+    @admin.display(description="Educations")
     def educations(self, obj):
         """Display educations as clickable links."""
         links = [
@@ -73,8 +75,9 @@ class UserAdmin(admin.ModelAdmin):
             )
             for edu in obj.educations.all()
         ]
-        return format_html("<br>".join(links)) if links else "-"
+        return format_html("<br>".join(links)) if links else "N/A"
 
+    @admin.display(description="Results")
     def results(self, obj):
         """Display results as clickable links."""
         links = [
@@ -85,8 +88,9 @@ class UserAdmin(admin.ModelAdmin):
             )
             for res in obj.results.all()
         ]
-        return format_html("<br>".join(links)) if links else "-"
+        return format_html("<br>".join(links)) if links else "N/A"
 
+    @admin.display(description="Profile")
     def profile(self, obj):
         """Display trainer or sportsman profile as a clickable link."""
         if obj.user_role == "trainer" and hasattr(obj, "trainer_profile"):
@@ -99,11 +103,14 @@ class UserAdmin(admin.ModelAdmin):
                 '<a href="{}">Sportsman Profile</a>',
                 reverse("admin:user_sportsman_change", args=[obj.id]),
             )
-        return "-"
+        return "N/A"
 
-    educations.short_description = "Educations"
-    results.short_description = "Results"
-    profile.short_description = "Profile"
+    @admin.display(description="Federation")
+    def federation(self, obj):
+        if hasattr(obj, 'federation') and obj.federation:
+            url = reverse("admin:federation_federation_change", args=[obj.federation.id])
+            return format_html('<a href="{}">{}</a>', url, obj.federation.name)
+        return "N/A"
 
 
 @admin.register(Sportsman)
