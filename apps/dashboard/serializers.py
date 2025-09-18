@@ -16,6 +16,7 @@ from apps.dashboard.models import PrivacyPolicy, TermsOfCondition
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
+from apps.shared.utils import enums
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -43,6 +44,63 @@ class UserListSerializer(serializers.ModelSerializer):
         if instance.user_role == "trainer":
             if getattr(instance, "trainer_profile", None):
                 data["sport"] = instance.trainer_profile.sport.name if instance.trainer_profile.sport else None
+        return data
+
+
+class AddUserSerializer(serializers.ModelSerializer):
+    """
+    User Serializer
+    """
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'middle_name',
+            "username",
+            'gender',
+            'phone_number',
+            'email',
+            'birth_date',
+            'user_role',
+            'is_verified',
+            'created_time',
+        ]
+        extra_kwargs: dict[str, dict] = {
+            'email': {'required': False},
+        }
+        read_only_fields: list[str] = ['id', 'username', 'is_verified', 'created_time']
+
+    def validate(self, attrs: dict) -> dict:
+        user_role = attrs.get('user_role')
+        phone_number = attrs.get('phone_number')
+        email = attrs.get('email')
+        if User.objects.filter(phone_number=phone_number).exists():
+            raise_validation_error(message=_("User with this phone number already exists."))
+        if email and User.objects.filter(email=email).exists():
+            raise_validation_error(message=_("User with this email already exists."))
+        if user_role not in [enums.UserRoles.ADMIN.value, enums.UserRoles.FEDERATION.value]:
+            raise_validation_error(message=_("Wrong user role has been provided."))
+        return attrs
+
+    def create(self, validated_data: dict) -> User:
+        user = User(
+            first_name=validated_data.get('first_name'),
+            last_name=validated_data.get('last_name'),
+            middle_name=validated_data.get('middle_name'),
+            gender=validated_data.get('gender'),
+            phone_number=validated_data.get('phone_number'),
+            email=validated_data.get('email'),
+            birth_date=validated_data.get('birth_date'),
+            user_role=validated_data.get('user_role'),
+            is_verified=True,
+        )
+        user.save()
+        return user
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
         return data
 
 

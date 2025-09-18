@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 
-from apps.shared.utils.permissions import IsAdmin
+from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import (
@@ -37,12 +37,7 @@ from apps.user.serializers import (
     UsersMeSerializer
 )
 
-from apps.dashboard.serializers import (
-    UserListSerializer,
-    UserExportSerializer,
-    PrivacyPolicySerializer,
-    TermsOfConditionSerializer
-)
+import apps.dashboard.serializers as serializers
 
 from apps.dashboard.filters import (
     UserFilter,
@@ -51,7 +46,7 @@ from apps.dashboard.filters import (
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
-    serializer_class = UserListSerializer
+    serializer_class = serializers.UserListSerializer
     permission_classes = (
         permissions.AllowAny,
     )
@@ -77,10 +72,32 @@ class UserListView(generics.ListAPIView):
         )
 
 
+class AddUserAPIView(generics.GenericAPIView):
+    serializer_class = serializers.AddUserSerializer
+    permission_classes = [IsAdminOrSuperAdmin,]
+    model = "user"
+    specific_permissions = ["add_user"]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("User created successfully"),
+            code=status.HTTP_201_CREATED,
+        )
+
+
 class ExportView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = User.objects.all()
-    serializer_class = UserExportSerializer
+    serializer_class = serializers.UserExportSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = UserFilter
 
@@ -112,7 +129,7 @@ class ExportView(generics.ListAPIView):
 
 class PrivacyPolicyAddListView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny, ) # IsAdmin
-    serializer_class = PrivacyPolicySerializer
+    serializer_class = serializers.PrivacyPolicySerializer
     queryset = PrivacyPolicy.objects.all()
 
     def list(self, request, *args, **kwargs):
@@ -135,7 +152,7 @@ class PrivacyPolicyAddListView(generics.ListCreateAPIView):
 
 class PrivacyPolicyDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.AllowAny,]
-    serializer_class = PrivacyPolicySerializer
+    serializer_class = serializers.PrivacyPolicySerializer
     queryset = PrivacyPolicy.objects.all()
 
     def get_permissions(self):
@@ -179,7 +196,7 @@ class PrivacyPolicyDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView)
 
 class TermsOfConditionAddListView(generics.ListCreateAPIView):
     permission_classes = [permissions.AllowAny,]
-    serializer_class = TermsOfConditionSerializer
+    serializer_class = serializers.TermsOfConditionSerializer
     queryset = TermsOfCondition.objects.all()
 
     def list(self, request, *args, **kwargs):
@@ -201,7 +218,7 @@ class TermsOfConditionAddListView(generics.ListCreateAPIView):
 
 class TermsOfConditionDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.AllowAny,]
-    serializer_class = TermsOfConditionSerializer
+    serializer_class = serializers.TermsOfConditionSerializer
     queryset = TermsOfCondition.objects.all()
 
     def get_permissions(self):

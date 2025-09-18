@@ -6,6 +6,7 @@ app_name = "dashboard"
 
 urlpatterns = [
     path("users/", views.UserListView.as_view(), name='users-list'),
+    path("add-user/", views.AddUserAPIView.as_view(), name='add-user'),
 
     path("export-excel/", views.ExportView.as_view(), name='export-excel'),
 
