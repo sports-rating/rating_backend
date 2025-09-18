@@ -12,6 +12,7 @@ from apps.user.models import (
     Trainer,
 )
 from apps.dashboard.models import PrivacyPolicy, TermsOfCondition
+from apps.federation.models import Federation
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
@@ -51,6 +52,12 @@ class AddUserSerializer(serializers.ModelSerializer):
     """
     User Serializer
     """
+    federation = serializers.PrimaryKeyRelatedField(
+        queryset=Federation.objects.all(),
+        required=True,
+        write_only=True
+    )
+
     class Meta:
         model = User
         fields = [
@@ -64,6 +71,7 @@ class AddUserSerializer(serializers.ModelSerializer):
             'email',
             'birth_date',
             'user_role',
+            'federation',
             'is_verified',
             'created_time',
         ]
@@ -85,6 +93,8 @@ class AddUserSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data: dict) -> User:
+        federation: Federation = validated_data.pop('federation')
+        user_role: str = validated_data.get('user_role')
         user = User(
             first_name=validated_data.get('first_name'),
             last_name=validated_data.get('last_name'),
@@ -97,10 +107,18 @@ class AddUserSerializer(serializers.ModelSerializer):
             is_verified=True,
         )
         user.save()
+        if user_role == enums.UserRoles.FEDERATION.value:
+            # Assign user to federation
+            federation.users.add(user)
+            federation.save()
         return user
 
     def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)
+        data['federation'] = {
+            'id': instance.federation.id,
+            'name': instance.federation.name
+        } if instance.federation else None
         return data
 
 
