@@ -109,9 +109,13 @@ class UserAdmin(admin.ModelAdmin):
 
     @admin.display(description="Federation")
     def federation(self, obj):
-        if hasattr(obj, 'federation') and obj.federation:
-            url = reverse("admin:federation_federation_change", args=[obj.federation.id])
-            return format_html('<a href="{}">{}</a>', url, obj.federation.name)
+        if obj.user_role == "trainer" and hasattr(obj, 'trainer_profile') and obj.trainer_profile and obj.trainer_profile.federation:
+            url = reverse("admin:federation_federation_change", args=[obj.trainer_profile.federation.id])
+            return format_html('<a href="{}">{}</a>', url, obj.trainer_profile.federation.name)
+        elif obj.user_role == "sportsman" and hasattr(obj, 'sportsman_profile') and obj.sportsman_profile and obj.sportsman_profile.trainer:
+            if obj.sportsman_profile.trainer.federation:
+                url = reverse("admin:federation_federation_change", args=[obj.sportsman_profile.trainer.federation.id])
+                return format_html('<a href="{}">{}</a>', url, obj.sportsman_profile.trainer.federation.name)
         return "N/A"
 
     @admin.display(description="Profile Picture")
