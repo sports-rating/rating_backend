@@ -6,9 +6,10 @@ from django.db import transaction
 from collections import defaultdict
 
 from apps.shared.utils.logging import logger
-from apps.sport.models import Result, Tournament
-from apps.user.models import User, Trainer
-from apps.sport.models import Result, Tournament
+from apps.shared.entities import (
+    User,
+    Tournament,
+)
 
 
 class ScoringService:

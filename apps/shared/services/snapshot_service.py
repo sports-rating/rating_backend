@@ -1,26 +1,16 @@
 import typing as t
 
 from uuid import UUID
+from google_crc32c import value
 
 from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet, Model
 from django.utils.functional import Promise
-from google_crc32c import value
 
-from apps.user.models import (
-    User,
-    Sportsman,
-    Trainer,
-    UserRequest,
-)
-from apps.federation.models import (
-    Federation
-)
 from apps.shared.utils.types import *
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.logging import logger
 import apps.shared.utils.enums as enums
-from apps.sport.models import Result
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.utils.payloads import (
     SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
@@ -33,7 +23,12 @@ from apps.shared.serializers import (
     SportsmanSnapshotSerializer,
     TrainerSnapshotSerializer
 )
-
+from apps.shared.entities import (
+    User,
+    Sportsman,
+    Trainer,
+    Result,
+)
 
 class SnapshotService:
 

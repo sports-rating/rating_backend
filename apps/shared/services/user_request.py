@@ -8,13 +8,6 @@ from django.db.models import QuerySet, Model
 from django.utils.functional import Promise
 from django.db import IntegrityError, transaction
 
-from apps.user.models import (
-    User,
-    UserRequest,
-    Sportsman,
-    Trainer
-)
-
 from apps.shared.utils.types import *
 from apps.shared.utils.notifications import send_notification_to_user
 from apps.shared.utils.exceptions import raise_validation_error
@@ -35,8 +28,6 @@ from apps.shared.entities import (
     Federation,
     Tournament,
     Result,
-    School,
-    Sport
 )
 
 
