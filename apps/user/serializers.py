@@ -1228,6 +1228,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "year",
             "currently_participating",
             "rating",
+            "score",
             "message",
             "additional_attributes",
             "is_verified",

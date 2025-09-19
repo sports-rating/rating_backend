@@ -146,6 +146,10 @@ class Result(BaseModel):
 
     repr_fields = ("tournament", "is_verified")
 
+    @property
+    def score(self) -> float:
+        return self.tournament.get_score(self.rating) if self.tournament else 0
+
 
 class Team(BaseModel):
     name = models.CharField(max_length=250, unique=True)
