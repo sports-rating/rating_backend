@@ -7,12 +7,19 @@ from collections import defaultdict
 
 from apps.shared.utils.logging import logger
 from apps.sport.models import Result, Tournament
+from apps.user.models import User, Trainer
+from apps.sport.models import Result, Tournament
 
 
 class ScoringService:
 
     @staticmethod
-    def update_points(sportsman, old_rating, new_rating, tournament):
+    def update_points(
+        sportsman: User,
+        old_rating: int | None,
+        new_rating: int | None,
+        tournament: Tournament
+    ) -> None:
         """
         Update points for both sportsman and their trainer when result is created or updated.
         """
@@ -26,7 +33,12 @@ class ScoringService:
             ScoringService.update_trainer_points(trainer_profile.user, tournament, new_rating)
 
     @staticmethod
-    def update_sportsman_points(sportsman, old_rating, new_rating, tournament):
+    def update_sportsman_points(
+        sportsman: User,
+        old_rating: int | None,
+        new_rating: int | None,
+        tournament: Tournament
+    ) -> None:
         """
         Update sportsman's points when result is firstly created.
         Subtracts old score and adds new score.
