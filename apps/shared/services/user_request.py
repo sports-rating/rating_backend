@@ -14,15 +14,12 @@ from apps.user.models import (
     Sportsman,
     Trainer
 )
-from apps.federation.models import (
-    Federation
-)
+
 from apps.shared.utils.types import *
 from apps.shared.utils.notifications import send_notification_to_user
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.logging import logger
 import apps.shared.utils.enums as enums
-from apps.sport.models import Result
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.serializers import (
@@ -31,8 +28,16 @@ from apps.shared.serializers import (
     TrainerSnapshotSerializer,
     TrainerWorkPlaceSnapshotSerializer
 )
-from apps.user.models import WorkPlace
-from apps.sport.models import Tournament
+from apps.shared.entities import (
+    User,
+    UserRequest,
+    WorkPlace,
+    Federation,
+    Tournament,
+    Result,
+    School,
+    Sport
+)
 
 
 class UserRequestService:
