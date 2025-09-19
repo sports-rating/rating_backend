@@ -1236,7 +1236,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "silver",
             "bronze",
         ]
-        read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status"]
+        read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status", "score"]
 
     def validate(self, attrs: dict) -> dict:
         sportsman: User = self.request.user # type: ignore

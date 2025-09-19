@@ -314,6 +314,7 @@ class UserRequestService:
             logger.info(f"Normalized result data: {result_data}")  # LOGGING
 
             # Applying the requested rating here
+            result_data.pop("score", None)  # Score is calculated based on rating and tournament
             requested_rating: int | None = result_data.get("rating")
             tournament: Tournament = result_data.get("tournament")
             logger.info(f"Requested rating: {requested_rating}")  # LOGGING

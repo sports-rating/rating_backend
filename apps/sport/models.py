@@ -135,15 +135,6 @@ class Result(BaseModel):
     status = models.CharField(max_length=20, choices=ResultVerificationStatus.choices(), default=ResultVerificationStatus.PENDING.value)
 
     rating = models.PositiveIntegerField(default=0)
-    score = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        validators=[
-            MinValueValidator(0),
-        ],
-        null=True,
-        blank=True
-    )
 
     gold = models.PositiveIntegerField(default=0)
     silver = models.PositiveIntegerField(default=0)
