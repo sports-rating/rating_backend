@@ -1,5 +1,5 @@
-import uuid
 import typing as t
+import uuid
 import random
 import string
 import requests
@@ -35,7 +35,7 @@ def generate_verification_code() -> str:
     return "".join(random.choices(string.digits, k=settings.VERIFICATION_CODE_LENGTH))
 
 
-def send_verification_code(phone_number: str):
+def send_verification_code(phone_number: str) -> tuple[int, str, t.Optional[str]]:
     verification_code = None
     error_status, error_text, verification_code_key, verified_phone_number_key = (
         check_existence_of_verification(phone_number)
@@ -68,7 +68,7 @@ def send_verification_code(phone_number: str):
         ex=settings.VERIFICATION_CODE_EXPIRE,
     )
 
-    return 200, "Verification code is successfully sent"
+    return 200, "Verification code is successfully sent", verification_code
 
 
 def check_existence_of_verification(
@@ -135,7 +135,7 @@ def verify_code(phone_number: str, code: str):
 
     verification_code_key = f"verification_code:{phone_number}"
     stored_code = redis_connection.get(verification_code_key)
-    logger.info(f"Verification code: {redis_connection.get(verification_code_key)}")
+    # logger.info(f"Verification code: {redis_connection.get(verification_code_key)}")
 
     if stored_code is None:
         return 400, "Verification code expired or not found"

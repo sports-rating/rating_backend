@@ -75,12 +75,13 @@ class SendVerificationCodeView(generics.CreateAPIView):
     def post(self, request: Request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        code, message = send_verification_code(
-            serializer.validated_data["phone_number"]
+        phone_number = serializer.validated_data.get("phone_number")
+        status, message, verification_code = send_verification_code(
+            phone_number
         )
-        # code, message = 200, "Verification code is successfully sent"
+        logger.info(f"{phone_number} | Generated code: {verification_code} | Status: {status} | Message: {message}")
 
-        if code == 200:
+        if status == 200:
             return success_response(message=_(message))
 
         return error_response(message=_(message))
@@ -106,7 +107,7 @@ class VerifyCodeView(generics.GenericAPIView):
         #         )
         #         data["tokens"] = user.tokens()
         #     return success_response(message=_(message), data=data)
-        logger.info(f"Status code: {response_code}, Message: {message}")
+        logger.info(f"{phone_number} | Entered code: {code} | Status: {response_code} | Message: {message}")
         if response_code == 200:
             return success_response(
                 message=_(message),
@@ -273,8 +274,11 @@ class UserPhoneUpdateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         phone_number = serializer.validated_data.get("phone_number")
-        code, message = send_verification_code(phone_number)
-        if code == 200:
+        status, message, verification_code = send_verification_code(phone_number)
+
+        logger.info(f"(UPDATE) {phone_number} | Generated code: {verification_code} | Status: {status} | Message: {message}")
+
+        if status == 200:
             return success_response(message=_(message))
         else:
             return error_response(message=_(message))

@@ -3,6 +3,7 @@ import string
 import os
 import mimetypes
 import io
+import typing as t
 import phonenumbers
 
 from PIL import Image
@@ -65,6 +66,13 @@ class User(AbstractUser, BaseModel):
     @property
     def federation(self):
         return self.federations.first()
+
+    @property
+    def profile_photo(self) -> t.Optional["UserMedia"]:
+        profile_photo = self.media.filter(is_profile_photo=True).first()
+        if profile_photo:
+            return profile_photo
+        return None
 
     repr_fields = ("first_name", "last_name", "phone_number")
 

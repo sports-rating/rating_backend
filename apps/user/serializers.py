@@ -239,7 +239,7 @@ class SportsmanListSerializer(serializers.ModelSerializer):
             "statistics"
         ]
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)
         if instance.sportsman_profile.sport:
             data["sport"] = instance.sportsman_profile.sport.name
@@ -250,6 +250,8 @@ class SportsmanListSerializer(serializers.ModelSerializer):
             data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
         if getattr(instance, "sportsman_profile", None):
             data["points"] = instance.sportsman_profile.points
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
         return data
 
     def get_statistics(self, obj) -> Dict[str, Any]:
@@ -455,6 +457,8 @@ class TrainerListSerializer(serializers.ModelSerializer):
                 data["logo"] = get_file_full_url(instance.trainer_profile.sport.logo.url) if instance.trainer_profile.sport.logo else None
         if getattr(instance, "trainer_profile", None):
             data["points"] = instance.trainer_profile.points
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
         return data
 
     def get_statistics(self, obj) ->  List[Dict[str, Any]]:
