@@ -78,7 +78,7 @@ class AgeGroupSerializer(serializers.ModelSerializer):
         u_match = re.match(r'^U-(\d+)(?:-(\d+))?$', name)
         plus_match = re.match(r'^\+(\d+)$', name)
 
-        logger.info(f"U-match: {u_match}, Plus-match: {plus_match}")
+        # logger.info(f"U-match: {u_match}, Plus-match: {plus_match}")
 
         if u_match:
             attrs["max_age"] = int(u_match.group(1))
@@ -289,7 +289,6 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "user_role": instance.sender.user_role,
             "phone_number": instance.sender.phone_number,
         }
-        logger.info(f"Receivers: {instance.receivers}")
         federation: Federation | None = Federation.objects.filter(id=federation_id).first()
         data["receiver"] = {
             "id": receiver.id,
