@@ -382,6 +382,8 @@ JAZZMIN_UI_TWEAKS = {
     },
 }
 
+SUPER_ADMIN_PHONE_NUMBER = os.getenv("SUPER_ADMIN_PHONE_NUMBER")
+
 # SMS configuration via Playmobile
 PLAY_MOBILE_URL = os.getenv("PLAY_MOBILE_URL")
 PLAY_MOBILE_LOGIN = os.getenv("PLAY_MOBILE_LOGIN")

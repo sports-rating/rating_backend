@@ -16,6 +16,7 @@ redis_connection = get_redis_connection()
 
 STATIC_CODE = "171717"
 PHONE_NUMBER_WHITELIST = [
+    settings.SUPER_ADMIN_PHONE_NUMBER, # super_admin
     "+998901234567", # Example Sportsman
     "+998901234568", # Example Trainer
     "+998901234569", # Example Federation

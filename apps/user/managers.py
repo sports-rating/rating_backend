@@ -1,4 +1,5 @@
 from django.contrib.auth.models import BaseUserManager
+from django.conf import settings
 
 
 class UserManager(BaseUserManager):
@@ -14,10 +15,12 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("is_verified", True)
 
         extra_fields.setdefault("first_name", "Admin_B")
         extra_fields.setdefault("last_name", "Admin_B")
         extra_fields.setdefault("user_role", "super_admin")
+        extra_fields.setdefault("phone_number", settings.SUPER_ADMIN_PHONE_NUMBER)
 
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")

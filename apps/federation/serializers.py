@@ -166,7 +166,7 @@ class FederationSerializer(RequestContextMixin, serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> Federation:
         age_groups_data = validated_data.pop("age_groups", [])
-        admin_users: QuerySet[User] = User.objects.filter(user_role__in=[enums.UserRoles.ADMIN.value, enums.UserRoles.SUPER_ADMIN.value])
+        admin_users: QuerySet[User] = User.objects.filter(user_role__in=[enums.UserRoles.ADMIN.value])
         sports = validated_data.pop("sports", [])
         documents = validated_data.pop("documents", [])
         validated_data.pop("users", None)  # we will set users after creation
