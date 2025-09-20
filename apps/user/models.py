@@ -31,6 +31,7 @@ from apps.sport.models import (
 from apps.federation.models import (
     Federation
 )
+from apps.user.managers import UserManager
 
 fake = Faker()
 
@@ -54,6 +55,8 @@ class User(AbstractUser, BaseModel):
 
     birth_date = models.DateField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+
+    objects = UserManager()
 
     class Meta:
         db_table = "user"
