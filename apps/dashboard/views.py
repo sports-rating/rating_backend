@@ -51,9 +51,15 @@ class UserListView(generics.ListAPIView):
     permission_classes = (
         permissions.AllowAny,
     )
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = UserFilter
     pagination_class = CustomPagination
+    search_fields = [
+        "first_name",
+        "last_name",
+        "username",
+        "phone_number",
+    ]
 
     def get_queryset(self) -> QuerySet[User]:
         queryset = User.objects.exclude(user_role__in=["ordinary", "admin", "super_admin"]).select_related(

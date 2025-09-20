@@ -49,6 +49,7 @@ class UserAdmin(admin.ModelAdmin):
                     "gender",
                     "pinfl",
                     "phone_number",
+                    "email",
                     "is_verified",
                     "user_role",
                     "region",
