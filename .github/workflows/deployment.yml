@@ -27,7 +27,9 @@ jobs:
             echo "IMAGE_TAG=dev" >> $GITHUB_ENV
           fi
           echo "COMMIT_TAG=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
-          echo "IMAGE_NAME=ghcr.io/sports-rating/myapp" >> $GITHUB_ENV
+          echo "IMAGE_NAME=userb1docker/sports-rating" >> $GITHUB_ENV
+
+        #   echo "IMAGE_NAME=ghcr.io/sports-rating/myapp" >> $GITHUB_ENV. # for GHCR
 
       - name: Build and Push Docker Image
         run: |
