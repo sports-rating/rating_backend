@@ -17,7 +17,7 @@ jobs:
     #     run: echo "${{ secrets.USERB_CI_PUSH_TOKEN_PAT }}" | docker login ghcr.io -u CoderB7 --password-stdin
 
       - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login --username ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
       - name: Set Image Name and Tags
         run: |
