@@ -1,5 +1,5 @@
 services:
-  web:
+  website_blue:
     build:
       dockerfile: deployment/Dockerfile
       context: .
@@ -9,7 +9,24 @@ services:
       - /var/www/static:/app/staticfiles
       - /var/www/media:/app/media
     ports:
-    - "8000:8000" # Expose port for nginx
+    - "8001:8000" # Blue on port 8001
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - backend
+
+  website_green:
+    build:
+      dockerfile: deployment/Dockerfile
+      context: .
+    env_file: .env
+    command: ./deployment/start.sh
+    volumes:
+      - /var/www/static:/app/staticfiles
+      - /var/www/media:/app/media
+    ports:
+    - "8002:8000" # Green on port 8002
     depends_on:
       - redis
       - postgres
