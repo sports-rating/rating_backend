@@ -1,0 +1,75 @@
+name: Blue-Green Deployment
+
+on:
+  push:
+    branches:
+      - dev
+    paths-ignore:
+      - "README.md"
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: [self-hosted]
+
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+    - name: Checkout the repo
+      uses: actions/checkout@v4
+
+    - name: Copy Secrets
+      run: cp ~/.secrets/.env .
+
+    - name: Determine Active Environment
+      id: active
+      run: |
+        if docker ps | grep website_blue; then
+          echo "ACTIVE=blue" >> $GITHUB_ENV
+          echo "NEW=green" >> $GITHUB_ENV
+          echo "NEW_PORT=8002" >> $GITHUB_ENV
+          echo "OLD_PORT=8001" >> $GITHUB_ENV
+        else
+          echo "ACTIVE=green" >> $GITHUB_ENV
+          echo "NEW=blue" >> $GITHUB_ENV
+          echo "NEW_PORT=8001" >> $GITHUB_ENV
+          echo "OLD_PORT=8002" >> $GITHUB_ENV
+        fi
+    - name: Build New Docker Image
+      run: docker compose build website_$NEW
+
+    - name: Restart Celery Services
+      run: |
+        docker compose up -d --build celery_worker celery_beat
+    - name: Start New Containers
+      run: docker compose up -d website_$NEW
+
+    - name: Wait for New Containers to Be Healthy
+      run: |
+        set -e
+        echo "Waiting for new container to pass health check..."
+        if timeout 180 bash -c 'while [[ "$(curl -L -s -o /dev/null -w "%{http_code}" http://localhost:$NEW_PORT/health-check/)" != "200" ]]; do sleep 5; done'; then
+          echo "Health check passed!"
+        else
+          echo "Docker logs for health check fail"
+          docker compose logs --tail=100 website_$NEW
+          echo "Health check failed. Rolling back..."
+          docker compose stop website_$NEW
+          docker compose rm -f website_$NEW
+          exit 1
+        fi
+    - name: Switch Traffic to New Containers
+      run: |
+        # Temporarily remove the active backend from nginx
+        sudo sed -i "s/#server 127.0.0.1:$NEW_PORT;/server 127.0.0.1:$NEW_PORT;/g" /etc/nginx/conf.d/dev-api.yoshtadbirkorlar.uz.conf
+        sudo sed -i "s/server 127.0.0.1:$OLD_PORT;/#server 127.0.0.1:$OLD_PORT;/g" /etc/nginx/conf.d/dev-api.yoshtadbirkorlar.uz.conf
+        sudo nginx -s reload
+    - name: Stop Old Containers
+      run: docker compose stop website_${{ env.ACTIVE }}
+
+    - name: Cleanup Unused Images
+      run: |
+        yes | docker image prune
+        yes | docker system prune
