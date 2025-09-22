@@ -63,8 +63,8 @@ jobs:
     - name: Switch Traffic to New Containers
       run: |
         # Enable new backend
-        sudo sed -i "s|proxy_pass http://website_${ACTIVE};|# proxy_pass http://website_${ACTIVE};|" /etc/nginx/sites-available/dev-api.7srating.uz.conf
-        sudo sed -i "s|# proxy_pass http://website_${NEW};|proxy_pass http://website_${NEW};|" /etc/nginx/sites-available/dev-api.7srating.uz.conf
+        sudo sed -i "s|proxy_pass http://website_${ACTIVE};|# proxy_pass http://website_${ACTIVE};|" /etc/nginx/sites-available/dev-api.7srating.uz
+        sudo sed -i "s|# proxy_pass http://website_${NEW};|proxy_pass http://website_${NEW};|" /etc/nginx/sites-available/dev-api.7srating.uz
         sudo nginx -s reload
     - name: Stop Old Containers
       run: docker compose stop website_${{ env.ACTIVE }}
