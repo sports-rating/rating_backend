@@ -198,10 +198,12 @@ class ResultCreateSerializer(serializers.ModelSerializer):
             "currently_participating",
             "rating",
             "additional_attributes",
+            "score",
             "gold",
             "silver",
             "bronze",
         ]
+        read_only_fields = ("id", "score")
         extra_kwargs = {"id": {"read_only": True}, "country": {"required": False}}
 
     def create(self, validated_data):
