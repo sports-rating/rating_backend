@@ -51,9 +51,9 @@ jobs:
         set -e
         echo "Waiting for new container to pass health check..."
         if timeout 180 bash -c 'while [[ "$(curl -L -s -o /dev/null -w "%{http_code}" http://localhost:$NEW_PORT/health-check/)" != "200" ]]; do sleep 5; done'; then
-          echo "Health check passed!"
+          echo "✅ Health check passed!"
         else
-          echo "Docker logs for health check fail"
+          echo "❌ Docker logs for health check fail"
           docker compose logs --tail=100 website_$NEW
           echo "Health check failed. Rolling back..."
           docker compose stop website_$NEW
@@ -62,9 +62,9 @@ jobs:
         fi
     - name: Switch Traffic to New Containers
       run: |
-        # Temporarily remove the active backend from nginx
-        sudo sed -i "s/#server 127.0.0.1:$NEW_PORT;/server 127.0.0.1:$NEW_PORT;/g" /etc/nginx/sites-available/dev-api.7srating.uz.conf
-        sudo sed -i "s/server 127.0.0.1:$OLD_PORT;/#server 127.0.0.1:$OLD_PORT;/g" /etc/nginx/sites-available/dev-api.7srating.uz.conf
+        # Enable new backend
+        sudo sed -i "s|proxy_pass http://website_${ACTIVE};|# proxy_pass http://website_${ACTIVE};|" /etc/nginx/sites-available/dev-api.7srating.uz.conf
+        sudo sed -i "s|# proxy_pass http://website_${NEW};|proxy_pass http://website_${NEW};|" /etc/nginx/sites-available/dev-api.7srating.uz.conf
         sudo nginx -s reload
     - name: Stop Old Containers
       run: docker compose stop website_${{ env.ACTIVE }}
