@@ -63,8 +63,8 @@ jobs:
     - name: Switch Traffic to New Containers
       run: |
         # Temporarily remove the active backend from nginx
-        sudo sed -i "s/#server 127.0.0.1:$NEW_PORT;/server 127.0.0.1:$NEW_PORT;/g" /etc/nginx/conf.d/dev-api.yoshtadbirkorlar.uz.conf
-        sudo sed -i "s/server 127.0.0.1:$OLD_PORT;/#server 127.0.0.1:$OLD_PORT;/g" /etc/nginx/conf.d/dev-api.yoshtadbirkorlar.uz.conf
+        sudo sed -i "s/#server 127.0.0.1:$NEW_PORT;/server 127.0.0.1:$NEW_PORT;/g" /etc/nginx/sites-available/dev-api.7srating.uz.conf
+        sudo sed -i "s/server 127.0.0.1:$OLD_PORT;/#server 127.0.0.1:$OLD_PORT;/g" /etc/nginx/sites-available/dev-api.7srating.uz.conf
         sudo nginx -s reload
     - name: Stop Old Containers
       run: docker compose stop website_${{ env.ACTIVE }}
