@@ -9,6 +9,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("apps.urls")),
+    path('health-check/', include('health_check.urls')),
     path("", lambda _: JsonResponse({"message": "OK"})),
 ]
 

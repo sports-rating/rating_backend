@@ -24,6 +24,8 @@ ALLOWED_HOSTS = ["*"]
 
 
 PACKAGES = [
+    "health_check",
+    "health_check.db",
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "phonenumbers",

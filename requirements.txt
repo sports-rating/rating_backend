@@ -27,6 +27,8 @@ djangorestframework-simplejwt==5.3.1
 djangorestframework-stubs==3.15.4
 drf-spectacular==0.27.2
 drf-spectacular-sidecar==2024.11.1
+django-querycount==0.8.3
+django-health-check==3.18.3
 fcm-django==2.2.1
 firebase-admin==6.6.0
 google-api-core==2.23.0
@@ -88,4 +90,3 @@ pytest-django==4.9.0
 factory-boy==3.3.3
 pytest-factoryboy==2.7.0
 locust==2.32.8
-django-querycount==0.8.3
