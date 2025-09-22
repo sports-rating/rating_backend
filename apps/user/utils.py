@@ -2,6 +2,7 @@ from django.db.models import Count, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from apps.shared.utils.logging import logger
 
+
 def calculate_sportsman_statistics(sportsman):
     """
     Calculate statistics for a sportsman based on their results.
