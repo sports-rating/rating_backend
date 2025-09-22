@@ -10,7 +10,7 @@ on:
 jobs:
   deploy:
     name: Deploy
-    runs-on: [self-hosted]
+    runs-on: [srating-dev]
 
     concurrency:
       group: deploy-${{ github.ref }}
