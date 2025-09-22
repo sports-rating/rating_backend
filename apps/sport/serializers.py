@@ -245,14 +245,16 @@ class ResultSerializer(serializers.ModelSerializer):
             "rating",
             "tournament",
             "additional_attributes",
+            "score",
             "gold",
             "silver",
             "bronze",
         )
+        read_only_fields = ("id", "score")
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['trianer_id'] = instance.trainer.user.id if instance.trainer else None
+        data['trainer_id'] = instance.trainer.user.id if instance.trainer else None
         data['trainer_name'] = str(instance.traier.user) if instance.trainer else None
 
         data['archived_trainer_id'] = instance.archived_trainer.id if instance.archived_trainer else None
