@@ -54,6 +54,7 @@ from apps.shared.utils.payloads import (
 )
 from apps.shared.serializers import (
     TrainerWorkPlaceSnapshotSerializer,
+    SportsmanResultSnapshotSerializer
 )
 
 
@@ -1225,6 +1226,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "year",
             "currently_participating",
             "rating",
+            "score",
             "message",
             "additional_attributes",
             "is_verified",
@@ -1233,16 +1235,16 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "silver",
             "bronze",
         ]
-        read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status"]
+        read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status", "score"]
 
     def validate(self, attrs: dict) -> dict:
-        sportsman = self.context.get("request").user
-        federation = sportsman.sportsman_profile.trainer.federation
+        sportsman: User = self.request.user # type: ignore
+        federation: Federation = sportsman.sportsman_profile.trainer.federation
         tournament = attrs.get("tournament", None)
         trainer = attrs.get("trainer", None)
         rating = attrs.get("rating", None)
         year = attrs.get("year", None)
-        instance = self.instance
+        instance: Result = self.instance
         # if instance and tournament:
         #     if instance.tournament != tournament:
         #         raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
@@ -1260,12 +1262,49 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             raise_validation_error(message=_("Invalid rating for this tournament."))
         if instance and Result.objects.exclude(pk=instance.pk).filter(user=sportsman, tournament=tournament, trainer=trainer, year=year).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
-        return super().validate(attrs)
+        if UserRequest.objects.filter(
+            sender=sportsman,
+            status=enums.UserRequestStatus.PENDING.value,
+            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+            federation=federation,
+        ).exists():
+            raise_validation_error(message=_("You already have a pending request!"))
+        return attrs
 
-    def create(self, validated_data):
+    # def create(self, validated_data: dict) -> Result:
+    #     sender: User = self.request.user  # type: ignore
+    #     result = self._save_result(sender, validated_data)
+    #     return result
+
+    def create(self, validated_data: dict) -> t.Union[Result, UserRequest]:
         sender: User = self.request.user  # type: ignore
-        result = self._save_result(sender, validated_data)
-        return result
+        message_from_sender: str | None = validated_data.pop("message", None)
+        archived_trainer_name: str | None = validated_data.pop("archived_trainer_name", None)
+
+        if archived_trainer_name:
+            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+            result = Result.objects.create(user=sender, archived_trainer=archived_trainer, **validated_data)
+            return result
+
+        tournament: Tournament = validated_data.get("tournament")
+        score = tournament.get_score(validated_data.get("rating")) if tournament else None
+        validated_data['score'] = score
+        trainer: User = validated_data.get("trainer")
+
+        new_snapshot: dict = SportsmanResultSnapshotSerializer().to_new_snapshot(validated_data)
+
+        user_request, message, success = UserRequestService.create_request(
+            sender=sender,
+            receivers=User.objects.filter(id=trainer.user_id),
+            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+            old_data={},
+            new_data=new_snapshot,
+            message_from_sender=message_from_sender
+        )
+        if not success:
+            raise_validation_error(message=message)
+
+        return user_request
 
     def _save_result(self, sender, validated_data):
         new_trainer = validated_data.pop("trainer", None)
@@ -1287,7 +1326,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
     @transaction.atomic
     def _handle_trainer(self, sender, new_trainer, validated_data, message_from_sender):
         rating = validated_data.pop("rating")
-        tournament = validated_data.get("tournament", None)
+        tournament: Tournament = validated_data.get("tournament", None)
         score = tournament.get_score(rating) if tournament and rating else None
         result: Result = None
 
@@ -1316,7 +1355,9 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
 
             return result
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: Result) -> t.Optional[dict]:
+        if isinstance(instance, UserRequest):
+            return UserRequestSerializer(instance).data
         data = super().to_representation(instance)
         data["tournament"] = {
             "id": instance.tournament.id,
@@ -1395,7 +1436,7 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
 
         return super().validate(attrs)
 
-    def create(self, validated_data: dict) -> WorkPlace:
+    def create(self, validated_data: dict) -> t.Union[WorkPlace, UserRequest]:
         trainer: Trainer = self.request.user.trainer_profile  # type: ignore
         message_from_sender: str | None = validated_data.pop("message", None)
         federation: Federation = trainer.federation

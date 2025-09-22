@@ -81,7 +81,7 @@ class Tournament(BaseModel):
         return self.name
 
     def get_score(self, position):
-        scoring_policy = self.scoring_policies.filter(position=position).first()
+        scoring_policy: ScoringPolicy = self.scoring_policies.filter(position=position).first()
         return scoring_policy.score if scoring_policy else 0
 
     def save(self, *args, **kwargs):
@@ -135,6 +135,7 @@ class Result(BaseModel):
     status = models.CharField(max_length=20, choices=ResultVerificationStatus.choices(), default=ResultVerificationStatus.PENDING.value)
 
     rating = models.PositiveIntegerField(default=0)
+
     gold = models.PositiveIntegerField(default=0)
     silver = models.PositiveIntegerField(default=0)
     bronze = models.PositiveIntegerField(default=0)

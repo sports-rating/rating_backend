@@ -1,7 +1,7 @@
+import decimal
 import typing as t
 
 from datetime import date
-from typing import Any, Dict, List
 
 import rest_framework_simplejwt.serializers as jwt_serializers
 import rest_framework_simplejwt.tokens as jwt_tokens
@@ -14,7 +14,7 @@ from apps.shared.utils.enums import SportRankEnum
 from apps.shared.utils.logging import logger
 from apps.federation.models import Federation
 from apps.education.models import School
-from apps.sport.models import Sport
+from apps.sport.models import Sport, Tournament
 
 
 class ChildTournamentSnapshotSerializer(serializers.Serializer):
@@ -29,12 +29,43 @@ class ChildSportSnapshotSerializer(serializers.Serializer):
 
 # -- Sportsman Result Approval Snapshot Serializers --
 class SportsmanResultSnapshotSerializer(serializers.Serializer):
-    id = serializers.UUIDField(required=False, allow_null=True)
     country = serializers.CharField(required=False, allow_null=True)
     year = serializers.IntegerField(required=False, allow_null=True)
-    # currently_participating = serializers.BooleanField(default=False)
     rating = serializers.IntegerField(required=False, allow_null=True)
-    tournament = ChildTournamentSnapshotSerializer(required=False, allow_null=True)
+    tournament = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), required=True)
+    score = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    # id = serializers.UUIDField(required=False, allow_null=True)
+    # currently_participating = serializers.BooleanField(default=False)
+    # tournament = ChildTournamentSnapshotSerializer(required=False, allow_null=True)
+
+    def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
+        """
+        Allow deserialization from both:
+        - {"tournament": "uuid", ...}
+        - {"tournament": {"id": "uuid", ...}, ...}
+        """
+        if isinstance(data.get("tournament"), dict):
+            data["tournament"] = data["tournament"].get("id")
+        if isinstance(data.get("score"), str):
+            try:
+                data["score"] = decimal.Decimal(data["score"])
+            except decimal.InvalidOperation:
+                pass
+        logger.debug(f"Deserialized Internal data: {data}")
+        return super().to_internal_value(data)
+
+    def to_new_snapshot(self, validated_data: dict) -> dict:
+        tournament: Tournament = validated_data.get("tournament")
+        return {
+            "country": validated_data.get("country"),
+            "year": validated_data.get("year"),
+            "rating": validated_data.get("rating"),
+            "score": str(validated_data.get("score")),
+            "tournament": {
+                "id": str(tournament.id),
+                "name": tournament.name
+            } if tournament else None,
+        }
 
 
 # -- Sportsman Approval Snapshot Serializers --
@@ -58,7 +89,7 @@ class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
     school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), required=True)
     sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=True)
 
-    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
         """
         Allow deserialization from both:
         - {"school": "uuid", "sport": "uuid"}
