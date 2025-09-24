@@ -65,11 +65,12 @@ jobs:
         # Enable new backend
         sudo sed -i "s|proxy_pass http://website_${ACTIVE};|# proxy_pass http://website_${ACTIVE};|" /etc/nginx/sites-available/api.7srating.uz
         sudo sed -i "s|# proxy_pass http://website_${NEW};|proxy_pass http://website_${NEW};|" /etc/nginx/sites-available/api.7srating.uz
-        sudo nginx -s reload
+        sudo systemctl reload nginx
+
     - name: Stop Old Containers
       run: docker compose stop website_${{ env.ACTIVE }}
 
     - name: Cleanup Unused Images
       run: |
-        yes | docker image prune
-        yes | docker system prune
+        yes | docker image prune -f # -f to avoid confirmation prompt
+        yes | docker system prune -f
