@@ -10,11 +10,31 @@ from apps.sport.models import (
     ScoringPolicy
 )
 
+
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "sport", "federation"]
     search_fields = ["name", "sport__name"]
     list_filter = ["sport",]
+    readonly_fields = ["federation_obj", "scoring_policies",]
+
+    @admin.display(description="Federation")
+    def federation_obj(self, obj):
+        if obj.federation:
+            url = reverse("admin:federation_federation_change", args=[obj.federation.id])
+            return format_html('<a href="{}">{}</a>', url, obj.federation.name)
+        return "N/A"
+
+    @admin.display(description="Scoring Policies")
+    def scoring_policies(self, obj):
+        policies = ScoringPolicy.objects.filter(tournament=obj)
+        if policies.exists():
+            links = []
+            for policy in policies:
+                url = reverse("admin:sport_scoringpolicy_change", args=[policy.id])
+                links.append(format_html('<a href="{}">Position: {} - Score: {}</a>', url, policy.position, policy.score))
+            return format_html("<br>".join(links))
+        return "No scoring policies defined."
 
 
 @admin.register(Sport)
