@@ -335,7 +335,7 @@ class WorkPlace(BaseModel):
         related_name="work_places"
     )
     school = models.ForeignKey(
-        "education.School",
+        "sport.School",
         on_delete=models.CASCADE,
         related_name="school_trainer_work_places",
         null=True,
