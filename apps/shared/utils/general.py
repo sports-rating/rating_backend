@@ -21,6 +21,7 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.enums import (
     UserRequestTypes
 )
+from apps.shared.utils.utils import send_sms_message
 
 
 def get_file_full_url(url):
@@ -87,7 +88,7 @@ def check_m2m_uniqueness(field_name, data, model, instance=None, error_field_nam
         raise_validation_error(message=_(f"{model.__name__} already exists for {field_name}: {names}"))
 
 
-def check_phone_valid(self, phone_number: str) -> None:
+def check_phone_valid(phone_number: str) -> None:
     if phone_number:
         try:
             parsed_number = phonenumbers.parse(phone_number)
@@ -107,3 +108,12 @@ def request_type_theme_mapping(request_type):
         UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value: "Trainer Workplace Verification",
     }
     return mapping.get(request_type, "Unknown Request Type")
+
+
+def send_sport_institution_message(school_name: str, phone_number: str, status: str) -> int:
+    if status == "approved":
+        text = f"Your request to register the sport institution '{school_name}' has been approved. You can now log in and start using our services."
+    else:
+        text = f"Your request to register the sport institution '{school_name}' has been rejected. For more information, please contact support."
+
+    return send_sms_message(phone_number, text)

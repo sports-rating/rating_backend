@@ -57,7 +57,7 @@ class UserRoles(BaseEnum):
     SPORTSMAN = "sportsman"
     TRAINER = "trainer"
     FEDERATION = "federation"
-    SCHOOL_ADMIN = "school_admin"
+    SPORT_INSTITUTION_ADMIN = "sport_institution_admin"
 
 
 class SportInstitutionChoices(BaseEnum):

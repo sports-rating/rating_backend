@@ -13,11 +13,13 @@ from rest_framework.generics import get_object_or_404
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.general import (
     get_file_full_url,
     calculate_file_size,
     check_uniqueness,
-    check_phone_valid
+    check_phone_valid,
+    send_sport_institution_message
 )
 
 from apps.sport.models import (
@@ -356,7 +358,7 @@ class TeamSerializer(serializers.ModelSerializer):
         ]
 
 
-class SportInstitutionRequestSerializer(serializers.ModelSerializer):
+class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
     class Meta:
         model = SportInstitutionRequest
         fields = [
@@ -395,9 +397,10 @@ class SportInstitutionRequestSerializer(serializers.ModelSerializer):
         request = SportInstitutionRequest.objects.create(**validated_data)
         return request
 
+    @transaction.atomic
     def update(self, instance: SportInstitutionRequest, validated_data: dict) -> SportInstitutionRequest:
         status = validated_data.get("status", None)
-        processed_by = validated_data.get("processed_by", None)
+        processed_by = self.request.user
 
         if status in [enums.SportInstitutionRequestStatus.APPROVED.value, enums.SportInstitutionRequestStatus.REJECTED.value]:
             if not processed_by:
@@ -410,4 +413,51 @@ class SportInstitutionRequestSerializer(serializers.ModelSerializer):
             instance.additional_info = additional_info
 
         instance.save()
+
+        if status == enums.SportInstitutionRequestStatus.APPROVED.value:
+            # Create SportInstitution
+            sport_institution = self._create_sport_institution(instance)
+            # Create SportInstitution Admin user
+            admin_user = self._create_sport_institution_admin(instance, sport_institution)
+
+            sport_institution.user = admin_user
+            sport_institution.save()
+
+        # Send SMS to the manager with login details
+        status_code = send_sport_institution_message(sport_institution.name, admin_user.phone_number, status)
+        if status_code != 200:
+            logger.error(f"Failed to send SMS to {admin_user.phone_number} for Sport Institution '{sport_institution.name}'. Status code: {status_code}")
+            raise_validation_error(message=_("Failed to send SMS notification. Please try again later."))
+
         return instance
+
+    def _create_sport_institution(self, request: SportInstitutionRequest) -> SportInstitution:
+        sport_institution = SportInstitution.objects.create(
+            name=request.school_name,
+            phone_number=request.school_phone_number,
+            director=request.school_director,
+            type=request.school_type,
+            address=request.school_address,
+            latitude=request.school_latitude,
+            longitude=request.school_longitude,
+            region_id=request.school_region,
+            district_id=request.school_district,
+        )
+        if request.school_sports:
+            sports = Sport.objects.filter(id__in=request.school_sports)
+            sport_institution.sports.set(sports)
+        return sport_institution
+
+    def _create_sport_institution_admin(self, request: SportInstitutionRequest, sport_institution: SportInstitution) -> User:
+        # Create a user for the sport institution manager
+        # password = User.objects.make_random_password()
+        user = User(
+            first_name=request.manager_first_name,
+            last_name=request.manager_last_name,
+            phone_number=request.manager_phone_number,
+            user_role=enums.UserRoles.SPORT_INSTITUTION_ADMIN.value,
+            is_active=True,
+        )
+        user.save()
+
+        return user

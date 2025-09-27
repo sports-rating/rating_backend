@@ -82,6 +82,7 @@ class ScoringPolicyAdmin(admin.ModelAdmin):
         return "N/A"
 
 
+@admin.register(SportInstitutionRequest)
 class SportInstitutionRequestAdmin(admin.ModelAdmin):
     list_display = [
         "id",

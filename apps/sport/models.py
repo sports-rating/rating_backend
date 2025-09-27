@@ -52,6 +52,13 @@ class Sport(BaseModel):
 
 
 class SportInstitution(BaseModel):
+    user = models.ForeignKey(
+        "user.User",
+        on_delete=models.CASCADE,
+        related_name="sport_institution",
+        null=True,
+        blank=True
+    )
     name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=13)
     director = models.CharField(max_length=255, blank=True, null=True)
