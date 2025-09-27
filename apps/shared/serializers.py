@@ -13,8 +13,7 @@ from django.apps import apps
 from apps.shared.utils.enums import SportRankEnum
 from apps.shared.utils.logging import logger
 from apps.federation.models import Federation
-from apps.education.models import School
-from apps.sport.models import Sport, Tournament
+from apps.sport.models import Sport, Tournament, School
 
 
 class ChildTournamentSnapshotSerializer(serializers.Serializer):

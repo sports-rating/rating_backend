@@ -18,18 +18,17 @@ from apps.shared.utils.utils import (
 )
 
 from apps.career.models import (
-    Education
+    Education,
+    WorkPlace
 )
 
-from apps.career.serializers import (
-    EducationSerializer,
-)
+import apps.career.serializers as serializers
 
 
 class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny, )
     queryset = Education.objects.all()
-    serializer_class = EducationSerializer
+    serializer_class = serializers.EducationSerializer
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -57,4 +56,40 @@ class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             message=_("Education deleted successfully"),
             code=status.HTTP_204_NO_CONTENT
+        )
+
+
+class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = WorkPlace.objects.all()
+    serializer_class = serializers.TrainerWorkPlaceSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    # filterset_class = UserRequestFilter
+    pagination_class = CustomPagination
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(trainer__user=user).select_related("school", "sport", "request")
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Trainer WorkPlace sent for verification successfully"),
+            code=status.HTTP_201_CREATED
+        )
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Trainer WorkPlace requests retrieved successfully"),
+            code=status.HTTP_200_OK
         )

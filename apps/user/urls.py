@@ -23,7 +23,7 @@ urlpatterns = [
 
     path("profile/trainer/", views.TrainerListCreateView.as_view(), name='trainer-register-list'),
     path("profile/trainer/<uuid:pk>/", views.TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-retrieve"),
-    path("profile/trainer/workplace/", views.TrainerWorkPlaceListCreateView.as_view(), name='trainer-workplace-list-create'),
+    # path("profile/trainer/workplace/", views.TrainerWorkPlaceListCreateView.as_view(), name='trainer-workplace-list-create'),
     # path("profile/trainer/workplace/<uuid:pk>/", views.TrainerWorkPlaceRetrieveUpdateDeleteView.as_view(), name='trainer-workplace-retrieve-update-delete'),
 
     path("profile/archived-trainer/", views.ArchivedTrainerCreateListView.as_view(), name='archived-trainer-register-list'),
