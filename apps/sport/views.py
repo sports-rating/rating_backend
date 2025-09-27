@@ -27,7 +27,7 @@ from apps.sport.models import (
     Sport,
     Tournament,
     Team,
-    School
+    SportInstitution,
 )
 
 import apps.sport.serializers as serializers
@@ -35,7 +35,7 @@ import apps.sport.serializers as serializers
 from apps.sport.filters import (
     TournamentFilter,
     TeamFilter,
-    SchoolFilter
+    SportInstitutionFilter
 )
 
 
@@ -282,12 +282,12 @@ class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
-class SchoolListCreateView(generics.ListCreateAPIView):
+class SportInstitutionListCreateView(generics.ListCreateAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
-    queryset = School.objects.all()
-    serializer_class = serializers.SchoolSerializer
+    queryset = SportInstitution.objects.all()
+    serializer_class = serializers.SportInstitutionSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_class = SchoolFilter
+    filterset_class = SportInstitutionFilter
     pagination_class = CustomPagination
 
     def get_permissions(self):
@@ -295,16 +295,16 @@ class SchoolListCreateView(generics.ListCreateAPIView):
             return (permissions.AllowAny(),)
         return super().get_permissions()
 
-    def get_queryset(self) -> QuerySet[School]:
+    def get_queryset(self) -> QuerySet[SportInstitution]:
         return self.queryset.prefetch_related("sports")
 
     def create(self, request: Request, *args, **kwargs) -> Response:
-        serializer: serializers.SchoolSerializer = self.get_serializer(data=request.data)
+        serializer: serializers.SportInstitutionSerializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
             data=serializer.data,
-            message=_("School created successfully"),
+            message=_("Sport institution created successfully"),
             code=status.HTTP_201_CREATED
         )
 
@@ -312,34 +312,34 @@ class SchoolListCreateView(generics.ListCreateAPIView):
         response: Response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
-            message=_("School list retrieved successfully"),
+            message=_("Sport institution list retrieved successfully"),
             code=status.HTTP_200_OK
         )
 
 
-class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+class SportInstitutionRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (permissions.AllowAny,)
-    queryset = School.objects.all()
-    serializer_class = serializers.SchoolSerializer
+    queryset = SportInstitution.objects.all()
+    serializer_class = serializers.SportInstitutionSerializer
 
     def get_permissions(self):
         if self.request.method == "GET":
             return (permissions.AllowAny(),)
         return super().get_permissions()
 
-    def get_queryset(self) -> QuerySet[School]:
+    def get_queryset(self) -> QuerySet[SportInstitution]:
         return self.queryset.prefetch_related("sports")
 
-    def get_object(self) -> School:
-        school_id: UUID = self.kwargs.get("pk")
-        school: School = self.queryset.filter(id=school_id).first()
-        if not school:
-            raise_validation_error(message=_("School not found"), code=status.HTTP_404_NOT_FOUND)
-        return school
+    def get_object(self) -> SportInstitution:
+        sport_institution_id: UUID = self.kwargs.get("pk")
+        sport_institution: SportInstitution = self.queryset.filter(id=sport_institution_id).first()
+        if not sport_institution:
+            raise_validation_error(message=_("Sport institution not found"), code=status.HTTP_404_NOT_FOUND)
+        return sport_institution
 
     def retrieve(self, request: Request, *args, **kwargs) -> Response:
-        instance: School = self.get_object()
-        serializer: serializers.SchoolSerializer = self.get_serializer(instance)
+        instance: SportInstitution = self.get_object()
+        serializer: serializers.SportInstitutionSerializer = self.get_serializer(instance)
         return success_response(
             data=serializer.data,
             message=_("School retrieved successfully"),
@@ -347,20 +347,20 @@ class SchoolRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         )
 
     def update(self, request: Request, *args, **kwargs) -> Response:
-        instance: School = self.get_object()
-        serializer: serializers.SchoolSerializer = self.get_serializer(instance, data=request.data, partial=True)
+        instance: SportInstitution = self.get_object()
+        serializer: serializers.SportInstitutionSerializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(
             data=serializer.data,
-            message=_("School updated successfully"),
+            message=_("Sport institution updated successfully"),
             code=status.HTTP_200_OK,
         )
 
     def delete(self, request: Request, *args, **kwargs) -> Response:
-        instance: School = self.get_object()
+        instance: SportInstitution = self.get_object()
         instance.delete()
         return success_response(
-            message=_("School deleted successfully"),
+            message=_("Sport institution deleted successfully"),
             code=status.HTTP_204_NO_CONTENT
         )

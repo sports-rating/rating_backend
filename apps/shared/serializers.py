@@ -13,7 +13,7 @@ from django.apps import apps
 from apps.shared.utils.enums import SportRankEnum
 from apps.shared.utils.logging import logger
 from apps.federation.models import Federation
-from apps.sport.models import Sport, Tournament, School
+from apps.sport.models import Sport, Tournament, SportInstitution
 
 
 class ChildTournamentSnapshotSerializer(serializers.Serializer):
@@ -85,30 +85,30 @@ class TrainerSnapshotSerializer(serializers.Serializer):
 
 # -- Trainer WorkPlace Snapshot Serializers --
 class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
-    school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), required=True)
+    sport_institution = serializers.PrimaryKeyRelatedField(queryset=SportInstitution.objects.all(), required=True)
     sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=True)
 
     def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
         """
         Allow deserialization from both:
-        - {"school": "uuid", "sport": "uuid"}
-        - {"school": {"id": "uuid", ...}, "sport": {"id": "uuid", ...}}
+        - {"sport_institution": "uuid", "sport": "uuid"}
+        - {"sport_institution": {"id": "uuid", ...}, "sport": {"id": "uuid", ...}}
         """
-        if isinstance(data.get("school"), dict):
-            data["school"] = data["school"].get("id")
+        if isinstance(data.get("sport_institution"), dict):
+            data["sport_institution"] = data["sport_institution"].get("id")
         if isinstance(data.get("sport"), dict):
             data["sport"] = data["sport"].get("id")
         logger.debug(f"Deserialized Internal data: {data}")
         return super().to_internal_value(data)
 
     def to_new_snapshot(self, validated_data: dict) -> dict:
-        school: School = validated_data.get("school")
+        sport_institution: SportInstitution = validated_data.get("sport_institution")
         sport: Sport = validated_data.get("sport")
         return {
-            "school": {
-                "id": str(school.id),
-                "name": school.name
-            } if school else None,
+            "sport_institution": {
+                "id": str(sport_institution.id),
+                "name": sport_institution.name
+            } if sport_institution else None,
             "sport": {
                 "id": str(sport.id),
                 "name": sport.name

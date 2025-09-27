@@ -16,7 +16,7 @@ from apps.sport.models import (
     Tournament,
     Team,
     Sport,
-    School
+    SportInstitution
 )
 
 
@@ -64,13 +64,13 @@ class TeamFilter(filters.FilterSet):
         return queryset.filter(sport__name=value)
 
 
-class SchoolFilter(filters.FilterSet):
+class SportInstitutionFilter(filters.FilterSet):
     type = filters.CharFilter(method="filter_type")
     sport = filters.CharFilter(method="filter_sport")
     federation = filters.CharFilter(field_name="federation__id")
 
     class Meta:
-        model = School
+        model = SportInstitution
         fields = ["type", "sport"]
 
     def filter_type(self, queryset, name, value): # noqa

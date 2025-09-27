@@ -7,7 +7,7 @@ from apps.sport.models import (
     Tournament,
     Team,
     ScoringPolicy,
-    School
+    SportInstitution
 )
 
 
@@ -43,8 +43,8 @@ class SportAdmin(admin.ModelAdmin):
     search_fields = ["name",]
 
 
-@admin.register(School)
-class SchoolAdmin(admin.ModelAdmin):
+@admin.register(SportInstitution)
+class SportInstitutionAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "director", "phone_number"]
     search_fields = ["name", "phone_number"]
     readonly_fields = ["created_time", "updated_time", "sports_list"]

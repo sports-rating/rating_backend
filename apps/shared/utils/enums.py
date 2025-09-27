@@ -57,11 +57,13 @@ class UserRoles(BaseEnum):
     SPORTSMAN = "sportsman"
     TRAINER = "trainer"
     FEDERATION = "federation"
+    SCHOOL_ADMIN = "school_admin"
 
 
-class SchoolChoices(BaseEnum):
-    ORDINARY = "ordinary"
-    CLUB = "club"
+class SportInstitutionChoices(BaseEnum):
+    SPORT_SCHOOL = "sport_school"
+    SPORT_CLUB = "sport_club"
+    SPORT_COMPLEX = "sport_complex"
 
 
 class LanguageTypes(BaseEnum):

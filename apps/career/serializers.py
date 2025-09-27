@@ -29,7 +29,7 @@ from apps.career.models import (
 )
 from apps.sport.models import (
     Sport,
-    School,
+    SportInstitution,
     Tournament
 )
 from apps.user.models import (
@@ -105,7 +105,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
 
 class EducationSerializer(serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True) # sport
-    school_id = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), source="school", write_only=True)
+    school_id = serializers.PrimaryKeyRelatedField(queryset=SportInstitution.objects.all(), source="school", write_only=True)
 
     class Meta:
         model = Education
@@ -138,9 +138,9 @@ class EducationSerializer(serializers.ModelSerializer):
         if instance.sport:
             data["sport_id"] = instance.sport.id
             data["sport"] = instance.sport.name
-        if instance.school:
-            data["school_id"] = instance.school.id
-            data["school_name"] = instance.school.name
+        if instance.sport_institution:
+            data["id"] = instance.sport_institution.id
+            data["name"] = instance.sport_institution.name
         return data
 
 
@@ -159,7 +159,7 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         read_only_fields = ["id", "created_time"]
 
     def validate(self, attrs: dict) -> dict:
-        school: School = attrs.get("school")
+        school: SportInstitution = attrs.get("school")
         sport: Sport = attrs.get("sport")
         user = self.request.user  # type: ignore
 

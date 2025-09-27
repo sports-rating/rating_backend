@@ -21,7 +21,6 @@ from django.utils.translation import gettext as _
 from fcm_django.models import DeviceType, FCMDevice
 
 from apps.career.models import Education
-from apps.education.serializers import EducationCreateSerializer
 from apps.shared.models import District, Neighborhood, Region
 from apps.shared.utils import enums
 from apps.shared.utils.exceptions import raise_validation_error
@@ -33,12 +32,11 @@ from apps.shared.utils.utils import CorrectPath
 from apps.sport.models import Sport, Tournament
 from apps.career.models import Result
 from apps.federation.models import Federation
-from apps.career.serializers import ResultCreateSerializer
+from apps.career.serializers import ResultCreateSerializer, EducationSerializer
 from apps.user.models import (
     ArchivedTrainer, Sportsman, Trainer, User,
     UserMedia, UserNotification, UserRequest
 )
-from apps.sport.models import School
 from apps.user.utils import (
     calculate_sportsman_statistics,
     calculate_trainer_statistics
@@ -164,7 +162,7 @@ class BaseMediaSerializer(serializers.ModelSerializer):
 
 class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
     media = BaseMediaSerializer(many=True)
-    educations = EducationCreateSerializer(many=True, required=False)
+    educations = EducationSerializer(many=True, required=False)
     results = ResultCreateSerializer(many=True, required=False)
     profile_photo = serializers.SerializerMethodField()
 
@@ -625,7 +623,7 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
-    educations = EducationCreateSerializer(many=True, required=True)
+    educations = EducationSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
     sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileSerializer(required=False)
@@ -938,7 +936,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
     media = BaseMediaSerializer(many=True, required=False)
-    educations = EducationCreateSerializer(many=True, required=False)
+    educations = EducationSerializer(many=True, required=False)
     results = ResultCreateSerializer(many=True, required=False)
     profile_photo = serializers.SerializerMethodField()
 

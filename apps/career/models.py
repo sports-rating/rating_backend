@@ -9,7 +9,7 @@ from apps.user.models import (
 )
 from apps.sport.models import (
     Sport,
-    School,
+    SportInstitution,
     Tournament
 )
 from apps.shared.utils import enums
@@ -22,7 +22,7 @@ class Education(BaseModel):
     end_year = models.DateField()
     currently_studying = models.BooleanField(default=False)
 
-    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
+    sport_institution = models.ForeignKey(SportInstitution, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
     # trainer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="trainer_educations", blank=True, null=True) # ?
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
 
@@ -39,7 +39,7 @@ class WorkPlace(BaseModel):
         related_name="work_places"
     )
     school = models.ForeignKey(
-        "sport.School",
+        "sport.SportInstitution",
         on_delete=models.CASCADE,
         related_name="school_trainer_work_places",
         null=True,

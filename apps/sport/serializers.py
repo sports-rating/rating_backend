@@ -22,7 +22,7 @@ from apps.shared.utils.general import (
 from apps.sport.models import (
     Sport,
     Tournament,
-    School,
+    SportInstitution,
     Team,
     ScoringPolicy,
 )
@@ -67,10 +67,10 @@ class SportSerializer(serializers.ModelSerializer):
         return data
 
 
-class SchoolSerializer(serializers.ModelSerializer):
+class SportInstitutionSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = School
+        model = SportInstitution
         fields = [
             "id",
             "name",
@@ -90,23 +90,23 @@ class SchoolSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict) -> dict:
         instance = getattr(self, 'instance', None)
 
-        check_uniqueness("name", attrs, School, instance)
-        check_uniqueness("phone_number", attrs, School, instance)
+        check_uniqueness("name", attrs, SportInstitution, instance)
+        check_uniqueness("phone_number", attrs, SportInstitution, instance)
 
         return attrs
 
-    def create(self, validated_data: dict) -> School:
+    def create(self, validated_data: dict) -> SportInstitution:
         sports: list[Sport] = validated_data.pop("sports", None)
 
         with transaction.atomic():
-            school = School.objects.create(**validated_data)
+            sport_institution = SportInstitution.objects.create(**validated_data)
 
             if sports:
-                school.sports.set(sports)
+                sport_institution.sports.set(sports)
 
-        return school
+        return sport_institution
 
-    def update(self, instance: School, validated_data: dict) -> School:
+    def update(self, instance: SportInstitution, validated_data: dict) -> SportInstitution:
         sports: list[Sport] = validated_data.pop("sports", [])
 
         with transaction.atomic():
@@ -119,7 +119,7 @@ class SchoolSerializer(serializers.ModelSerializer):
 
         return instance
 
-    def to_representation(self, instance: School) -> dict:
+    def to_representation(self, instance: SportInstitution) -> dict:
         data =  super().to_representation(instance)
         data["region"] = {
             "id": instance.region.id,

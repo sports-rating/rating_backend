@@ -11,8 +11,8 @@ urlpatterns = [
     path("team/", views.TeamListCreateView.as_view(), name='team-create-list'),
     path("team/<uuid:pk>/", views.TeamRetrieveUpdateDeleteView.as_view(), name='team-retrieve-update-delete'),
 
-    path("school/", views.SchoolListCreateView.as_view(), name='school-create-list'),
-    path("school/<uuid:pk>/", views.SchoolRetrieveUpdateDeleteView.as_view(), name='school-retrieve-update-delete'),
+    path("school/", views.SportInstitutionListCreateView.as_view(), name='school-create-list'),
+    path("school/<uuid:pk>/", views.SportInstitutionRetrieveUpdateDeleteView.as_view(), name='school-retrieve-update-delete'),
 
     path("", views.SportListCreateView.as_view(), name='sport-create-list'),
     path("<uuid:pk>/", views.SportRetrieveUpdateDeleteView.as_view(), name='sport-retrieve-update-delete'),

@@ -51,11 +51,11 @@ class Sport(BaseModel):
         super().delete(*args, **kwargs)
 
 
-class School(BaseModel):
+class SportInstitution(BaseModel):
     name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=13)
     director = models.CharField(max_length=255, blank=True, null=True)
-    type = models.CharField(max_length=50, choices=enums.SchoolChoices.choices(), default=enums.SchoolChoices.ORDINARY.value)
+    type = models.CharField(max_length=50, choices=enums.SportInstitutionChoices.choices(), default=enums.SportInstitutionChoices.SPORT_SCHOOL.value)
 
     address = models.TextField(null=True, blank=True)
     latitude = models.FloatField(default="0.0")
@@ -75,16 +75,16 @@ class School(BaseModel):
         blank=True
     )
 
-    sports = models.ManyToManyField(Sport, related_name='schools')
+    sports = models.ManyToManyField(Sport, related_name='sport_institutions')
 
     class Meta:
-        db_table = "school"
+        db_table = "sport_institution"
         indexes = [
             models.Index(fields=["name"]),
             models.Index(fields=["phone_number"])
         ]
-        verbose_name = "School"
-        verbose_name_plural = "Schools"
+        verbose_name = "Sport Institution"
+        verbose_name_plural = "Sport Institutions"
 
     repr_fields = ("name",)
 
@@ -192,3 +192,18 @@ class Team(BaseModel):
     def delete(self, *args, **kwargs):
         handle_file_delete(self, 'logo')
         super().delete(*args, **kwargs)
+
+
+class SportSchoolRequest(BaseModel):
+
+    # User who sent the request
+    manager_first_name = models.CharField(max_length=255)
+    manager_last_name = models.CharField(max_length=255)
+    manager_phone_number = models.CharField(max_length=13)
+
+    # Sport School details
+    school_name = models.CharField(max_length=255)
+    school_phone_number = models.CharField(max_length=13)
+    school_address = models.TextField(null=True, blank=True)
+    school_director = models.CharField(max_length=255, blank=True, null=True)
+    school_type = models.CharField(max_length=50, choices=enums.SportInstitutionChoices.choices(), default=enums.SportInstitutionChoices.SPORT_SCHOOL.value)
