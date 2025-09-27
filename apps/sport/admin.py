@@ -7,7 +7,8 @@ from apps.sport.models import (
     Tournament,
     Result,
     Team,
-    ScoringPolicy
+    ScoringPolicy,
+    School
 )
 
 
@@ -41,6 +42,24 @@ class TournamentAdmin(admin.ModelAdmin):
 class SportAdmin(admin.ModelAdmin):
     list_display = ["id", "name",]
     search_fields = ["name",]
+
+
+@admin.register(School)
+class SchoolAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "director", "phone_number"]
+    search_fields = ["name", "phone_number"]
+    readonly_fields = ["created_time", "updated_time", "sports_list"]
+
+    def sports_list(self, obj):
+        links = [
+            format_html(
+                '<a href="{}">{}</a>',
+                reverse("admin:sport_sport_change", args=[sport.id]),
+                sport.name,
+            )
+            for sport in obj.sports.all()
+        ]
+        return format_html("<br>".join(links)) if links else "-"
 
 
 @admin.register(Result)

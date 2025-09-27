@@ -25,6 +25,7 @@ from apps.sport.models import (
     Result,
     Team,
     ScoringPolicy,
+    School
 )
 from apps.federation.models import (
     Federation,
@@ -64,6 +65,75 @@ class SportSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["logo"] = get_file_full_url(instance.logo.url) if instance.logo else None
+        return data
+
+
+class SchoolSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = School
+        fields = [
+            "id",
+            "name",
+            "phone_number",
+            "director",
+            "type",
+            "address",
+            "latitude",
+            "longitude",
+            "region",
+            "district",
+            "sports",
+            "created_time",
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def validate(self, attrs: dict) -> dict:
+        instance = getattr(self, 'instance', None)
+
+        check_uniqueness("name", attrs, School, instance)
+        check_uniqueness("phone_number", attrs, School, instance)
+
+        return attrs
+
+    def create(self, validated_data: dict) -> School:
+        sports: list[Sport] = validated_data.pop("sports", None)
+
+        with transaction.atomic():
+            school = School.objects.create(**validated_data)
+
+            if sports:
+                school.sports.set(sports)
+
+        return school
+
+    def update(self, instance: School, validated_data: dict) -> School:
+        sports: list[Sport] = validated_data.pop("sports", [])
+
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            if sports:
+                instance.sports.set(sports)
+
+        return instance
+
+    def to_representation(self, instance: School) -> dict:
+        data =  super().to_representation(instance)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        data["sports"] = SportSerializer(
+            instance.sports.all(),
+            many=True
+        ).data
         return data
 
 
