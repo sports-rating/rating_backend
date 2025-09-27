@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('education', '0005_school_district_school_federation_school_latitude_and_more'),
+        # ('education', '0005_school_district_school_federation_school_latitude_and_more'),
         ('federation', '0007_remove_agegroup_age_remove_agegroup_sign_and_more'),
         ('sport', '0025_remove_result_transaction'),
         ('user', '0029_sportsman_is_result_paid'),
@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('updated_time', models.DateTimeField(auto_now=True, null=True)),
                 ('federation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='federation_trainer_work_places', to='federation.federation')),
                 ('request', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='trainer_work_place', to='user.userrequest')),
-                ('school', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='school_trainer_work_places', to='education.school')),
+                ('school', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='school_trainer_work_places', to='sport.school')),
                 ('sport', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sport_trainer_work_places', to='sport.sport')),
                 ('trainer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='work_places', to='user.trainer')),
             ],

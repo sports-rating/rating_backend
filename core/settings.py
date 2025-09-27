@@ -43,7 +43,7 @@ BACKEND_APPS = [
     "shared",
     "dashboard",
     "sport",
-    "education",
+    # "education",
     "payment",
     "federation",
     "career",
@@ -85,7 +85,7 @@ SECURE_HSTS_SECONDS = 3600
 
 CORS_ALLOW_HEADERS = ["*"]
 CORS_ORIGIN_ALLOW_ALL = False
-# CORS_ALLOW_CREDENTIALS = True # extra added
+
 
 CORS_ALLOWED_HEADERS = [
     "content-type",
