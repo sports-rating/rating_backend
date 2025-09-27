@@ -112,8 +112,13 @@ def request_type_theme_mapping(request_type):
 
 def send_sport_institution_message(school_name: str, phone_number: str, status: str) -> int:
     if status == "approved":
-        text = f"Your request to register the sport institution '{school_name}' has been approved. You can now log in and start using our services."
+        text = _("Your request to register the sport institution '%(school_name)s' has been approved. "
+                "You can now log in and start using our services.") % {
+            "school_name": school_name
+        }
     else:
-        text = f"Your request to register the sport institution '{school_name}' has been rejected. For more information, please contact support."
-
+        text = _("Your request to register the sport institution '%(school_name)s' has been rejected. "
+                "For more information, please contact support.") % {
+            "school_name": school_name
+        }
     return send_sms_message(phone_number, text)
