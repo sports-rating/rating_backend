@@ -9,7 +9,9 @@ import datetime
 import math
 import re
 import tempfile
+import phonenumbers
 from dateutil import relativedelta
+from phonenumbers.phonenumberutil import NumberParseException
 
 from django.conf import settings
 from django.utils.translation import gettext as _
@@ -83,6 +85,16 @@ def check_m2m_uniqueness(field_name, data, model, instance=None, error_field_nam
         conflicting_objs = related_model.objects.filter(id__in=ids, **{model._meta.model_name + "s__in": qs}).distinct()
         names = ", ".join(str(obj.get_name) for obj in conflicting_objs)
         raise_validation_error(message=_(f"{model.__name__} already exists for {field_name}: {names}"))
+
+
+def check_phone_valid(self, phone_number: str) -> None:
+    if phone_number:
+        try:
+            parsed_number = phonenumbers.parse(phone_number)
+            if not phonenumbers.is_valid_number(parsed_number):
+                raise_validation_error(message=_("Please enter a valid phone number."))
+        except NumberParseException:
+            raise_validation_error(message=_("Please enter a valid phone number."))
 
 
 def request_type_theme_mapping(request_type):

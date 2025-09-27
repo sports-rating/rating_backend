@@ -7,7 +7,8 @@ from apps.sport.models import (
     Tournament,
     Team,
     ScoringPolicy,
-    SportInstitution
+    SportInstitution,
+    SportInstitutionRequest
 )
 
 
@@ -79,3 +80,26 @@ class ScoringPolicyAdmin(admin.ModelAdmin):
             name = f"{obj.tournament.name} - ({obj.tournament.sport.name})"
             return format_html('<a href="{}">{}</a>', url, name)
         return "N/A"
+
+
+class SportInstitutionRequestAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "manager_full_name",
+        "manager_phone_number",
+        "school_name",
+        "school_phone_number",
+        "created_time",
+    ]
+    search_fields = [
+        "manager_first_name",
+        "manager_last_name",
+        "manager_phone_number",
+        "school_name",
+        "school_phone_number",
+    ]
+    readonly_fields = ["created_time", "manager_full_name",]
+
+    @admin.display(description="Manager Full Name")
+    def manager_full_name(self, obj: SportInstitutionRequest):
+        return f"{obj.manager_first_name} {obj.manager_last_name}"

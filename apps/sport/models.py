@@ -194,16 +194,43 @@ class Team(BaseModel):
         super().delete(*args, **kwargs)
 
 
-class SportSchoolRequest(BaseModel):
+class SportInstitutionRequest(BaseModel):
 
     # User who sent the request
     manager_first_name = models.CharField(max_length=255)
     manager_last_name = models.CharField(max_length=255)
     manager_phone_number = models.CharField(max_length=13)
 
-    # Sport School details
+    # Sport Institution details
     school_name = models.CharField(max_length=255)
     school_phone_number = models.CharField(max_length=13)
-    school_address = models.TextField(null=True, blank=True)
     school_director = models.CharField(max_length=255, blank=True, null=True)
     school_type = models.CharField(max_length=50, choices=enums.SportInstitutionChoices.choices(), default=enums.SportInstitutionChoices.SPORT_SCHOOL.value)
+    school_address = models.TextField(null=True, blank=True)
+    school_latitude = models.FloatField(default="0.0")
+    school_longitude = models.FloatField(default="0.0")
+    school_region = models.CharField(max_length=100)
+    school_district = models.CharField(max_length=100)
+    school_sports = models.JSONField(default=list)
+
+    processed_by = models.ForeignKey(
+        "user.User",
+        on_delete=models.SET_NULL,
+        related_name="processed_sport_institution_requests",
+        null=True,
+        blank=True
+    )
+    additional_info = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=50, choices=enums.SportInstitutionRequestStatus.choices(), default=enums.SportInstitutionRequestStatus.PENDING.value)
+
+    class Meta:
+        db_table = "sport_institution_request"
+        indexes = [
+            models.Index(fields=["manager_phone_number"]),
+            models.Index(fields=["school_name"]),
+            models.Index(fields=["status"]),
+        ]
+        verbose_name = "Sport Institution Request"
+        verbose_name_plural = "Sport Institution Requests"
+
+    repr_fields = ("manager_phone_number", "school_name", "status")

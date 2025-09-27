@@ -66,6 +66,12 @@ class SportInstitutionChoices(BaseEnum):
     SPORT_COMPLEX = "sport_complex"
 
 
+class SportInstitutionRequestStatus(BaseEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class LanguageTypes(BaseEnum):
     EN = "en"
     RU = "ru"

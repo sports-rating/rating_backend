@@ -17,6 +17,7 @@ from apps.shared.utils.general import (
     get_file_full_url,
     calculate_file_size,
     check_uniqueness,
+    check_phone_valid
 )
 
 from apps.sport.models import (
@@ -25,6 +26,7 @@ from apps.sport.models import (
     SportInstitution,
     Team,
     ScoringPolicy,
+    SportInstitutionRequest,
 )
 from apps.federation.models import (
     Federation,
@@ -41,6 +43,7 @@ from apps.dashboard.serializers import (
 )
 # from apps.user.tasks import recalculate_user_points_task
 from apps.shared.services.scoring_service import ScoringService
+from apps.shared.utils import enums
 
 
 class SportSerializer(serializers.ModelSerializer):
@@ -351,3 +354,60 @@ class TeamSerializer(serializers.ModelSerializer):
             "losses",
             "draws",
         ]
+
+
+class SportInstitutionRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SportInstitutionRequest
+        fields = [
+            "id",
+            "manager_first_name",
+            "manager_last_name",
+            "manager_phone_number",
+            "school_name",
+            "school_phone_number",
+            "school_director",
+            "school_type",
+            "school_address",
+            "school_latitude",
+            "school_longitude",
+            "school_region",
+            "school_district",
+            "school_sports",
+            "processed_by",
+            "additional_info",
+            "status",
+            "created_time",
+        ]
+        read_only_fields = [
+            "id",
+            "created_time",
+        ]
+
+    def validate(self, attrs: dict) -> dict:
+        phone_number: str = attrs.get("manager_phone_number")
+        school_phone_number: str = attrs.get("school_phone_number")
+        check_phone_valid(phone_number)
+        check_phone_valid(school_phone_number)
+        return attrs
+
+    def create(self, validated_data: dict) -> SportInstitutionRequest:
+        request = SportInstitutionRequest.objects.create(**validated_data)
+        return request
+
+    def update(self, instance: SportInstitutionRequest, validated_data: dict) -> SportInstitutionRequest:
+        status = validated_data.get("status", None)
+        processed_by = validated_data.get("processed_by", None)
+
+        if status in [enums.SportInstitutionRequestStatus.APPROVED.value, enums.SportInstitutionRequestStatus.REJECTED.value]:
+            if not processed_by:
+                raise_validation_error(message=_("Processed by must be set when approving or rejecting a request."))
+            instance.processed_by = processed_by
+            instance.status = status
+
+        additional_info = validated_data.get("additional_info", None)
+        if additional_info:
+            instance.additional_info = additional_info
+
+        instance.save()
+        return instance
