@@ -85,7 +85,7 @@ class UserAdmin(admin.ModelAdmin):
         links = [
             format_html(
                 '<a href="{}">{}</a>',
-                reverse("admin:sport_result_change", args=[res.id]),
+                reverse("admin:career_result_change", args=[res.id]),
                 str(res),
             )
             for res in obj.results.all()
