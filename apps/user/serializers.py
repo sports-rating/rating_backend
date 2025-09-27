@@ -20,7 +20,7 @@ from django.utils.translation import gettext as _
 
 from fcm_django.models import DeviceType, FCMDevice
 
-from apps.education.models import Education
+from apps.career.models import Education
 from apps.education.serializers import EducationCreateSerializer
 from apps.shared.models import District, Neighborhood, Region
 from apps.shared.utils import enums
@@ -38,7 +38,7 @@ from apps.user.models import (
     UserMedia, UserNotification, UserRequest,
     WorkPlace
 )
-from apps.education.models import School
+from apps.sport.models import School
 from apps.user.utils import (
     calculate_sportsman_statistics,
     calculate_trainer_statistics

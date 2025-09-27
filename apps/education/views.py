@@ -17,7 +17,7 @@ from apps.shared.utils.utils import (
     error_response
 )
 
-from apps.education.models import (
+from apps.career.models import (
     Education
 )
 

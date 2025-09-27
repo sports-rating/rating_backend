@@ -15,7 +15,7 @@ from apps.shared.utils.general import (
     check_m2m_uniqueness
 )
 
-from apps.education.models import (
+from apps.career.models import (
     Education
 )
 
