@@ -24,19 +24,83 @@ from apps.shared.utils.mixins import RequestContextMixin
 
 from apps.career.models import (
     Education,
-    WorkPlace
+    WorkPlace,
+    Result
 )
 from apps.sport.models import (
     Sport,
-    School
+    School,
+    Tournament
 )
 from apps.user.models import (
     User,
     UserRequest,
-    Trainer
+    Trainer,
+    ArchivedTrainer
 )
 from apps.federation.models import Federation
-from apps.user.serializers import UserRequestSerializer
+from apps.sport.serializers import TournamentSerializer
+
+
+class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
+    """
+    For response only
+    """
+    class Meta:
+        model = UserRequest
+        fields = [
+            "id",
+            "sender",
+            "receivers",
+            "request_type",
+            "status",
+            "message_from_sender",
+            "message_from_receiver",
+            "old_data",
+            "new_data",
+            "created_time",
+        ]
+        read_only_fields = ["id", "sender", "created_time"]
+        extra_kwargs = {
+            "status": {"required": False}
+        }
+
+    def validate(self, attrs: dict) -> dict:
+        request_type = attrs.get("request_type")
+        sender = t.cast(User, self.request.user)
+        if request_type == "sportsman_trainer_request" and sender.user_role == "trainer":
+            raise_validation_error(message=_("Trainers cannot send trainer requests!"))
+        return super().validate(attrs)
+
+    def to_representation(self, instance: UserRequest) -> dict:
+        data = super().to_representation(instance)
+        receiver: User = instance.receivers.first()  # type: ignore
+        data["sender"] = {
+            "id": instance.sender.id,
+            "full_name": instance.sender.full_name,
+            "user_role": instance.sender.user_role,
+            "phone_number": instance.sender.phone_number,
+        }
+        if instance.federation:
+            federation: Federation = instance.federation
+            logger.info(f"Federation: {federation}")
+            data["receiver"] = {
+                "federation": {
+                    "id": federation.id,
+                    "name": federation.name,
+                    "phone_number": federation.phone_number,
+                    "is_national": federation.is_national,
+                } if federation else None
+            }
+        else:
+            data["receiver"] = {
+                "id": receiver.id,
+                "full_name": receiver.full_name,
+                "user_role": receiver.user_role,
+                "phone_number": receiver.phone_number,
+            }
+        data.pop("receivers")
+        return data
 
 
 class EducationSerializer(serializers.ModelSerializer):
@@ -149,4 +213,85 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
             "id": processed_federation.id if processed_federation else None,
             "name": processed_federation.name if processed_federation else None
         }
+        return data
+
+
+class ResultCreateSerializer(serializers.ModelSerializer):
+    tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source="tournament", write_only=True)
+    trainer_id = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), source="trainer", required=False, allow_null=True)
+    archived_trainer_name = serializers.CharField(max_length=255, required=False, allow_null=True)
+
+    class Meta:
+        model = Result
+        fields = [
+            "id",
+            "country",
+            "tournament_id",
+            "trainer_id",
+            "archived_trainer_name",
+            "year",
+            "currently_participating",
+            "rating",
+            "additional_attributes",
+            "score",
+            "gold",
+            "silver",
+            "bronze",
+        ]
+        read_only_fields = ("id", "score")
+        extra_kwargs = {"id": {"read_only": True}, "country": {"required": False}}
+
+    def create(self, validated_data):
+        tournament = validated_data.pop('tournament')
+        trainer = validated_data.pop("trainer")
+        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
+        if trainer:
+            result = Result.objects.create(trainer=trainer, tournament=tournament, **validated_data)
+        elif archived_trainer_name:
+            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
+            result = Result.objects.create(archived_trainer=archived_trainer, tournament=tournament, **validated_data)
+        else:
+            result = Result.objects.create(tournament=tournament, **validated_data)
+        return result
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["tournament_id"] = instance.tournament.id
+        data["tournament_name"] = instance.tournament.name
+
+        data["trainer_id"] = instance.trainer.user.id if instance.trainer else None
+        data["trainer_name"] = str(instance.trainer.user) if instance.trainer else None
+
+        data["archived_trainer_id"] = instance.archived_trainer.id if instance.archived_trainer else None
+        data["archived_trainer_name"] = instance.archived_trainer.name if instance.archived_trainer else None
+        return data
+
+
+class ResultSerializer(serializers.ModelSerializer):
+    tournament = TournamentSerializer(many=False)
+
+    class Meta:
+        model = Result
+        fields = (
+            "id",
+            "country",
+            "year",
+            "currently_participating",
+            "rating",
+            "tournament",
+            "additional_attributes",
+            "score",
+            "gold",
+            "silver",
+            "bronze",
+        )
+        read_only_fields = ("id", "score")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['trainer_id'] = instance.trainer.user.id if instance.trainer else None
+        data['trainer_name'] = str(instance.traier.user) if instance.trainer else None
+
+        data['archived_trainer_id'] = instance.archived_trainer.id if instance.archived_trainer else None
+        data['archived_trainer_name'] = instance.archived_trainer.name if instance.archived_trainer else None
         return data

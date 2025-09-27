@@ -153,43 +153,6 @@ class ScoringPolicy(BaseModel):
     repr_fields = ("tournament", "position", "score")
 
 
-class Result(BaseModel):
-    country = models.CharField(max_length=100, null=True, blank=True)
-    year = models.PositiveIntegerField(
-        default=1800,
-        null=True,
-        validators=[
-            MinValueValidator(1800)
-        ]
-    )
-    currently_participating = models.BooleanField(default=False)
-
-    user = models.ForeignKey("user.User", on_delete=models.CASCADE, related_name="results", blank=True, null=True)
-    trainer = models.ForeignKey("user.Trainer", on_delete=models.SET_NULL, related_name='assisted_results', blank=True, null=True)
-    archived_trainer = models.ForeignKey("user.ArchivedTrainer", on_delete=models.SET_NULL, related_name='archived_assisted_results', blank=True, null=True)
-
-    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="tournament_results", blank=True, null=True)
-    additional_attributes = models.JSONField(null=True, blank=True)
-    is_verified = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=ResultVerificationStatus.choices(), default=ResultVerificationStatus.PENDING.value)
-
-    rating = models.PositiveIntegerField(default=0)
-
-    gold = models.PositiveIntegerField(default=0)
-    silver = models.PositiveIntegerField(default=0)
-    bronze = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        db_table = "result"
-        ordering = ["-created_time"]
-
-    repr_fields = ("tournament", "is_verified")
-
-    @property
-    def score(self) -> float:
-        return self.tournament.get_score(self.rating) if self.tournament else 0
-
-
 class Team(BaseModel):
     name = models.CharField(max_length=250, unique=True)
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='teams')

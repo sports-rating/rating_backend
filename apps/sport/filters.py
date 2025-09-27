@@ -16,7 +16,6 @@ from apps.sport.models import (
     Tournament,
     Team,
     Sport,
-    Result,
     School
 )
 

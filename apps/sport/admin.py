@@ -5,7 +5,6 @@ from django.utils.html import format_html
 from apps.sport.models import (
     Sport,
     Tournament,
-    Result,
     Team,
     ScoringPolicy,
     School
@@ -60,12 +59,6 @@ class SchoolAdmin(admin.ModelAdmin):
             for sport in obj.sports.all()
         ]
         return format_html("<br>".join(links)) if links else "-"
-
-
-@admin.register(Result)
-class ResultAdmin(admin.ModelAdmin):
-    list_display = ["id", "tournament", "year", "currently_participating"]
-    list_filter = ["currently_participating",]
 
 
 @admin.register(Team)

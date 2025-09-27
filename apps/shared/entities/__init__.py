@@ -4,9 +4,9 @@ Use this ONLY outside of app-level models.py to avoid circular imports.
 """
 
 from apps.user.models import User, UserRequest, Sportsman, Trainer
-from apps.sport.models import Tournament, Result, Sport, School
+from apps.sport.models import Tournament, Sport, School
 from apps.federation.models import Federation
-from apps.career.models import WorkPlace, Education
+from apps.career.models import WorkPlace, Education, Result
 
 __all__ = [
     "User",

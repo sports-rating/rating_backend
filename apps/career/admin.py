@@ -5,7 +5,8 @@ from django.utils.html import format_html
 
 from apps.career.models import (
     Education,
-    WorkPlace
+    WorkPlace,
+    Result
 )
 
 
@@ -49,3 +50,9 @@ class WorkPlaceAdmin(admin.ModelAdmin):
             url = reverse("admin:sport_sport_change", args=[obj.sport.id])
             return format_html('<a href="{}">{}</a>', url, obj.sport.name)
         return "N/A"
+
+
+@admin.register(Result)
+class ResultAdmin(admin.ModelAdmin):
+    list_display = ["id", "tournament", "year", "currently_participating"]
+    list_filter = ["currently_participating",]

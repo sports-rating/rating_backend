@@ -30,9 +30,10 @@ from apps.shared.utils.general import get_file_full_url
 from apps.shared.utils.logging import logger
 from apps.shared.utils.notifications import send_notification_to_user
 from apps.shared.utils.utils import CorrectPath
-from apps.sport.models import Result, Sport, Tournament
+from apps.sport.models import Sport, Tournament
+from apps.career.models import Result
 from apps.federation.models import Federation
-from apps.sport.serializers import ResultCreateSerializer, SportSerializer
+from apps.career.serializers import ResultCreateSerializer
 from apps.user.models import (
     ArchivedTrainer, Sportsman, Trainer, User,
     UserMedia, UserNotification, UserRequest
@@ -52,7 +53,6 @@ from apps.shared.utils.payloads import (
     SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
 )
 from apps.shared.serializers import (
-    TrainerWorkPlaceSnapshotSerializer,
     SportsmanResultSnapshotSerializer
 )
 

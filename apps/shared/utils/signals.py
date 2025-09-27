@@ -5,7 +5,8 @@ from django.dispatch import receiver
 from apps.shared.utils.logging import logger
 
 from apps.user.models import Sportsman, Trainer
-from apps.sport.models import Result, Tournament, ScoringPolicy
+from apps.sport.models import Tournament, ScoringPolicy
+from apps.career.models import Result
 from apps.shared.utils import enums
 from apps.shared.services.scoring_service import ScoringService
 from apps.user.tasks import recalculate_user_points_task

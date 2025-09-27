@@ -90,6 +90,6 @@ class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
         response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
-            message=_("Trainer WorkPlace requests retrieved successfully"),
+            message=_("Trainer WorkPlace retrieved successfully"),
             code=status.HTTP_200_OK
         )

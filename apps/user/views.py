@@ -33,7 +33,7 @@ from apps.user.models import (
     UserNotification,
     UserRequest
 )
-from apps.sport.models import (
+from apps.career.models import (
     Result
 )
 from apps.shared.models import (

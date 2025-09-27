@@ -25,7 +25,6 @@ from apps.shared.utils.exceptions import raise_validation_error
 
 from apps.sport.models import (
     Sport,
-    Result,
     Tournament,
     Team,
     School
@@ -38,45 +37,6 @@ from apps.sport.filters import (
     TeamFilter,
     SchoolFilter
 )
-
-
-class ResultRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny,)
-    queryset = Result.objects.all().select_related('trainer', 'archived_trainer', 'tournament')
-    serializer_class = serializers.ResultCreateSerializer
-
-    def get_serializer_class(self):
-        if self.request.method == "GET":
-            return serializers.ResultSerializer
-        return super().get_serializer_class()
-
-    def retrieve(self, request: Request, *args, **kwargs) -> Response:
-        instance: Result = self.get_object()
-        serializer: serializers.ResultSerializer = self.get_serializer(instance)
-        return success_response(
-            data=serializer.data,
-            message=_("Result retrieved successfully"),
-            code=200,
-        )
-
-    def update(self, request: Request, *args, **kwargs) -> Response:
-        instance: Result = self.get_object()
-        serializer: serializers.ResultCreateSerializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return success_response(
-            data=serializer.data,
-            message=_("Result updated successfully"),
-            code=200,
-        )
-
-    def delete(self, request: Request, *args, **kwargs) -> Response:
-        instance: Result = self.get_object()
-        instance.delete()
-        return success_response(
-            message=_("Result deleted successfully"),
-            code=204
-        )
 
 
 class TournamentListCreateView(generics.ListCreateAPIView):

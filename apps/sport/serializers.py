@@ -22,10 +22,9 @@ from apps.shared.utils.general import (
 from apps.sport.models import (
     Sport,
     Tournament,
-    Result,
+    School,
     Team,
     ScoringPolicy,
-    School
 )
 from apps.federation.models import (
     Federation,
@@ -248,87 +247,6 @@ class TournamentSerializer(serializers.ModelSerializer):
             instance.scoring_policies,
             many=True
         ).data
-        return data
-
-
-class ResultCreateSerializer(serializers.ModelSerializer):
-    tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source="tournament", write_only=True)
-    trainer_id = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), source="trainer", required=False, allow_null=True)
-    archived_trainer_name = serializers.CharField(max_length=255, required=False, allow_null=True)
-
-    class Meta:
-        model = Result
-        fields = [
-            "id",
-            "country",
-            "tournament_id",
-            "trainer_id",
-            "archived_trainer_name",
-            "year",
-            "currently_participating",
-            "rating",
-            "additional_attributes",
-            "score",
-            "gold",
-            "silver",
-            "bronze",
-        ]
-        read_only_fields = ("id", "score")
-        extra_kwargs = {"id": {"read_only": True}, "country": {"required": False}}
-
-    def create(self, validated_data):
-        tournament = validated_data.pop('tournament')
-        trainer = validated_data.pop("trainer")
-        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
-        if trainer:
-            result = Result.objects.create(trainer=trainer, tournament=tournament, **validated_data)
-        elif archived_trainer_name:
-            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-            result = Result.objects.create(archived_trainer=archived_trainer, tournament=tournament, **validated_data)
-        else:
-            result = Result.objects.create(tournament=tournament, **validated_data)
-        return result
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["tournament_id"] = instance.tournament.id
-        data["tournament_name"] = instance.tournament.name
-
-        data["trainer_id"] = instance.trainer.user.id if instance.trainer else None
-        data["trainer_name"] = str(instance.trainer.user) if instance.trainer else None
-
-        data["archived_trainer_id"] = instance.archived_trainer.id if instance.archived_trainer else None
-        data["archived_trainer_name"] = instance.archived_trainer.name if instance.archived_trainer else None
-        return data
-
-
-class ResultSerializer(serializers.ModelSerializer):
-    tournament = TournamentSerializer(many=False)
-
-    class Meta:
-        model = Result
-        fields = (
-            "id",
-            "country",
-            "year",
-            "currently_participating",
-            "rating",
-            "tournament",
-            "additional_attributes",
-            "score",
-            "gold",
-            "silver",
-            "bronze",
-        )
-        read_only_fields = ("id", "score")
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['trainer_id'] = instance.trainer.user.id if instance.trainer else None
-        data['trainer_name'] = str(instance.traier.user) if instance.trainer else None
-
-        data['archived_trainer_id'] = instance.archived_trainer.id if instance.archived_trainer else None
-        data['archived_trainer_name'] = instance.archived_trainer.name if instance.archived_trainer else None
         return data
 
 
