@@ -5,6 +5,5 @@ from apps.shared.utils.enums import GenderChoices, UserRoles
 from apps.shared.utils.logging import logger
 
 from apps.education.models import (
-    Education,
     School
 )
