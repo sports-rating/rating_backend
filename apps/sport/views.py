@@ -28,6 +28,7 @@ from apps.sport.models import (
     Tournament,
     Team,
     SportInstitution,
+    SportInstitutionRequest
 )
 
 import apps.sport.serializers as serializers
@@ -362,5 +363,76 @@ class SportInstitutionRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPI
         instance.delete()
         return success_response(
             message=_("Sport institution deleted successfully"),
+            code=status.HTTP_204_NO_CONTENT
+        )
+
+
+class SportInstitutionRequestListCreateView(generics.ListCreateAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = SportInstitutionRequest.objects.all()
+    serializer_class = serializers.SportInstitutionRequestSerializer
+    pagination_class = CustomPagination
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return (IsAdminOrSuperAdmin(),)
+        return super().get_permissions()
+
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        serializer: serializers.SportInstitutionRequestSerializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Sport institution request created successfully"),
+            code=status.HTTP_201_CREATED
+        )
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Sport institution request list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class SportInstitutionRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsAdminOrSuperAdmin,)
+    queryset = SportInstitutionRequest.objects.all()
+    serializer_class = serializers.SportInstitutionRequestSerializer
+
+    def get_object(self) -> SportInstitutionRequest:
+        request_id: UUID = self.kwargs.get("pk")
+        request: SportInstitutionRequest = self.queryset.filter(id=request_id).first()
+        if not request:
+            raise_validation_error(message=_("Sport institution request not found"), code=status.HTTP_404_NOT_FOUND)
+        return request
+
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        instance: SportInstitutionRequest = self.get_object()
+        serializer: serializers.SportInstitutionRequestSerializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Sport institution request retrieved successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        instance: SportInstitutionRequest = self.get_object()
+        serializer: serializers.SportInstitutionRequestSerializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Sport institution request updated successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def delete(self, request: Request, *args, **kwargs) -> Response:
+        instance: SportInstitutionRequest = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Sport institution request deleted successfully"),
             code=status.HTTP_204_NO_CONTENT
         )
