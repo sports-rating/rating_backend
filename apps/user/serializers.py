@@ -122,44 +122,6 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
         return data
 
 
-class BaseMediaSerializer(serializers.ModelSerializer):
-    type = serializers.CharField(write_only=True, required=False)
-
-    class Meta:
-        model = UserMedia
-        fields = (
-            "id",
-            "media_type",
-            "size",
-            "extension",
-            "created_time",
-            "file",
-            "type",
-            "is_profile_photo",
-        )
-        read_only_fields = ["created_time", "size", "extension", "media_type"]
-
-    def validate(self, data):
-        """
-        Validate the file size for PDFs
-        """
-        file = data.get("file")
-        if file:
-            if file.name.lower().endswith(".pdf"):
-                if file.size > settings.MAX_PDF_SIZE_BYTES:
-                    size_in_mb = file.size / (1024 * 1024)
-                    raise_validation_error(
-                        message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
-                    )
-        return data
-
-    def create(self, validated_data):
-        model = self.context.get("model")
-        media_instance = model(**validated_data)
-        media_instance.save()
-        return media_instance
-
-
 class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
     class Meta:
         model = UserMedia
@@ -658,7 +620,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
     sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    media = BaseMediaSerializer(many=True, required=False, read_only=True)
+    media = UserMediaSerializer(many=True, required=False, read_only=True)
 
     class Meta:
         model = User
@@ -965,7 +927,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    media = BaseMediaSerializer(many=True, required=False)
+    media = UserMediaSerializer(many=True, required=False)
     educations = EducationSerializer(many=True, required=False)
     results = ResultCreateSerializer(many=True, required=False)
     profile_photo = serializers.SerializerMethodField()

@@ -662,7 +662,7 @@ class MediaUploadView(generics.CreateAPIView):
 class MediaDeleteView(generics.DestroyAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     queryset = UserMedia.objects.all()
-    serializer_class = serializers.BaseMediaSerializer
+    serializer_class = serializers.UserMediaSerializer
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -940,7 +940,7 @@ class NeighborhoodListView(generics.ListAPIView):
 class UserMediaListView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = UserMedia.objects.all()
-    serializer_class = serializers.BaseMediaSerializer
+    serializer_class = serializers.UserMediaSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = UserMediaFilter
 
