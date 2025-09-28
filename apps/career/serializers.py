@@ -151,7 +151,7 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         model = WorkPlace
         fields = [
             "id",
-            "school",
+            "sport_institution",
             "sport",
             "message",
             "created_time"
@@ -159,12 +159,12 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         read_only_fields = ["id", "created_time"]
 
     def validate(self, attrs: dict) -> dict:
-        school: SportInstitution = attrs.get("school")
+        sport_institution: SportInstitution = attrs.get("sport_institution")
         sport: Sport = attrs.get("sport")
         user = self.request.user  # type: ignore
 
-        if not school.sports.filter(id=sport.id).exists():
-            raise_validation_error(message=_("This sport is not offered by the selected school."))
+        if not sport_institution.sports.filter(id=sport.id).exists():
+            raise_validation_error(message=_("This sport is not offered by the selected sport institution."))
 
         if UserRequest.objects.filter(
             sender=user,
@@ -200,10 +200,10 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         if isinstance(instance, UserRequest):
             return UserRequestSerializer(instance).data
         data = super().to_representation(instance)
-        data["school"] = {
-            "id": instance.school.id,
-            "name": instance.school.name,
-        } if instance.school else None
+        data["sport_institution"] = {
+            "id": instance.sport_institution.id,
+            "name": instance.sport_institution.name,
+        } if instance.sport_institution else None
         data["sport"] = {
             "id": instance.sport.id,
             "name": instance.sport.name,

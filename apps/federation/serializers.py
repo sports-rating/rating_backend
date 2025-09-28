@@ -261,6 +261,11 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "receivers",
             "request_type",
             "status",
+            "message_from_sender",
+            "message_from_receiver",
+            "old_data",
+            "new_data",
+            "processed_by",
             "created_time",
         ]
         read_only_fields = ["id", "sender", "created_time"]
@@ -306,6 +311,11 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "name": sport.name,
             "logo": get_file_full_url(sport.logo.url) if sport.logo else None
         } if sport else None
+        data["processed_by"] = {
+            "id": instance.processed_by.id,
+            "full_name": instance.processed_by.full_name,
+            "phone_number": instance.processed_by.phone_number,
+        }
         data.pop("receivers", None)
         return data
 

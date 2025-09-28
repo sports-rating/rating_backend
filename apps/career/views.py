@@ -74,7 +74,7 @@ class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return self.queryset.filter(trainer__user=user).select_related("school", "sport", "request")
+        return self.queryset.filter(trainer__user=user).select_related("sport_institution", "sport", "request")
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
