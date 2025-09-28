@@ -4,7 +4,7 @@ from django_filters import rest_framework as filters
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
 
-from apps.shared.utils.enums import GenderChoices, UserRoles
+from apps.shared.utils import enums
 from apps.shared.utils.logging import logger
 from apps.user.models import (
     Sportsman,
@@ -65,16 +65,10 @@ class TeamFilter(filters.FilterSet):
 
 
 class SportInstitutionFilter(filters.FilterSet):
-    type = filters.CharFilter(method="filter_type")
-    sport = filters.CharFilter(method="filter_sport")
+    type = filters.ChoiceFilter(field_name="type", choices=enums.SportInstitutionChoices.choices())
+    sports = filters.CharFilter(field_name="sports__id")
     federation = filters.CharFilter(field_name="federation__id")
 
     class Meta:
         model = SportInstitution
-        fields = ["type", "sport"]
-
-    def filter_type(self, queryset, name, value): # noqa
-        return queryset.filter(type=value)
-
-    def filter_sport(self, queryset, name, value): # noqa
-        return queryset.filter(sports__name=value)
+        fields = ["type", "sports", "federation"]
