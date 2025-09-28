@@ -25,7 +25,7 @@ class FederationFilter(BaseFilterSet):
         fields = ["sport"]
 
 
-class FederationUserListFilter(BaseFilterSet):
+class FederationUsersFilter(BaseFilterSet):
     user_role = filters.ChoiceFilter(choices=UserRoles.choices())
     sport = filters.CharFilter(method="filter_sport")
     region = filters.CharFilter(field_name='region__id')
@@ -34,7 +34,7 @@ class FederationUserListFilter(BaseFilterSet):
 
     class Meta:
         model = User
-        fields = ["sport", "region", "district"]
+        fields = ["sport", "region", "district", "gender"]
 
     def filter_sport(self, queryset, name, value):
         if not value:

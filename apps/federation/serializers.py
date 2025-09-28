@@ -358,12 +358,18 @@ class FederationUserListSerializer(serializers.ModelSerializer):
             "name": sport.name,
             "logo": get_file_full_url(sport.logo.url) if sport.logo else None
         } if sport else None
-        data["trainer"] = {
-            "id": trainer.id,
-            "full_name": trainer.full_name,
-            "user_role": trainer.user_role,
-            "phone_number": trainer.phone_number,
-        } if trainer else None
+        if instance.user_role == enums.UserRoles.SPORTSMAN.value:
+            data["trainer"] = {
+                "id": trainer.id,
+                "full_name": trainer.full_name,
+                "user_role": trainer.user_role,
+                "phone_number": trainer.phone_number,
+            } if trainer else None
+        else:
+            data["federation"] = {
+                "id": instance.trainer_profile.federation.id,
+                "name": instance.trainer_profile.federation.name
+            }
         return data
 
     def _get_sport(self, instance: User) -> t.Union[Sport, None]:

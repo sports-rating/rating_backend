@@ -187,7 +187,7 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
         """
         Returns the URL of the user's profile photo if it exists.
         """
-        profile_photo = self.instance.media.filter(is_profile_photo=True).first()
+        profile_photo = obj.media.filter(is_profile_photo=True).first()
         if profile_photo:
             return get_file_full_url(profile_photo.file.url)
         return None

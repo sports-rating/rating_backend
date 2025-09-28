@@ -44,7 +44,7 @@ from apps.sport.models import Tournament
 from apps.federation.filters import (
     FederationFilter,
     FederationUserRequestFilter,
-    FederationUserListFilter
+    FederationUsersFilter
 )
 
 from apps.shared.utils.types import *
@@ -155,7 +155,7 @@ class FederationUserListAPIView(generics.ListAPIView):
         # permissions.IsAuthenticated,
     )
     filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
-    filterset_class = FederationUserListFilter
+    filterset_class = FederationUsersFilter
     pagination_class = CustomPagination
     search_fields = [
         "first_name",

@@ -21,6 +21,7 @@ from apps.shared.utils.utils import (
     success_response,
     error_response
 )
+from apps.shared.utils import enums
 from apps.shared.utils.exceptions import raise_validation_error
 
 from apps.sport.models import (
@@ -30,13 +31,16 @@ from apps.sport.models import (
     SportInstitution,
     SportInstitutionRequest
 )
+from apps.user.models import User
 
 import apps.sport.serializers as serializers
+import apps.user.serializers as user_serializers
 
 from apps.sport.filters import (
     TournamentFilter,
     TeamFilter,
-    SportInstitutionFilter
+    SportInstitutionFilter,
+    SportInstitutionUsersFilter
 )
 
 
@@ -435,4 +439,50 @@ class SportInstitutionRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDes
         return success_response(
             message=_("Sport institution request deleted successfully"),
             code=status.HTTP_204_NO_CONTENT
+        )
+
+
+class SportInstitutionUsersListView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = User.objects.all()
+    serializer_class = serializers.SportInstitutionUsersSerializer
+    pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = SportInstitutionUsersFilter
+    search_fields = ["first_name", "last_name", "username", "phone_number"]
+
+    def get_queryset(self) -> QuerySet[User]:
+        sport_institution_id: UUID = self.kwargs.get("pk")
+
+        base_qs = User.objects.exclude(user_role__in=[
+            enums.UserRoles.SUPER_ADMIN.value,
+            enums.UserRoles.ADMIN.value,
+            enums.UserRoles.ORDINARY.value,
+        ]).select_related(
+            "sportsman_profile",
+            "trainer_profile",
+            "region",
+            "district",
+        ).prefetch_related(
+            "media",
+            "educations",
+            "sportsman_profile__trainer",
+            "trainer_profile__federation",
+            "trainer_profile__work_places",
+        )
+
+        if sport_institution_id:
+            return base_qs.filter(
+                Q(trainer_profile__work_places__sport_institution__id=sport_institution_id) |
+                Q(educations__sport_institution__id=sport_institution_id)
+            ).distinct()
+
+        return base_qs
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Sport institution users retrieved successfully"),
+            code=status.HTTP_200_OK
         )

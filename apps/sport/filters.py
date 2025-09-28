@@ -3,6 +3,7 @@ from datetime import datetime
 from django_filters import rest_framework as filters
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
+from django.db.models import F, Q
 
 from apps.shared.utils import enums
 from apps.shared.utils.logging import logger
@@ -73,3 +74,23 @@ class SportInstitutionFilter(filters.FilterSet):
     class Meta:
         model = SportInstitution
         fields = ["type", "sports", "federation", "region"]
+
+
+class SportInstitutionUsersFilter(filters.FilterSet):
+    user_role = filters.ChoiceFilter(choices=enums.UserRoles.choices())
+    sport = filters.CharFilter(method="filter_sport")
+    region = filters.CharFilter(field_name='region__id')
+    district = filters.CharFilter(field_name='district__id')
+    gender = filters.ChoiceFilter(choices=enums.GenderChoices.choices())
+
+    class Meta:
+        model = User
+        fields = ["sport", "region", "district", "gender"]
+
+    def filter_sport(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(
+            Q(sportsman_profile__sport__id=value) |
+            Q(trainer_profile__sport__id=value)
+        )

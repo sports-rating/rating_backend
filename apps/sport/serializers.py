@@ -1,5 +1,5 @@
+import typing as t
 from datetime import datetime
-from typing import Optional
 
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
@@ -493,3 +493,66 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
         user.save()
 
         return user
+
+
+class SportInstitutionUsersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "phone_number",
+            "birth_date",
+            "region",
+            "district",
+            "gender",
+            "user_role",
+            "created_time"
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
+        sport: Sport | None = self._get_sport(instance)
+        trainer: User | None = self._get_trainer(instance)
+        data["full_name"] = instance.full_name
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        data["sport"] = {
+            "id": sport.id,
+            "name": sport.name,
+            "logo": get_file_full_url(sport.logo.url) if sport.logo else None
+        } if sport else None
+        if instance.user_role == enums.UserRoles.SPORTSMAN.value:
+            data["trainer"] = {
+                "id": trainer.id,
+                "full_name": trainer.full_name,
+                "user_role": trainer.user_role,
+                "phone_number": trainer.phone_number,
+            } if trainer else None
+        else:
+            data["federation"] = {
+                "id": instance.trainer_profile.federation.id,
+                "name": instance.trainer_profile.federation.name
+            }
+        return data
+
+    def _get_sport(self, instance: User) -> t.Union[Sport, None]:
+        if instance.user_role == "sportsman":
+            return instance.sportsman_profile.sport
+        elif instance.user_role == "trainer":
+            return instance.trainer_profile.sport
+        return None
+
+    def _get_trainer(self, instance: User) -> t.Union[User, None]:
+        if instance.user_role == "sportsman":
+            return instance.sportsman_profile.trainer.user
+        return None
