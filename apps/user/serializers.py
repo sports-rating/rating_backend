@@ -1139,6 +1139,8 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
             "message_from_receiver",
             "old_data",
             "new_data",
+            "processed_by",
+            "processed_time",
             "created_time",
         ]
         read_only_fields = ["id", "sender", "created_time"]
@@ -1197,6 +1199,14 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                     "is_national": federation.is_national,
                 } if federation else None
             }
+            data["processed_by"] = {
+                "federation": {
+                    "id": federation.id,
+                    "name": federation.name,
+                    "phone_number": federation.phone_number,
+                    "is_national": federation.is_national,
+                } if federation else None
+            }
         else:
             data["receiver"] = {
                 "id": receiver.id,
@@ -1204,6 +1214,12 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                 "user_role": receiver.user_role,
                 "phone_number": receiver.phone_number,
             }
+            data["processed_by"] = {
+                "id": instance.processed_by.id,
+                "full_name": instance.processed_by.full_name,
+                "phone_number": instance.processed_by.phone_number,
+            } if instance.processed_by else None
+        data["processed_time"] = instance.processed_time
         data.pop("receivers")
         return data
 

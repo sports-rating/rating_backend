@@ -266,6 +266,7 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "old_data",
             "new_data",
             "processed_by",
+            "processed_time",
             "created_time",
         ]
         read_only_fields = ["id", "sender", "created_time"]
@@ -315,7 +316,7 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "id": instance.processed_by.id,
             "full_name": instance.processed_by.full_name,
             "phone_number": instance.processed_by.phone_number,
-        }
+        } if instance.processed_by else None
         data.pop("receivers", None)
         return data
 

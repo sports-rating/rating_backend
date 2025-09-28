@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet, Model
 from django.utils.functional import Promise
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from apps.shared.utils.types import *
 from apps.shared.utils.notifications import send_notification_to_user
@@ -87,6 +88,7 @@ class UserRequestService:
         notification_data: dict
     ) -> None:
         user_request.processed_by = receiver
+        user_request.processed_time = timezone.now()
         user_request.status = enums.UserRequestStatus.ACCEPTED.value
         user_request.save()
 
@@ -123,6 +125,7 @@ class UserRequestService:
         notification_data: dict
     ) -> None:
         user_request.processed_by = receiver
+        user_request.processed_time = timezone.now()
         user_request.status = enums.UserRequestStatus.REJECTED.value
         user_request.save()
 
@@ -432,7 +435,6 @@ class UserRequestService:
                 request=user_request,
                 **work_place_data
             )
-            logger.info(f"New data as snapshot 1: {user_request.new_data}")  # LOGGING
             notification_body = f"Your workplace verification request has been accepted."
             notification_data = {
                 "request_type": "trainer_workplace_verification_request",
@@ -441,5 +443,4 @@ class UserRequestService:
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
-        logger.info(f"New data as snapshot 2: {user_request.new_data}")  # LOGGING
         return _("Request handled successfully."), True

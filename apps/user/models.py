@@ -274,6 +274,7 @@ class UserRequest(BaseModel):
         null=True, blank=True,
         help_text="The user who processed this request"
     )
+    processed_time = models.DateTimeField(null=True, blank=True, help_text="Time when the request was processed")
 
     request_type = models.CharField(max_length=100, choices=enums.UserRequestTypes.choices(), default=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value)
     status = models.CharField(max_length=50, choices=enums.UserRequestStatus.choices(), default=enums.UserRequestStatus.PENDING.value)
