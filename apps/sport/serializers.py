@@ -170,6 +170,14 @@ class SportInstitutionSerializer(serializers.ModelSerializer):
             instance.sports.all(),
             many=True
         ).data
+        data["trainers"] = [
+            {
+                "id": work_place.trainer.user_id,
+                "full_name": work_place.trainer.user.full_name,
+                "phone_number": work_place.trainer.user.phone_number,
+            }
+            for work_place in instance.institution_trainer_work_places.select_related("trainer").distinct('trainer').all()
+        ]
         return data
 
 

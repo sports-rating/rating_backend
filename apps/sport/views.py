@@ -301,7 +301,14 @@ class SportInstitutionListCreateView(generics.ListCreateAPIView):
         return super().get_permissions()
 
     def get_queryset(self) -> QuerySet[SportInstitution]:
-        return self.queryset.prefetch_related("sports")
+        return self.queryset.select_related(
+            "region",
+            "district",
+        ).prefetch_related(
+            "sports",
+            "institution_trainer_work_places",
+            "media",
+        ).order_by("created_time")
 
     def create(self, request: Request, *args, **kwargs) -> Response:
         serializer: serializers.SportInstitutionSerializer = self.get_serializer(data=request.data)
