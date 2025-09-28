@@ -68,7 +68,8 @@ class SportInstitutionFilter(filters.FilterSet):
     type = filters.ChoiceFilter(field_name="type", choices=enums.SportInstitutionChoices.choices())
     sports = filters.CharFilter(field_name="sports__id")
     federation = filters.CharFilter(field_name="federation__id")
+    region = filters.CharFilter(field_name="region__id")
 
     class Meta:
         model = SportInstitution
-        fields = ["type", "sports", "federation"]
+        fields = ["type", "sports", "federation", "region"]
