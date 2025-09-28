@@ -12,14 +12,14 @@ urlpatterns = [
     path("team/<uuid:pk>/", views.TeamRetrieveUpdateDeleteView.as_view(), name='team-retrieve-update-delete'),
 
     path(
-        "school/",
+        "sport-institutions/",
         views.SportInstitutionListCreateView.as_view(),
-        name='school-create-list'
+        name='sport-institution-create-list'
     ),
     path(
-        "school/<uuid:pk>/",
+        "sport-institutions/<uuid:pk>/",
         views.SportInstitutionRetrieveUpdateDeleteView.as_view(),
-        name='school-retrieve-update-delete'
+        name='sport-institution-retrieve-update-delete'
     ),
     path(
         "sport-institution-request/",
