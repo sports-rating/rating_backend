@@ -36,6 +36,9 @@ from apps.user.models import (
 from apps.career.models import (
     Result
 )
+from apps.sport.models import (
+    SportInstitutionMedia,
+)
 from apps.shared.models import (
     Region,
     District,
@@ -599,23 +602,31 @@ class SportsmanResultRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyA
 class MediaUploadView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = UserMedia.objects.all()
-    serializer_class = serializers.BaseMediaSerializer
+    serializer_class = serializers.UserMediaSerializer
 
     def get_queryset(self) -> QuerySet:
         model_type: str = self.request.data.get("type")
         model: t.Optional[t.Type[Model]] = self._get_model(model_type=model_type)
         return model.objects.all() if model else UserMedia.objects.none()
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict:
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
         model_type: str = self.request.data.get("type")  # user, sportcomplex
         if model_type:
             context["model"] = self._get_model(model_type=model_type)
-        self.request.data.pop("type")
+        # self.request.data.pop("type")
         return context
 
-    def create(self, request, *args, **kwargs):
+    def get_serializer_class(self):
+        model_type: str = self.request.data.get("type")
+        serializer_mapping = {
+            "user": serializers.UserMediaSerializer,
+            "sport_institution": sport_serializers.SportInstitutionMediaSerializer,
+        }
+        return serializer_mapping.get(model_type, serializers.UserMediaSerializer)
+
+    def create(self, request: Request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self._handle_media(request, serializer)
@@ -625,11 +636,16 @@ class MediaUploadView(generics.CreateAPIView):
             code=200
         )
 
-    def _handle_media(self, request, serializer):
-        user = request.user if request.user.is_authenticated else None
-        if user.user_role == "admin" or user.user_role == "superadmin":
-            user = None
-        serializer.save(user=user)
+    def _handle_media(self, request: Request, serializer) -> None:
+        model_type: str = request.data.get("type")
+        if model_type == "user":
+            user: User = request.user if request.user.is_authenticated else None  # type: ignore
+            if user.user_role == "admin" or user.user_role == "superadmin":
+                user = None
+            serializer.save(user=user)
+        else:
+            serializer.save()
+        request.data.pop("type", None)
 
     def _get_model(self, model_type: str) -> t.Optional[t.Type[Model]]:
         """
@@ -637,6 +653,7 @@ class MediaUploadView(generics.CreateAPIView):
         """
         model_mapping = {
             "user": UserMedia,
+            "sport_institution": SportInstitutionMedia,
             "other": None
         }
         return model_mapping.get(model_type)

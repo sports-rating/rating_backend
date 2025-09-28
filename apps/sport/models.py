@@ -96,6 +96,24 @@ class SportInstitution(BaseModel):
     repr_fields = ("name",)
 
 
+class SportInstitutionMedia(BaseMedia):
+    sport_institution = models.ForeignKey(
+        SportInstitution,
+        on_delete=models.CASCADE,
+        related_name='media',
+        blank=True,
+        null=True
+    )
+
+    class Meta:
+        db_table = "sport_institution_media"
+        verbose_name = "Sport Institution Media"
+        verbose_name_plural = "Sport Institution Media"
+
+    def save(self, *args, **kwargs):
+        return super().save(*args, **kwargs)
+
+
 class Tournament(BaseModel):
     name = models.CharField(max_length=450)
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="tournaments", blank=True, null=True)

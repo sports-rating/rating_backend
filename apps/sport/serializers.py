@@ -29,6 +29,7 @@ from apps.sport.models import (
     Team,
     ScoringPolicy,
     SportInstitutionRequest,
+    SportInstitutionMedia
 )
 from apps.federation.models import (
     Federation,
@@ -461,3 +462,32 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
         user.save()
 
         return user
+
+
+class SportInstitutionMediaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SportInstitutionMedia
+        fields = [
+            "id",
+            "sport_institution",
+            "media_type",
+            "size",
+            "extension",
+            "file",
+            "created_time"
+        ]
+        read_only_fields = ["id", "size", "extension", "media_type", "created_time"]
+
+    def validate(self, data):
+        """
+        Validate the file size for PDFs
+        """
+        file = data.get("file")
+        if file:
+            if file.name.lower().endswith(".pdf"):
+                if file.size > settings.MAX_PDF_SIZE_BYTES:
+                    size_in_mb = file.size / (1024 * 1024)
+                    raise_validation_error(
+                        message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
+                    )
+        return data

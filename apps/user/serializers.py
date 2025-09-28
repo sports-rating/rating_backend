@@ -160,8 +160,38 @@ class BaseMediaSerializer(serializers.ModelSerializer):
         return media_instance
 
 
+class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
+    class Meta:
+        model = UserMedia
+        fields = (
+            "id",
+            "user",
+            "media_type",
+            "size",
+            "extension",
+            "file",
+            "is_profile_photo",
+            "created_time",
+        )
+        read_only_fields = ("id", "user", "media_type", "size", "extension", "created_time")
+
+    def validate(self, data):
+        """
+        Validate the file size for PDFs
+        """
+        file = data.get("file")
+        if file:
+            if file.name.lower().endswith(".pdf"):
+                if file.size > settings.MAX_PDF_SIZE_BYTES:
+                    size_in_mb = file.size / (1024 * 1024)
+                    raise_validation_error(
+                        message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
+                    )
+        return data
+
+
 class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
-    media = BaseMediaSerializer(many=True)
+    media = UserMediaSerializer(many=True)
     educations = EducationSerializer(many=True, required=False)
     results = ResultCreateSerializer(many=True, required=False)
     profile_photo = serializers.SerializerMethodField()
