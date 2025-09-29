@@ -12,6 +12,7 @@ from rest_framework import generics, permissions, status, filters as rest_framew
 
 from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
 from apps.shared.utils.pagination import CustomPagination
+from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import (
     success_response,
     error_response
@@ -92,4 +93,89 @@ class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
             data=response.data,
             message=_("Trainer WorkPlace retrieved successfully"),
             code=status.HTTP_200_OK
+        )
+
+
+class EducationListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = Education.objects.all()
+    serializer_class = serializers.EducationSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    pagination_class = CustomPagination
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(user=user).select_related("sport_institution", "sport", "trainer")
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Education sent for verification successfully"),
+            code=status.HTTP_201_CREATED
+        )
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Educations retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class EducationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = Education.objects.all()
+    serializer_class = serializers.EducationSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(user=user).select_related("sport_institution", "sport", "trainer")
+
+    def get_object(self) -> Education:
+        education_id = self.kwargs.get("pk")
+        education = self.queryset.filter(id=education_id).first()
+        if not education:
+            raise_validation_error(message=_("Education not found"), code=status.HTTP_404_NOT_FOUND)
+        return education
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Education retrieved successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Education updated successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Education deleted successfully"),
+            code=status.HTTP_204_NO_CONTENT
         )

@@ -12,7 +12,7 @@ from apps.career.models import (
 
 @admin.register(Education)
 class EducationAdmin(admin.ModelAdmin):
-    list_display = ["id", "sport", "start_year", "end_year"]
+    list_display = ["id", "trainer", "sport", "sport_institution", "created_time"]
 
 
 @admin.register(WorkPlace)

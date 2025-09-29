@@ -18,6 +18,7 @@ from apps.shared.utils.general import (
 )
 from apps.shared.serializers import (
     TrainerWorkPlaceSnapshotSerializer,
+    EducationSnapshotSerializer
 )
 from apps.shared.utils import enums
 from apps.shared.utils.mixins import RequestContextMixin
@@ -40,6 +41,7 @@ from apps.user.models import (
 )
 from apps.federation.models import Federation
 from apps.sport.serializers import TournamentSerializer
+from apps.shared.services.user_request import UserRequestService
 
 
 class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
@@ -193,7 +195,7 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
         )
         user_request.receivers.set(receivers)
         user_request.save()
-        logger.info(f"UserRequest created: {user_request}")  # LOGGING
+        logger.info(f"WorkPlace UserRequest created: {user_request}")  # LOGGING
         return user_request
 
     def to_representation(self, instance: WorkPlace) -> t.Optional[dict]:
@@ -294,4 +296,81 @@ class ResultSerializer(serializers.ModelSerializer):
 
         data['archived_trainer_id'] = instance.archived_trainer.id if instance.archived_trainer else None
         data['archived_trainer_name'] = instance.archived_trainer.name if instance.archived_trainer else None
+        return data
+
+
+class EducationSerializer(RequestContextMixin, serializers.ModelSerializer):
+    message = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+    class Meta:
+        model = Education
+        fields = [
+            "id",
+            "sport",
+            "sport_institution",
+            "trainer",
+            "start_year",
+            "end_year",
+            "currently_studying",
+            "message",
+            "created_time"
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def validate(self, attrs: dict) -> dict:
+        sport_institution: SportInstitution = attrs.get("sport_institution")
+        sport: Sport = attrs.get("sport")
+
+        if not sport_institution.sports.filter(id=sport.id).exists():
+            raise_validation_error(message=_("This sport is not offered by the selected sport institution."))
+
+        start_year = attrs.get("start_year")
+        end_year = attrs.get("end_year")
+        if start_year and end_year and start_year >= end_year:
+            raise_validation_error(message=_("Start year must be less than end year"))
+
+        return super().validate(attrs)
+
+    @transaction.atomic
+    def create(self, validated_data: dict) -> t.Union[Education, UserRequest]:
+        trainer: Trainer = validated_data.get("trainer")
+        message_from_sender: str | None = validated_data.pop("message", None)
+
+        new_snapshot: dict = EducationSnapshotSerializer().to_new_snapshot(validated_data)
+
+        user_request, message, success = UserRequestService.create_request(
+            sender=user,
+            receivers=User.objects.filter(id=trainer.user_id),
+            request_type=enums.UserRequestTypes.EDUCATION_VERIFICATION_REQUEST.value,
+            old_data={},
+            new_data=new_snapshot,
+            message_from_sender=message_from_sender
+        )
+        if not success:
+            raise_validation_error(message=message)
+
+        logger.info(f"Education UserRequest created: {user_request}")  # LOGGING
+        return user_request
+
+    def to_representation(self, instance: Education) -> t.Optional[dict]:
+        if isinstance(instance, UserRequest):
+            return UserRequestSerializer(instance).data
+        data = super().to_representation(instance)
+        data["trainer"] = {
+            "id": instance.trainer.user.id,
+            "full_name": instance.trainer.user.full_name,
+            "phone_number": instance.trainer.user.phone_number,
+        }
+        data["sport_institution"] = {
+            "id": instance.sport_institution.id,
+            "name": instance.sport_institution.name,
+            "phone_number": instance.sport_institution.phone_number,
+            "director": instance.sport_institution.director,
+            "type": instance.sport_institution.type,
+            "address": instance.sport_institution.address,
+        } if instance.sport_institution else None
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+        } if instance.sport else None
         return data

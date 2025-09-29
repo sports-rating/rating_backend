@@ -16,18 +16,31 @@ from apps.shared.utils import enums
 
 
 class Education(BaseModel):
-    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
-    # TODO:CoderB7 remove start_year and end_year
-    start_year = models.DateField()
-    end_year = models.DateField()
-    currently_studying = models.BooleanField(default=False)
-
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_educations", blank=True, null=True)
+    trainer = models.ForeignKey(Trainer, on_delete=models.SET_NULL, related_name="education_records", blank=True, null=True)
     sport_institution = models.ForeignKey(SportInstitution, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
-    # trainer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="trainer_educations", blank=True, null=True) # ?
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations", blank=True, null=True)
+    sport = models.ForeignKey(Sport, on_delete=models.SET_NULL, related_name="sport_educations", blank=True, null=True)
+
+    start_year = models.PositiveIntegerField(
+        default=1800,
+        null=True,
+        validators=[
+            MinValueValidator(1800)
+        ]
+    )
+    end_year = models.PositiveIntegerField(
+        default=1800,
+        null=True,
+        validators=[
+            MinValueValidator(1800)
+        ]
+    )
+    currently_studying = models.BooleanField(default=False)
 
     class Meta:
         db_table = "education"
+        verbose_name = "Education"
+        verbose_name_plural = "Educations"
 
     repr_fields = ("school", "start_year", "end_year")
 
