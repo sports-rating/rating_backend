@@ -333,6 +333,7 @@ class EducationSerializer(RequestContextMixin, serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data: dict) -> t.Union[Education, UserRequest]:
+        user: User = self.request.user  # type: ignore
         trainer: Trainer = validated_data.get("trainer")
         message_from_sender: str | None = validated_data.pop("message", None)
 
