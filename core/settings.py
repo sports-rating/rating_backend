@@ -43,7 +43,7 @@ BACKEND_APPS = [
     "shared",
     "dashboard",
     "sport",
-    # "education",
+    "education",
     "payment",
     "federation",
     "career",
