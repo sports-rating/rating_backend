@@ -472,7 +472,7 @@ class SportInstitutionUsersListView(generics.ListAPIView):
             "district",
         ).prefetch_related(
             "media",
-            "educations",
+            "user_educations",
             "sportsman_profile__trainer",
             "trainer_profile__federation",
             "trainer_profile__work_places",
@@ -481,7 +481,7 @@ class SportInstitutionUsersListView(generics.ListAPIView):
         if sport_institution_id:
             return base_qs.filter(
                 Q(trainer_profile__work_places__sport_institution__id=sport_institution_id) |
-                Q(educations__sport_institution__id=sport_institution_id)
+                Q(user_educations__sport_institution__id=sport_institution_id)
             ).distinct()
 
         return base_qs
