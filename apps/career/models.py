@@ -36,6 +36,7 @@ class Education(BaseModel):
         ]
     )
     currently_studying = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False, help_text="Indicates whether the education has been verified by a trainer.")
 
     class Meta:
         db_table = "education"
