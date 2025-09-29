@@ -120,9 +120,8 @@ class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
 class EducationSnapshotSerializer(serializers.Serializer):
     sport_institution = serializers.PrimaryKeyRelatedField(queryset=SportInstitution.objects.all(), required=True)
     sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=True)
-    trainer = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), required=True)
-    start_year = serializers.DateField(required=True)
-    end_year = serializers.DateField(required=False, allow_null=True)
+    start_year = serializers.IntegerField(required=True)
+    end_year = serializers.IntegerField(required=False, default=None, allow_null=True)
     currently_studying = serializers.BooleanField(default=False)
 
     def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
@@ -135,15 +134,12 @@ class EducationSnapshotSerializer(serializers.Serializer):
             data["sport_institution"] = data["sport_institution"].get("id")
         if isinstance(data.get("sport"), dict):
             data["sport"] = data["sport"].get("id")
-        if isinstance(data.get("trainer"), dict):
-            data["trainer"] = data["trainer"].get("id")
         logger.debug(f"Deserialized Internal data: {data}")
         return super().to_internal_value(data)
 
     def to_new_snapshot(self, validated_data: dict) -> dict:
         sport_institution: SportInstitution = validated_data.get("sport_institution")
         sport: Sport = validated_data.get("sport")
-        trainer: Trainer = validated_data.get("trainer")
         return {
             "sport_institution": {
                 "id": str(sport_institution.id),
@@ -157,10 +153,6 @@ class EducationSnapshotSerializer(serializers.Serializer):
                 "id": str(sport.id),
                 "name": sport.name
             } if sport else None,
-            "trainer": {
-                "id": str(trainer.user_id),
-                "full_name": trainer.user.full_name
-            } if trainer else None,
             "start_year": validated_data.get("start_year"),
             "end_year": validated_data.get("end_year"),
             "currently_studying": validated_data.get("currently_studying"),

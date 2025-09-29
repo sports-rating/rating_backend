@@ -13,15 +13,15 @@ from apps.career.models import (
 @admin.register(Education)
 class EducationAdmin(admin.ModelAdmin):
     list_display = ["id", "trainer", "sport", "sport_institution", "created_time"]
-
+    search_fields = ["trainer__user__first_name", "trainer__user__last_name", "sport__name", "sport_institution__name"]
 
 @admin.register(WorkPlace)
 class WorkPlaceAdmin(admin.ModelAdmin):
-    list_display = ['id', 'trainer_obj', 'school_obj', 'sport_obj', 'created_time']
+    list_display = ['id', 'trainer_obj', 'sport_institution_obj', 'sport_obj', 'created_time']
     search_fields = ['trainer__user__first_name', 'trainer__user__last_name', 'federation__name', 'school__name', 'sport__name']
     list_per_page = 10
     ordering = ['-created_time']
-    readonly_fields = ['trainer_obj', 'school_obj', 'sport_obj']
+    readonly_fields = ['trainer_obj', 'sport_institution_obj', 'sport_obj']
 
     @admin.display(description="Trainer")
     def trainer_obj(self, obj: WorkPlace) -> str:
@@ -37,11 +37,11 @@ class WorkPlaceAdmin(admin.ModelAdmin):
     #         return format_html('<a href="{}">{}</a>', url, obj.federation.name)
     #     return "N/A"
 
-    @admin.display(description="School")
-    def school_obj(self, obj: WorkPlace) -> str:
-        if obj.school:
-            url = reverse("admin:sport_school_change", args=[obj.school.id])
-            return format_html('<a href="{}">{}</a>', url, obj.school.name)
+    @admin.display(description="Sport Institution")
+    def sport_institution_obj(self, obj: WorkPlace) -> str:
+        if obj.sport_institution:
+            url = reverse("admin:sport_institution_change", args=[obj.sport_institution.id])
+            return format_html('<a href="{}">{}</a>', url, obj.sport_institution.name)
         return "N/A"
 
     @admin.display(description="Sport")

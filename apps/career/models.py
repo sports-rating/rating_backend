@@ -43,7 +43,7 @@ class Education(BaseModel):
         verbose_name = "Education"
         verbose_name_plural = "Educations"
 
-    repr_fields = ("school", "start_year", "end_year")
+    repr_fields = ("sport_institution", "start_year", "end_year")
 
 
 class WorkPlace(BaseModel):
