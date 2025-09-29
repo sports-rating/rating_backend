@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('updated_time', models.DateTimeField(auto_now=True, null=True)),
                 ('federation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='federation_trainer_work_places', to='federation.federation')),
                 ('request', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='trainer_work_place', to='user.userrequest')),
-                ('school', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='school_trainer_work_places', to='sport.school')),
+                ('school', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='school_trainer_work_places', to='education.school')),
                 ('sport', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sport_trainer_work_places', to='sport.sport')),
                 ('trainer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='work_places', to='user.trainer')),
             ],
