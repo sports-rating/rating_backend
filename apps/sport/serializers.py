@@ -34,12 +34,12 @@ from apps.sport.models import (
 from apps.federation.models import (
     Federation,
 )
-
 from apps.user.models import (
     User,
     Trainer,
-    ArchivedTrainer
+    ArchivedTrainer,
 )
+from apps.shared.models import Region, District
 
 from apps.dashboard.serializers import (
     UserListSerializer
@@ -417,6 +417,7 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
             "school_district",
             "school_sports",
             "processed_by",
+            "processed_time",
             "additional_info",
             "status",
             "created_time",
@@ -446,6 +447,7 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
             if not processed_by:
                 raise_validation_error(message=_("Processed by must be set when approving or rejecting a request."))
             instance.processed_by = processed_by
+            instance.processed_time = timezone.now()
             instance.status = status
 
         additional_info = validated_data.get("additional_info", None)
@@ -501,6 +503,27 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
         user.save()
 
         return user
+
+    def to_representation(self, instance: SportInstitutionRequest) -> dict:
+        data = super().to_representation(instance)
+        region = Region.objects.filter(id=instance.school_region).first()
+        district = District.objects.filter(id=instance.school_district).first()
+        sports = Sport.objects.filter(id__in=instance.school_sports).all()
+        data["school_region"] = {
+            "id": region.id,
+            "name": region.name
+        } if region else None
+        data["school_district"] = {
+            "id": district.id,
+            "name": district.name
+        } if district else None
+        data["school_sports"] = SportSerializer(sports, many=True).data
+        data["processed_by"] = {
+            "id": instance.processed_by.id,
+            "full_name": instance.processed_by.full_name,
+            "phone_number": instance.processed_by.phone_number,
+        }
+        return data
 
 
 class SportInstitutionUsersSerializer(serializers.ModelSerializer):

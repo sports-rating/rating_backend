@@ -384,6 +384,9 @@ class SportInstitutionRequestListCreateView(generics.ListCreateAPIView):
     serializer_class = serializers.SportInstitutionRequestSerializer
     pagination_class = CustomPagination
 
+    def get_queryset(self) -> QuerySet[SportInstitutionRequest]:
+        return self.queryset.select_related("processed_by")
+
     def get_permissions(self):
         if self.request.method == "GET":
             return (IsAdminOrSuperAdmin(),)

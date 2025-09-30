@@ -245,6 +245,8 @@ class SportInstitutionRequest(BaseModel):
         null=True,
         blank=True
     )
+    processed_time = models.DateTimeField(null=True, blank=True, help_text="Time when the request was processed")
+
     additional_info = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=enums.SportInstitutionRequestStatus.choices(), default=enums.SportInstitutionRequestStatus.PENDING.value)
 
