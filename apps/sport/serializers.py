@@ -464,9 +464,9 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
             sport_institution.save()
 
         # Send SMS to the manager with login details
-        status_code = send_sport_institution_message(sport_institution.name, admin_user.phone_number, status)
+        status_code = send_sport_institution_message(instance.school_name, instance.manager_phone_number, status)
         if status_code != 200:
-            logger.error(f"Failed to send SMS to {admin_user.phone_number} for Sport Institution '{sport_institution.name}'. Status code: {status_code}")
+            logger.error(f"Failed to send SMS to {instance.manager_phone_number} for Sport Institution '{instance.school_name}'. Status code: {status_code}")
             raise_validation_error(message=_("Failed to send SMS notification. Please try again later."))
 
         return instance
