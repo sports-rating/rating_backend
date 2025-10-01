@@ -71,6 +71,10 @@ class User(AbstractUser, BaseModel):
         return self.federations.first()
 
     @property
+    def sport_institution(self):
+        return self.sport_institutions.first()
+
+    @property
     def profile_photo(self) -> t.Optional["UserMedia"]:
         profile_photo = self.media.filter(is_profile_photo=True).first()
         if profile_photo:

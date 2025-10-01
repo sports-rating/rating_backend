@@ -55,7 +55,7 @@ class SportInstitution(BaseModel):
     user = models.ForeignKey(
         "user.User",
         on_delete=models.CASCADE,
-        related_name="sport_institution",
+        related_name="sport_institutions",
         null=True,
         blank=True
     )
@@ -82,7 +82,7 @@ class SportInstitution(BaseModel):
         blank=True
     )
 
-    sports = models.ManyToManyField(Sport, related_name='sport_institutions')
+    sports = models.ManyToManyField(Sport, related_name='institutions')
 
     class Meta:
         db_table = "sport_institution"

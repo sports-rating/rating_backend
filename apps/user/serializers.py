@@ -204,6 +204,11 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
                 "name": instance.federation.name,
                 "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
             } if instance.federation else None
+        elif instance.user_role == "sport_institution_admin":
+            data["sport_institution"] = {
+                "id": instance.sport_institution.id,
+                "name": instance.sport_institution.name,
+            }
         data["region"] = {
             "id": instance.region.id,
             "name": instance.region.name

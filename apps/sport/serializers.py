@@ -158,6 +158,11 @@ class SportInstitutionSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: SportInstitution) -> dict:
         data =  super().to_representation(instance)
+        data["user"] = {
+            "id": instance.user.id,
+            "full_name": instance.user.full_name,
+            "phone_number": instance.user.phone_number,
+        } if instance.user else None
         data["region"] = {
             "id": instance.region.id,
             "name": instance.region.name
