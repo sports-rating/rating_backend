@@ -17,7 +17,8 @@ from apps.sport.models import (
     Tournament,
     Team,
     Sport,
-    SportInstitution
+    SportInstitution,
+    SportInstitutionRequest
 )
 
 
@@ -94,3 +95,11 @@ class SportInstitutionUsersFilter(filters.FilterSet):
             Q(sportsman_profile__sport__id=value) |
             Q(trainer_profile__sport__id=value)
         )
+
+
+class SportInstitutionRequestFilter(filters.FilterSet):
+    status = filters.ChoiceFilter(field_name="status", choices=enums.SportInstitutionRequestStatus.choices())
+
+    class Meta:
+        model = SportInstitutionRequest
+        fields = ["status"]

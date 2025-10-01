@@ -40,7 +40,8 @@ from apps.sport.filters import (
     TournamentFilter,
     TeamFilter,
     SportInstitutionFilter,
-    SportInstitutionUsersFilter
+    SportInstitutionUsersFilter,
+    SportInstitutionRequestFilter
 )
 
 
@@ -383,6 +384,15 @@ class SportInstitutionRequestListCreateView(generics.ListCreateAPIView):
     queryset = SportInstitutionRequest.objects.all()
     serializer_class = serializers.SportInstitutionRequestSerializer
     pagination_class = CustomPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = SportInstitutionRequestFilter
+    search_fields = [
+        "manager_first_name",
+        "manager_last_name",
+        "manager_phone_number",
+        "school_name",
+        "school_phone_number"
+    ]
 
     def get_queryset(self) -> QuerySet[SportInstitutionRequest]:
         return self.queryset.select_related("processed_by")
