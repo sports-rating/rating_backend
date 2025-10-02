@@ -40,7 +40,7 @@ class WorkPlaceAdmin(admin.ModelAdmin):
     @admin.display(description="Sport Institution")
     def sport_institution_obj(self, obj: WorkPlace) -> str:
         if obj.sport_institution:
-            url = reverse("admin:sport_institution_change", args=[obj.sport_institution.id])
+            url = reverse("admin:sport_sportinstitution_change", args=[obj.sport_institution.id])
             return format_html('<a href="{}">{}</a>', url, obj.sport_institution.name)
         return "N/A"
 
