@@ -8,7 +8,8 @@ from apps.sport.models import (
     Team,
     ScoringPolicy,
     SportInstitution,
-    SportInstitutionRequest
+    SportInstitutionMedia,
+    SportInstitutionRequest,
 )
 
 
@@ -61,6 +62,20 @@ class SportInstitutionAdmin(admin.ModelAdmin):
         ]
         return format_html("<br>".join(links)) if links else "-"
 
+
+@admin.register(SportInstitutionMedia)
+class SportInstitutionMediaAdmin(admin.ModelAdmin):
+    list_display = ["id", "sport_institution_obj", "file", "media_type", "created_time"]
+    search_fields = ["sport_institution__name", "media_type"]
+    list_filter = ["media_type", "created_time"]
+    readonly_fields = ["created_time", "sport_institution_obj"]
+
+    @admin.display(description="Sport Institution")
+    def sport_institution_obj(self, obj):
+        if obj.sport_institution:
+            url = reverse("admin:sport_sportinstitution_change", args=[obj.sport_institution.id])
+            return format_html('<a href="{}">{}</a>', url, obj.sport_institution.name)
+        return "N/A"
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
