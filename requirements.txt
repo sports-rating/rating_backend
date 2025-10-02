@@ -3,6 +3,7 @@ asgiref==3.8.1
 async-timeout==5.0.1
 attrs==24.2.0
 billiard==4.2.1
+boto3==1.40.43
 CacheControl==0.14.1
 cachetools==5.5.0
 celery==5.4.0
