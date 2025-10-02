@@ -310,7 +310,7 @@ if not IS_LOCAL:
 
     STORAGES = {
         "default": {
-            "BACKEND": "components.storage_backends.CustomMediaStorage",
+            "BACKEND": "apps.shared.utils.storage_backends.CustomMediaStorage",
             "OPTIONS": {
                 "bucket_name": S3_MEDIA_BUCKET,
                 "location": S3_MEDIA_LOCATION,
@@ -320,7 +320,7 @@ if not IS_LOCAL:
             },
         },
         "staticfiles": {
-            "BACKEND": "components.storage_backends.CustomStaticStorage",
+            "BACKEND": "apps.shared.utils.storage_backends.CustomStaticStorage",
             "OPTIONS": {
                 "bucket_name": S3_STATIC_BUCKET,
                 "location": S3_STATIC_LOCATION,
