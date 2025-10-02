@@ -14,8 +14,6 @@ from firebase_admin import initialize_app, credentials
 IS_LOCAL: bool = os.getenv("IS_LOCAL", "true").lower() == "true"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-STATICFILES_DIRS = [BASE_DIR / "static"]
-
 sys.path.append(os.path.join(BASE_DIR, "apps"))
 
 load_dotenv()
@@ -238,6 +236,13 @@ LANGUAGES = [
 ]
 
 
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = "static/"
+# Directory for static files after collectstatic
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+
 AUTH_USER_MODEL = "user.User"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -326,11 +331,6 @@ if not IS_LOCAL:
         },
     }
 else:
-    # Static files (CSS, JavaScript, Images)
-    STATIC_URL = "static/"
-    # Directory for static files after collectstatic
-    STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-
     # Media files (user-uploaded content)
     MEDIA_URL = "/media/"  # URL for serving media files
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Directory for storing media files
