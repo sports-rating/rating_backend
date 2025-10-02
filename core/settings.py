@@ -12,6 +12,8 @@ from firebase_admin import initialize_app, credentials
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+STATICFILES_DIRS = [BASE_DIR.parent / "static"]
+
 sys.path.append(os.path.join(BASE_DIR, "apps"))
 
 load_dotenv()

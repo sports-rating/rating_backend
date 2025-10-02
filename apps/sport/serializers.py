@@ -1,6 +1,7 @@
 import typing as t
 import os
 from datetime import datetime
+from pathlib import Path
 
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
@@ -503,7 +504,7 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
             sport_institution.sports.set(sports)
 
         # Assign default media
-        default_path = os.path.join(settings.BASE_DIR, 'static', 'default_institution_image.png')
+        default_path = os.path.join(settings.STATICFILES_DIRS[0], 'static', 'default_institution_image.png')
         with open(default_path, 'rb') as f:
             sport_institution_media = SportInstitutionMedia(
                 sport_institution=sport_institution,
