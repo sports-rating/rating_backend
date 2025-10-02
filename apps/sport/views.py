@@ -175,7 +175,7 @@ class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self) -> Sport:
         sport_id: UUID = self.kwargs.get("pk")
-        sport: Sport = self.queryset.filter(sport_id=sport_id).first()
+        sport: Sport = self.queryset.filter(pk=sport_id).first()
         if not sport:
             raise_validation_error(message=_("Sport not found"), code=status.HTTP_404_NOT_FOUND)
         return sport
