@@ -49,8 +49,9 @@ class SportAdmin(admin.ModelAdmin):
 class SportInstitutionAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "director", "phone_number"]
     search_fields = ["name", "phone_number"]
-    readonly_fields = ["created_time", "updated_time", "sports_list"]
+    readonly_fields = ["created_time", "updated_time", "sports_list", "media_list"]
 
+    @admin.display(description="Sports")
     def sports_list(self, obj):
         links = [
             format_html(
@@ -59,6 +60,18 @@ class SportInstitutionAdmin(admin.ModelAdmin):
                 sport.name,
             )
             for sport in obj.sports.all()
+        ]
+        return format_html("<br>".join(links)) if links else "-"
+
+    @admin.display(description="Media")
+    def media_list(self, obj):
+        links = [
+            format_html(
+                '<a href="{}">{}</a>',
+                reverse("admin:sport_sportinstitutionmedia_change", args=[media.id]),
+                media.file.name,
+            )
+            for media in obj.media.all()
         ]
         return format_html("<br>".join(links)) if links else "-"
 
@@ -76,6 +89,7 @@ class SportInstitutionMediaAdmin(admin.ModelAdmin):
             url = reverse("admin:sport_sportinstitution_change", args=[obj.sport_institution.id])
             return format_html('<a href="{}">{}</a>', url, obj.sport_institution.name)
         return "N/A"
+
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
