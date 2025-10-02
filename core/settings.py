@@ -515,6 +515,7 @@ cred = credentials.Certificate(BASE_DIR / "sportsrating-firebase.json")
 
 FIREBASE_APP = initialize_app(cred, {"projectId": "sportsrating"})
 
+
 # Payme
 PAYME_ID = os.getenv("PAYME_ID")
 PAYME_KEY = os.getenv("PAYME_KEY")
