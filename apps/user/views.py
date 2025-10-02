@@ -664,6 +664,17 @@ class MediaDeleteView(generics.DestroyAPIView):
     queryset = UserMedia.objects.all()
     serializer_class = serializers.UserMediaSerializer
 
+    def get_queryset(self) -> QuerySet:
+        model_type: str = self.request.query_params.get("type", "user")
+        model: t.Optional[t.Type[Model]] = self._get_model(model_type=model_type)
+        return model.objects.all() if model else UserMedia.objects.all()
+
+    def get_object(self):
+        media = self.get_queryset().filter(pk=self.kwargs.get("pk")).first()
+        if not media:
+            raise_validation_error(message=_("Media not found"), code=404)
+        return media
+
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.delete()
@@ -672,6 +683,16 @@ class MediaDeleteView(generics.DestroyAPIView):
             code=204
         )
 
+    def _get_model(self, model_type: str) -> t.Optional[t.Type[Model]]:
+        """
+        Returns the appropriate model based on the media type
+        """
+        model_mapping = {
+            "user": UserMedia,
+            "sport_institution": SportInstitutionMedia,
+            "other": None
+        }
+        return model_mapping.get(model_type)
 
 class ArchivedTrainerCreateListView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
