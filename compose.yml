@@ -85,10 +85,36 @@ services:
     networks:
       - backend
 
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Web console
+    volumes:
+      - /mnt/minio-storage:/data
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin_minio_12345
+    command: server /data --console-address ":9001"
+    networks:
+      - backend
+
+  mc:
+    image: minio/mc
+    container_name: minio-mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 admin admin_minio_12345;
+      tail -f /dev/null
+      "
 
 volumes:
   postgres_data:
   redis-data:
+  minio-data:
 
 networks:
   backend:
