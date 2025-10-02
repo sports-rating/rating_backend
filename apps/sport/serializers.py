@@ -1,4 +1,5 @@
 import typing as t
+import os
 from datetime import datetime
 
 from django.db import transaction, IntegrityError
@@ -7,6 +8,7 @@ from django.contrib.auth.models import update_last_login
 from django.utils import timezone
 from django.db.models import Sum
 from django.conf import settings
+from django.core.files import File
 
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
@@ -435,6 +437,12 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
     def validate(self, attrs: dict) -> dict:
         phone_number: str = attrs.get("manager_phone_number")
         school_phone_number: str = attrs.get("school_phone_number")
+
+        instance = getattr(self, 'instance', None)
+        attrs["name"] = attrs.get("school_name", None)
+        check_uniqueness("name", attrs, SportInstitution, instance)
+        attrs.pop("name", None)  # remove temporary field
+
         check_phone_valid(phone_number)
         check_phone_valid(school_phone_number)
         return attrs
@@ -493,6 +501,15 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
         if request.school_sports:
             sports = Sport.objects.filter(id__in=request.school_sports)
             sport_institution.sports.set(sports)
+
+        # Assign default media
+        default_path = os.path.join(settings.BASE_DIR, 'static', 'default_institution_image.png')
+        with open(default_path, 'rb') as f:
+            sport_institution_media = SportInstitutionMedia(
+                sport_institution=sport_institution,
+            )
+            sport_institution_media.file.save('default_institution_image.png', File(f), save=True)
+
         return sport_institution
 
     def _create_sport_institution_admin(self, request: SportInstitutionRequest, sport_institution: SportInstitution) -> User:
@@ -527,7 +544,7 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
             "id": instance.processed_by.id,
             "full_name": instance.processed_by.full_name,
             "phone_number": instance.processed_by.phone_number,
-        }
+        } if instance.processed_by else None
         return data
 
 

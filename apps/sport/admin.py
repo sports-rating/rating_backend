@@ -90,6 +90,7 @@ class SportInstitutionRequestAdmin(admin.ModelAdmin):
         "manager_phone_number",
         "school_name",
         "school_phone_number",
+        "status",
         "created_time",
     ]
     search_fields = [
