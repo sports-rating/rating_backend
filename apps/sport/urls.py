@@ -36,6 +36,11 @@ urlpatterns = [
         views.SportInstitutionUsersListView.as_view(),
         name='sport-institution-users-list'
     ),
+    path(
+        "sport-institution/<uuid:pk>/media/",
+        views.SportInstitutionMediaListView.as_view(),
+        name='sport-institution-media-list'
+    ),
 
     path("", views.SportListCreateView.as_view(), name='sport-create-list'),
     path("<uuid:pk>/", views.SportRetrieveUpdateDeleteView.as_view(), name='sport-retrieve-update-delete'),

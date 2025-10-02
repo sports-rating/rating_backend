@@ -12,17 +12,18 @@ from apps.user.models import (
     Trainer,
     User
 )
-
+from apps.shared.utils.filters import BaseFilterSet
 from apps.sport.models import (
     Tournament,
     Team,
     Sport,
     SportInstitution,
+    SportInstitutionMedia,
     SportInstitutionRequest
 )
 
 
-class TournamentFilter(filters.FilterSet):
+class TournamentFilter(BaseFilterSet):
     start_time = filters.DateFilter(field_name="start_time", lookup_expr='gte')
     end_time = filters.DateFilter(field_name="end_time", lookup_expr="lte")
     sport = filters.CharFilter(method='filter_sport')
@@ -55,7 +56,7 @@ class TournamentFilter(filters.FilterSet):
 
         return queryset
 
-class TeamFilter(filters.FilterSet):
+class TeamFilter(BaseFilterSet):
     sport = filters.CharFilter(method="filter_sport")
 
     class Meta:
@@ -66,7 +67,7 @@ class TeamFilter(filters.FilterSet):
         return queryset.filter(sport__name=value)
 
 
-class SportInstitutionFilter(filters.FilterSet):
+class SportInstitutionFilter(BaseFilterSet):
     type = filters.ChoiceFilter(field_name="type", choices=enums.SportInstitutionChoices.choices())
     sports = filters.CharFilter(field_name="sports__id")
     federation = filters.CharFilter(field_name="federation__id")
@@ -77,7 +78,7 @@ class SportInstitutionFilter(filters.FilterSet):
         fields = ["type", "sports", "federation", "region"]
 
 
-class SportInstitutionUsersFilter(filters.FilterSet):
+class SportInstitutionUsersFilter(BaseFilterSet):
     user_role = filters.ChoiceFilter(choices=enums.UserRoles.choices())
     sport = filters.CharFilter(method="filter_sport")
     region = filters.CharFilter(field_name='region__id')
@@ -97,9 +98,17 @@ class SportInstitutionUsersFilter(filters.FilterSet):
         )
 
 
-class SportInstitutionRequestFilter(filters.FilterSet):
+class SportInstitutionRequestFilter(BaseFilterSet):
     status = filters.ChoiceFilter(field_name="status", choices=enums.SportInstitutionRequestStatus.choices())
 
     class Meta:
         model = SportInstitutionRequest
         fields = ["status"]
+
+
+class SportInstitutionMediaFilter(BaseFilterSet):
+    media_type = filters.ChoiceFilter(choices=enums.MediaChoices.choices())
+
+    class Meta:
+        model = SportInstitutionMedia
+        fields = ["media_type",]

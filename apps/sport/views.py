@@ -15,6 +15,8 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework import generics, permissions, status, filters as rest_framework_filters
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
+
 from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.utils import (
@@ -29,7 +31,8 @@ from apps.sport.models import (
     Tournament,
     Team,
     SportInstitution,
-    SportInstitutionRequest
+    SportInstitutionMedia,
+    SportInstitutionRequest,
 )
 from apps.user.models import User
 
@@ -41,7 +44,8 @@ from apps.sport.filters import (
     TeamFilter,
     SportInstitutionFilter,
     SportInstitutionUsersFilter,
-    SportInstitutionRequestFilter
+    SportInstitutionRequestFilter,
+    SportInstitutionMediaFilter,
 )
 
 
@@ -504,5 +508,25 @@ class SportInstitutionUsersListView(generics.ListAPIView):
         return success_response(
             data=response.data,
             message=_("Sport institution users retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class SportInstitutionMediaListView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = SportInstitutionMedia.objects.all()
+    serializer_class = serializers.SportInstitutionMediaSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = SportInstitutionMediaFilter
+
+    def get_queryset(self):
+        sport_inst_id = self.kwargs.get("pk")
+        return self.queryset.filter(sport_institution__id=sport_inst_id)
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Sport institution media list retrieved successfully"),
             code=status.HTTP_200_OK
         )
