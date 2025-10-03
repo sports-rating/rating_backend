@@ -215,6 +215,7 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
             "id": processed_federation.id if processed_federation else None,
             "name": processed_federation.name if processed_federation else None
         }
+        data["processed_time"] = instance.request.processed_time if instance.request else None
         return data
 
 
