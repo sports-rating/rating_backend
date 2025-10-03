@@ -250,7 +250,12 @@ class SportsmanListSerializer(serializers.ModelSerializer):
         return data
 
     def get_statistics(self, obj) -> Dict[str, Any]:
-        return calculate_sportsman_statistics(sportsman=obj)
+        return {
+            "total_gold": getattr(obj, "total_gold", 0),
+            "total_silver": getattr(obj, "total_silver", 0),
+            "total_bronze": getattr(obj, "total_bronze", 0),
+            "total_competitions": getattr(obj, "total_competitions", 0),
+        }
 
 
 class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerializer):
@@ -455,7 +460,24 @@ class TrainerListSerializer(serializers.ModelSerializer):
         return data
 
     def get_statistics(self, obj) ->  List[Dict[str, Any]]:
-        return calculate_trainer_statistics(trainer=obj)
+        stats = {
+            "own_statistics": {
+                "gold": obj.own_total_gold,
+                "silver": obj.own_total_silver,
+                "bronze": obj.own_total_bronze,
+            },
+            "students_statistics": {
+                "gold": obj.students_total_gold,
+                "silver": obj.students_total_silver,
+                "bronze": obj.students_total_bronze,
+            },
+            "total_statistics": {
+                "gold": obj.own_total_gold + obj.students_total_gold,
+                "silver": obj.own_total_silver + obj.students_total_silver,
+                "bronze": obj.own_total_bronze + obj.students_total_bronze,
+            },
+        }
+        return stats
 
 
 class TrainerProfileSerializer(serializers.ModelSerializer):

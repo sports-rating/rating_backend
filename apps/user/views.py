@@ -342,13 +342,17 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         return context
 
     def get_queryset(self):
-        queryset = User.objects.filter(user_role='sportsman').select_related(
+        queryset = User.stats.with_sportsman_statistics().filter(
+            user_role='sportsman'
+        ).select_related(
             'sportsman_profile__sport',
-            'sportsman_profile__trainer',
-            "region",
-            "district",
+            'sportsman_profile__trainer__user',
         ).prefetch_related(
-            "media",
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
             "results",
         )
         return queryset
@@ -453,8 +457,16 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         return context
 
     def get_queryset(self):
-        queryset = User.objects.filter(user_role='trainer').prefetch_related(
-            "trainer_profile__sport",
+        queryset = User.stats.with_trainer_statistics().filter(
+            user_role='trainer'
+        ).select_related(
+            'trainer_profile__sport',
+        ).prefetch_related(
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
         )
         return queryset
 

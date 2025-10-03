@@ -31,7 +31,7 @@ from apps.sport.models import (
 from apps.federation.models import (
     Federation
 )
-from apps.user.managers import UserManager
+from apps.user.managers import UserManager, UserStatisticsManager
 
 fake = Faker()
 
@@ -57,6 +57,7 @@ class User(AbstractUser, BaseModel):
     is_verified = models.BooleanField(default=False)
 
     objects = UserManager()
+    stats = UserStatisticsManager()
 
     class Meta:
         db_table = "user"
@@ -75,11 +76,10 @@ class User(AbstractUser, BaseModel):
         return self.sport_institutions.first()
 
     @property
-    def profile_photo(self) -> t.Optional["UserMedia"]:
-        profile_photo = self.media.filter(is_profile_photo=True).first()
-        if profile_photo:
-            return profile_photo
-        return None
+    def profile_photo(self: "User") -> t.Optional["UserMedia"]:
+        if hasattr(self, 'prefetched_profile_photos'):
+            return self.prefetched_profile_photos[0] if self.prefetched_profile_photos else None
+        return self.media.filter(is_profile_photo=True).first()
 
     repr_fields = ("first_name", "last_name", "phone_number")
 

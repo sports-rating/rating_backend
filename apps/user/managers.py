@@ -1,5 +1,14 @@
+import typing as t
+
 from django.contrib.auth.models import BaseUserManager
+from django.db import models
+from django.db.models import Count, Q, Sum, Value, Model, QuerySet
+from django.db.models.functions import Coalesce
 from django.conf import settings
+
+
+if t.TYPE_CHECKING:
+    from apps.user.models import User
 
 
 class UserManager(BaseUserManager):
@@ -30,3 +39,66 @@ class UserManager(BaseUserManager):
             raise ValueError("Superuser must have role of super_admin.")
 
         return self.create_user(username, password, **extra_fields)
+
+
+class UserStatisticsManager(models.Manager):
+
+    def get_sportsman_statistics(self, user: "User") -> dict[str, int]:
+        """
+        Calculate statistics for a sportsman based on their results.
+        """
+        # Aggregate counts directly in the database
+        return user.results.aggregate(
+            total_gold=Count('id', filter=Q(rating=1)),
+            total_silver=Count('id', filter=Q(rating=2)),
+            total_bronze=Count('id', filter=Q(rating=3)),
+            total_competitions=Count('id', distinct=True)
+        )
+
+    def with_sportsman_statistics(self) -> QuerySet[Model]:
+        """
+        Annotate the queryset with sportsman statistics.
+        """
+        return self.get_queryset().annotate(
+            total_gold=Count('results', filter=Q(results__rating=1), distinct=True),
+            total_silver=Count('results', filter=Q(results__rating=2), distinct=True),
+            total_bronze=Count('results', filter=Q(results__rating=3), distinct=True),
+            total_competitions=Count('results', distinct=True)
+        )
+
+    def with_trainer_statistics(self) -> QuerySet[Model]:
+        """
+        Annotate the queryset with trainer statistics
+        """
+        # Aggregate both trainer's own achievements and students' achievements in a single query
+        queryset = self.get_queryset().annotate(
+            # Trainer's own results (current participation)
+            own_total_gold=Coalesce(
+                Count('results', filter=Q(results__currently_participating=True, results__rating=1)),
+                Value(0)
+            ),
+            own_total_silver=Coalesce(
+                Count('results', filter=Q(results__currently_participating=True, results__rating=2)),
+                Value(0)
+            ),
+            own_total_bronze=Coalesce(
+                Count('results', filter=Q(results__currently_participating=True, results__rating=3)),
+                Value(0)
+            ),
+
+            # Students' aggregated results (when not currently participating)
+            students_total_gold=Coalesce(
+                Sum('results__gold', filter=Q(results__currently_participating=False)),
+                Value(0)
+            ),
+            students_total_silver=Coalesce(
+                Sum('results__silver', filter=Q(results__currently_participating=False)),
+                Value(0)
+            ),
+            students_total_bronze=Coalesce(
+                Sum('results__bronze', filter=Q(results__currently_participating=False)),
+                Value(0)
+            ),
+        )
+
+        return queryset
