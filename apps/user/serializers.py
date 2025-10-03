@@ -156,7 +156,6 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
     media = UserMediaSerializer(many=True)
     educations = EducationSerializer(many=True, required=False)
     results = ResultCreateSerializer(many=True, required=False)
-    profile_photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -172,27 +171,16 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             "region",
             "district",
             "birth_date",
-            "is_superuser",
             "media",
             "educations",
             "results",
             "user_role",
-            "profile_photo",
             "is_verified",
             "created_time",
         ]
-        read_only_fields = ["id", "created_time", "is_verified", "profile_photo"]
+        read_only_fields = ["id", "created_time", "is_verified", "user_role"]
 
-    def get_profile_photo(self, obj):
-        """
-        Returns the URL of the user's profile photo if it exists.
-        """
-        profile_photo = obj.media.filter(is_profile_photo=True).first()
-        if profile_photo:
-            return get_file_full_url(profile_photo.file.url)
-        return None
-
-    def to_representation(self, instance):
+    def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)
         if instance.user_role == "sportsman":
             data["sportsman_profile"] = SportsmanProfileSerializer(instance.sportsman_profile, context=self.context).data
@@ -209,6 +197,8 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
                 "id": instance.sport_institution.id,
                 "name": instance.sport_institution.name,
             }
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
         data["region"] = {
             "id": instance.region.id,
             "name": instance.region.name
@@ -288,8 +278,6 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         read_only_fields = ["is_sportsman_verified", "is_result_paid", "statistics"]
 
     def validate(self, attrs: dict) -> dict:
-        height = attrs.get("height", None)
-        weight = attrs.get("weight", None)
         sport = attrs.get("sport", None)
         trainer = attrs.get("trainer", None)
         if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:

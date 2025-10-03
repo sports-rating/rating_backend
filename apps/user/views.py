@@ -383,10 +383,30 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
 class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
-    queryset = User.objects.all().select_related(
-        "sportsman_profile", "sportsman_profile__sport", "sportsman_profile__trainer"
-    ).prefetch_related("media", "results")
+    queryset = User.objects.all()
     serializer_class = serializers.UserUpdateSerializer
+
+    def get_queryset(self):
+        queryset = User.stats.with_sportsman_statistics().filter(
+            user_role='sportsman'
+        ).select_related(
+            'sportsman_profile__sport',
+            'sportsman_profile__trainer__user',
+            'sportsman_profile__trainer__federation',
+            'region',
+            'district',
+        ).prefetch_related(
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
+            Prefetch(
+                "results",
+                queryset=Result.objects.select_related("trainer", "tournament", "archived_trainer"),
+            ),
+        )
+        return queryset
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -399,7 +419,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return super().get_permissions()
 
     def get_object(self):
-        user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+        user_profile = self.get_queryset().filter(pk=self.kwargs.get("pk")).first()
         if not user_profile:
             raise_validation_error(message=_("Sportsman Profile not found"), code=status.HTTP_404_NOT_FOUND)
         return user_profile
