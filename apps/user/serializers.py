@@ -344,8 +344,8 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
         return instance
 
-    def get_statistics(self, obj) -> Dict[str, Any]:
-        return calculate_sportsman_statistics(sportsman=obj.user)
+    def get_statistics(self, obj: Sportsman) -> Dict[str, Any]:
+        return User.stats.get_sportsman_statistics(user=obj.user)
 
     def to_representation(self, instance: Sportsman) -> dict:
         data = super().to_representation(instance)
@@ -561,8 +561,8 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
         return instance
 
-    def get_statistics(self, obj) -> Dict[str, Any]:
-        return calculate_trainer_statistics(trainer=obj.user)
+    def get_statistics(self, obj: Trainer) ->  List[Dict[str, Any]]:
+        return User.stats.get_trainer_statistics(user=obj.user)
 
     def to_representation(self, instance: Trainer) -> dict:
         data = super().to_representation(instance)

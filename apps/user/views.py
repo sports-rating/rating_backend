@@ -385,7 +385,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     queryset = User.objects.all().select_related(
         "sportsman_profile", "sportsman_profile__sport", "sportsman_profile__trainer"
-    ).prefetch_related("media", "educations", "results")
+    ).prefetch_related("media", "results")
     serializer_class = serializers.UserUpdateSerializer
 
     def get_serializer_class(self):
@@ -496,9 +496,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 
 class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
-    queryset = User.objects.all().select_related(
-        "trainer_profile", "trainer_profile__sport"
-    ).prefetch_related("media", "educations", "results")
+    queryset = User.objects.all()
     serializer_class = serializers.UserUpdateSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_Class = TrainerFilter
@@ -509,13 +507,27 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             return serializers.UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
         return super().get_serializer_class()
 
-    def get_object(self):
-        user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+    def get_queryset(self) -> QuerySet[User]:
+        queryset = User.objects.filter(
+            user_role='trainer'
+        ).select_related(
+            'trainer_profile__sport',
+        ).prefetch_related(
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
+        )
+        return queryset
+
+    def get_object(self) -> User:
+        user_profile = self.get_queryset().filter(pk=self.kwargs.get("pk")).first()
         if not user_profile:
             raise_validation_error(message=_("Trainer Profile not found"), code=404)
         return user_profile
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict[str, t.Any]:
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
         return context
@@ -525,8 +537,8 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             return (permissions.AllowAny(),)
         return super().get_permissions()
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        instance: User = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
             data=serializer.data,
@@ -534,8 +546,8 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             code=200,
         )
 
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        instance: User = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -545,8 +557,8 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             code=200,
         )
 
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def delete(self, request: Request, *args, **kwargs) -> Response:
+        instance: User = self.get_object()
         instance.delete()
         return success_response(
             message=_("Trainer deleted successfully"),

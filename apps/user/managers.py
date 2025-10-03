@@ -102,3 +102,38 @@ class UserStatisticsManager(models.Manager):
         )
 
         return queryset
+
+    def get_trainer_statistics(self, user: "User") -> dict[str, dict[str, int]]:
+        """
+        Calculate statistics for a trainer based on their results and their students' results.
+        """
+        # Aggregate both trainer's own achievements and students' achievements in a single query
+        statistics = user.results.aggregate(
+            own_total_gold=Coalesce(Count('id', filter=Q(currently_participating=True, rating=1)), Value(0)),
+            own_total_silver=Coalesce(Count('id', filter=Q(currently_participating=True, rating=2)), Value(0)),
+            own_total_bronze=Coalesce(Count('id', filter=Q(currently_participating=True, rating=3)), Value(0)),
+            students_total_gold=Coalesce(Sum('gold', filter=Q(currently_participating=False)), Value(0)),
+            students_total_silver=Coalesce(Sum('silver', filter=Q(currently_participating=False)), Value(0)),
+            students_total_bronze=Coalesce(Sum('bronze', filter=Q(currently_participating=False)), Value(0)),
+        )
+
+        # Combine all statistics
+        total_statistics = {
+            "gold": statistics["own_total_gold"] + statistics["students_total_gold"],
+            "silver": statistics["own_total_silver"] + statistics["students_total_silver"],
+            "bronze": statistics["own_total_bronze"] + statistics["students_total_bronze"],
+        }
+
+        return {
+            "own_statistics": {
+                "gold": statistics["own_total_gold"],
+                "silver": statistics["own_total_silver"],
+                "bronze": statistics["own_total_bronze"],
+            },
+            "students_statistics": {
+                "gold": statistics["students_total_gold"],
+                "silver": statistics["students_total_silver"],
+                "bronze": statistics["students_total_bronze"],
+            },
+            "total_statistics": total_statistics,
+        }
