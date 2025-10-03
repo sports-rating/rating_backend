@@ -96,6 +96,56 @@ class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
         )
 
 
+class TrainerWorkPlaceRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = WorkPlace.objects.all()
+    serializer_class = serializers.TrainerWorkPlaceSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(trainer__user=user).select_related("sport_institution", "sport", "request")
+
+    def get_object(self) -> WorkPlace:
+        workplace_id = self.kwargs.get("pk")
+        workplace = self.queryset.filter(pk=workplace_id).first()
+        if not workplace:
+            raise_validation_error(message=_("Trainer WorkPlace not found"), code=status.HTTP_404_NOT_FOUND)
+        return workplace
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Trainer WorkPlace retrieved successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(
+            data=serializer.data,
+            message=_("Trainer WorkPlace updated successfully"),
+            code=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return success_response(
+            message=_("Trainer WorkPlace deleted successfully"),
+            code=status.HTTP_204_NO_CONTENT
+        )
+
+
 class EducationListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Education.objects.all()
@@ -147,7 +197,7 @@ class EducationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView
 
     def get_object(self) -> Education:
         education_id = self.kwargs.get("pk")
-        education = self.queryset.filter(id=education_id).first()
+        education = self.queryset.filter(pk=education_id).first()
         if not education:
             raise_validation_error(message=_("Education not found"), code=status.HTTP_404_NOT_FOUND)
         return education
