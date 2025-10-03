@@ -227,8 +227,20 @@ class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
             return serializers.UsersMeSerializer
         return self.serializer_class
 
+    def get_queryset(self):
+        return self.queryset.select_related(
+            "sportsman_profile__sport",
+            "sportsman_profile__trainer",
+            "trainer_profile__sport",
+            "region",
+            "district",
+        ).prefetch_related(
+            "media",
+            "results",
+        )
+
     def get_object(self):
-        return User.objects.get(id=self.request.user.id)
+        return self.get_queryset().get(id=self.request.user.id)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
