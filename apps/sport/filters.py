@@ -72,10 +72,11 @@ class SportInstitutionFilter(BaseFilterSet):
     sports = filters.CharFilter(field_name="sports__id")
     federation = filters.CharFilter(field_name="federation__id")
     region = filters.CharFilter(field_name="region__id")
+    district = filters.CharFilter(field_name="district__id")
 
     class Meta:
         model = SportInstitution
-        fields = ["type", "sports", "federation", "region"]
+        fields = ["type", "sports", "federation", "region", "district"]
 
 
 class SportInstitutionUsersFilter(BaseFilterSet):
