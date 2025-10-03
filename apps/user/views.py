@@ -343,7 +343,13 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         queryset = User.objects.filter(user_role='sportsman').select_related(
-            'sportsman_profile__sport', 'sportsman_profile__trainer',
+            'sportsman_profile__sport',
+            'sportsman_profile__trainer',
+            "region",
+            "district",
+        ).prefetch_related(
+            "media",
+            "results",
         )
         return queryset
 
