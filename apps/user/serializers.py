@@ -1345,11 +1345,6 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             raise_validation_error(message=_("You already have a pending request!"))
         return attrs
 
-    # def create(self, validated_data: dict) -> Result:
-    #     sender: User = self.request.user  # type: ignore
-    #     result = self._save_result(sender, validated_data)
-    #     return result
-
     def create(self, validated_data: dict) -> t.Union[Result, UserRequest]:
         sender: User = self.request.user  # type: ignore
         message_from_sender: str | None = validated_data.pop("message", None)
@@ -1380,55 +1375,6 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
 
         return user_request
 
-    def _save_result(self, sender, validated_data):
-        new_trainer = validated_data.pop("trainer", None)
-        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
-        message_from_sender = validated_data.pop("message", None)
-
-        # Handle archived trainer case
-        if archived_trainer_name:
-            return self._handle_archived_trainer(sender, archived_trainer_name, validated_data)
-
-        # Handle trainer case (with snapshot + request if needed)
-        return self._handle_trainer(sender, new_trainer, validated_data, message_from_sender)
-
-    def _handle_archived_trainer(self, sender, archived_trainer_name, validated_data):
-        archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-        result = Result.objects.create(user=sender, archived_trainer=archived_trainer, **validated_data)
-        return result
-
-    @transaction.atomic
-    def _handle_trainer(self, sender, new_trainer, validated_data, message_from_sender):
-        rating = validated_data.pop("rating")
-        tournament: Tournament = validated_data.get("tournament", None)
-        score = tournament.get_score(rating) if tournament and rating else None
-        result: Result = None
-
-        if new_trainer:
-            result = Result.objects.create(user=sender, **validated_data)
-            _, new_snapshot, result_data = self._handle_snapshot(result, validated_data)
-
-            # Create result first
-            new_snapshot['score'] = str(score)
-            new_snapshot['id'] = str(result.id)
-            new_snapshot['rating'] = str(rating)
-
-            logger.info(f"New Snapshot: {new_snapshot}")  # LOGGING
-            # Create verification request
-            request_type = enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value
-            user_request, message, success = UserRequestService.create_request(
-                sender=sender,
-                receivers=User.objects.filter(id=new_trainer.user.id),
-                request_type=request_type,
-                old_data={},
-                new_data=new_snapshot,
-                message_from_sender=message_from_sender
-            )
-            if not success:
-                raise_validation_error(message=message)
-
-            return result
-
     def to_representation(self, instance: Result) -> t.Optional[dict]:
         if isinstance(instance, UserRequest):
             return UserRequestSerializer(instance).data
@@ -1448,35 +1394,6 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "name": instance.archived_trainer.name,
         } if instance.archived_trainer else None
         return data
-
-    # ----------------------------
-    # Helpers
-    # ----------------------------
-    def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
-        filtered = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                # Recursively filter nested dictionaries
-                filtered[k] = self._filter_critical_fields(v, critical_fields)
-            elif k not in critical_fields:
-                filtered[k] = v
-        return filtered
-
-    def _handle_snapshot(
-        self,
-        instance: Result,
-        result_data: dict
-    ) -> tuple[dict | None, dict | None, dict | None]:
-        critical_fields = SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
-
-        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-            model=instance,
-            data=result_data,
-            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value
-        )
-        result_data = self._filter_critical_fields(result_data, critical_fields)
-
-        return old_snapshot, new_snapshot, result_data
 
 
 class RegionSerializer(serializers.ModelSerializer):
