@@ -20,7 +20,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import BasePermission
 
 from apps.shared.utils.exceptions import raise_validation_error
-from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
+from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin, IsFederationAdmin
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.utils import (
     success_response,
@@ -151,8 +151,8 @@ class FederationUserListAPIView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = serializer.FederationUserListSerializer
     permission_classes = (
-        permissions.AllowAny,
-        # permissions.IsAuthenticated,
+        permissions.IsAuthenticated,
+        IsFederationAdmin,
     )
     filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
     filterset_class = FederationUsersFilter
@@ -235,7 +235,10 @@ class RegionalFederationListCreateAPIView(generics.ListCreateAPIView):
 
 
 class FederationUserRequestListAPIView(generics.ListAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (
+        permissions.IsAuthenticated,
+        IsFederationAdmin,
+    )
     serializer_class = serializer.FederationUserRequestSerializer
     queryset = UserRequest.objects.all()
     pagination_class = CustomPagination
@@ -276,7 +279,10 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
 
 
 class FederationTournamentListAPIView(generics.ListAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (
+        permissions.IsAuthenticated,
+        IsFederationAdmin,
+    )
     serializer_class = sport_serializers.TournamentSerializer
     queryset = Tournament.objects.all()
     pagination_class = CustomPagination

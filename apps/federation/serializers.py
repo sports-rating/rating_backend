@@ -365,6 +365,7 @@ class FederationUserListSerializer(serializers.ModelSerializer):
                 "user_role": trainer.user_role,
                 "phone_number": trainer.phone_number,
             } if trainer else None
+            data["is_result_paid"] = instance.sportsman_profile.is_result_paid
         else:
             data["federation"] = {
                 "id": instance.trainer_profile.federation.id,
