@@ -1312,8 +1312,8 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status", "score"]
 
     def validate(self, attrs: dict) -> dict:
-        sportsman: User = self.request.user # type: ignore
-        federation: Federation = sportsman.sportsman_profile.trainer.federation
+        user: User = self.request.user # type: ignore
+        federation: Federation = user.sportsman_profile.trainer.federation
         tournament = attrs.get("tournament", None)
         trainer = attrs.get("trainer", None)
         rating = attrs.get("rating", None)
@@ -1322,7 +1322,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         # if instance and tournament:
         #     if instance.tournament != tournament:
         #         raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
-        if Result.objects.filter(user=sportsman, tournament=tournament, trainer=trainer, year=year).exists():
+        if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
         if not trainer:
             raise_validation_error(message=_("You must specify a trainer to submit results."))
@@ -1334,15 +1334,8 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
         if rating and not tournament.scoring_policies.filter(position=rating).exists():
             raise_validation_error(message=_("Invalid rating for this tournament."))
-        if instance and Result.objects.exclude(pk=instance.pk).filter(user=sportsman, tournament=tournament, trainer=trainer, year=year).exists():
+        if instance and Result.objects.exclude(pk=instance.pk).filter(user=user, tournament=tournament, trainer=trainer, year=year).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
-        if UserRequest.objects.filter(
-            sender=sportsman,
-            status=enums.UserRequestStatus.PENDING.value,
-            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
-            federation=federation,
-        ).exists():
-            raise_validation_error(message=_("You already have a pending request!"))
         return attrs
 
     def create(self, validated_data: dict) -> t.Union[Result, UserRequest]:
