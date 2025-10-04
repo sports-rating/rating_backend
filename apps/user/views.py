@@ -392,6 +392,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         ).select_related(
             'sportsman_profile__sport',
             'sportsman_profile__trainer__user',
+            'sportsman_profile__trainer__sport',
             'sportsman_profile__trainer__federation',
             'region',
             'district',
