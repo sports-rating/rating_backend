@@ -152,6 +152,46 @@ class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
         return data
 
 
+class BaseUserSerializer(serializers.ModelSerializer):
+    media = UserMediaSerializer(many=True)
+    results = ResultCreateSerializer(many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "pinfl",
+            "phone_number",
+            "email",
+            "gender",
+            "region",
+            "district",
+            "birth_date",
+            "media",
+            "results",
+            "user_role",
+            "is_verified",
+            "created_time",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        return data
+
+
 class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
     media = UserMediaSerializer(many=True)
     educations = EducationSerializer(many=True, required=False)
@@ -419,6 +459,13 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         return sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type, send_request
 
 
+class SportsmanUserSerializer(BaseUserSerializer):
+    sportsman_profile = SportsmanProfileSerializer()
+
+    class Meta(BaseUserSerializer.Meta):
+        fields = BaseUserSerializer.Meta.fields + ["sportsman_profile"]
+
+
 class TrainerListSerializer(serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
     # logo = serializers.SerializerMethodField()
@@ -627,6 +674,13 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
         receivers: QuerySet[User] = new_federation.users.filter(user_role="federation")
         return sender, trainer_data, new_federation, old_federation, send_request, message_from_sender, request_type, receivers
+
+
+class TrainerUserSerializer(BaseUserSerializer):
+    trainer_profile = TrainerProfileSerializer()
+
+    class Meta(BaseUserSerializer.Meta):
+        fields = BaseUserSerializer.Meta.fields + ["trainer_profile"]
 
 
 class RegistrationSerializer(serializers.ModelSerializer):

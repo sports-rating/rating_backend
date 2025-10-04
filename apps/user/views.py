@@ -411,7 +411,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return serializers.UsersMeSerializer # Because assigning sportsman or trainer profile during presentation by looking into user_role
+            return serializers.SportsmanUserSerializer
         return super().get_serializer_class()
 
     def get_permissions(self):
@@ -525,7 +525,7 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return serializers.UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
+            return serializers.TrainerUserSerializer
         return super().get_serializer_class()
 
     def get_queryset(self) -> QuerySet[User]:
