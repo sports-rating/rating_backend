@@ -12,7 +12,7 @@ from django.apps import apps
 
 from apps.shared.utils.enums import SportRankEnum
 from apps.shared.utils.logging import logger
-from apps.federation.models import Federation
+from apps.federation.models import Federation, FederationAgeGroup
 from apps.sport.models import Sport, Tournament, SportInstitution
 from apps.user.models import User, Trainer, Sportsman
 
@@ -31,6 +31,8 @@ class ChildSportSnapshotSerializer(serializers.Serializer):
 class SportsmanResultSnapshotSerializer(serializers.Serializer):
     country = serializers.CharField(required=False, allow_null=True)
     year = serializers.IntegerField(required=False, allow_null=True)
+    age_group = serializers.PrimaryKeyRelatedField(queryset=FederationAgeGroup.objects.all(), required=False, allow_null=True)
+    weight = serializers.CharField(required=False, allow_null=True, max_length=10)
     rating = serializers.IntegerField(required=False, allow_null=True)
     tournament = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), required=True)
     score = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
@@ -41,9 +43,11 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
     def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
         """
         Allow deserialization from both:
-        - {"tournament": "uuid", ...}
-        - {"tournament": {"id": "uuid", ...}, ...}
+        - {"tournament": "uuid", "age_group": "uuid", ...}
+        - {"tournament": {"id": "uuid", ...}, "age_group": {"id": "uuid", ...}, ...}
         """
+        if isinstance(data.get("age_group"), dict):
+            data["age_group"] = data["age_group"].get("id")
         if isinstance(data.get("tournament"), dict):
             data["tournament"] = data["tournament"].get("id")
         if isinstance(data.get("score"), str):
@@ -56,15 +60,23 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
 
     def to_new_snapshot(self, validated_data: dict) -> dict:
         tournament: Tournament = validated_data.get("tournament")
+        age_group: FederationAgeGroup = validated_data.get("age_group")
         return {
-            "country": validated_data.get("country"),
-            "year": validated_data.get("year"),
-            "rating": validated_data.get("rating"),
-            "score": str(validated_data.get("score")),
             "tournament": {
                 "id": str(tournament.id),
                 "name": tournament.name
             } if tournament else None,
+            "age_group": {
+                "id": str(age_group.id),
+                "name": age_group.age_group.name,
+                "min_age": age_group.age_group.min_age,
+                "max_age": age_group.age_group.max_age,
+            } if age_group else None,
+            "country": validated_data.get("country"),
+            "year": validated_data.get("year"),
+            "rating": validated_data.get("rating"),
+            "score": str(validated_data.get("score")),
+            "weight": validated_data.get("weight"),
         }
 
 

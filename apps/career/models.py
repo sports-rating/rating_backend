@@ -103,6 +103,8 @@ class Result(BaseModel):
     is_verified = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=enums.ResultVerificationStatus.choices(), default=enums.ResultVerificationStatus.PENDING.value)
 
+    age_group = models.ForeignKey("federation.FederationAgeGroup", on_delete=models.SET_NULL, related_name="federation_results", blank=True, null=True)
+    weight = models.CharField(max_length=10, null=True, blank=True)
     rating = models.PositiveIntegerField(default=0)
 
     gold = models.PositiveIntegerField(default=0)

@@ -1299,6 +1299,8 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "archived_trainer_name",
             "year",
             "currently_participating",
+            "age_group",
+            "weight",
             "rating",
             "score",
             "message",
@@ -1318,11 +1320,13 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         trainer = attrs.get("trainer", None)
         rating = attrs.get("rating", None)
         year = attrs.get("year", None)
+        age_group = attrs.get("age_group", None)
+        weight = attrs.get("weight", None)
         instance: Result = self.instance
         # if instance and tournament:
         #     if instance.tournament != tournament:
         #         raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
-        if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year).exists():
+        if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
         if not trainer:
             raise_validation_error(message=_("You must specify a trainer to submit results."))
@@ -1334,7 +1338,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
         if rating and not tournament.scoring_policies.filter(position=rating).exists():
             raise_validation_error(message=_("Invalid rating for this tournament."))
-        if instance and Result.objects.exclude(pk=instance.pk).filter(user=user, tournament=tournament, trainer=trainer, year=year).exists():
+        if instance and Result.objects.exclude(pk=instance.pk).filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
         return attrs
 
@@ -1386,6 +1390,12 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "id": instance.archived_trainer.id,
             "name": instance.archived_trainer.name,
         } if instance.archived_trainer else None
+        data["age_group"] = {
+            "id": instance.age_group.id,
+            "name": instance.age_group.age_group.name,
+            "min_age": instance.age_group.age_group.min_age,
+            "max_age": instance.age_group.age_group.max_age,
+        } if instance.age_group else None
         return data
 
 
