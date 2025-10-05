@@ -47,6 +47,16 @@ class Education(BaseModel):
 
 
 class WorkPlace(BaseModel):
+    QUARTER_TIME = 0.25
+    HALF_TIME = 0.5
+    FULL_TIME = 1.0
+
+    WORKLOAD_CHOICES = [
+        (QUARTER_TIME, '25% (1/4 time)'),
+        (HALF_TIME, '50% (1/2 time)'),
+        (FULL_TIME, '100% (Full time)'),
+    ]
+
     trainer = models.ForeignKey(
         Trainer,
         on_delete=models.CASCADE,
@@ -74,6 +84,12 @@ class WorkPlace(BaseModel):
         related_name="trainer_work_place"
     )
 
+    start_year = models.IntegerField(default=1800, validators=[MinValueValidator(1800)])
+    start_month = models.IntegerField(choices=[(i, i) for i in range(1, 13)], default=1)
+    end_year = models.IntegerField(default=1800, validators=[MinValueValidator(1800)])
+    end_month = models.IntegerField(choices=[(i, i) for i in range(1, 13)], default=12)
+    workload = models.FloatField(choices=WORKLOAD_CHOICES, default=FULL_TIME)
+
 
     class Meta:
         db_table = "work_place"
@@ -81,6 +97,11 @@ class WorkPlace(BaseModel):
         verbose_name_plural = "Work Places"
 
     repr_fields = ("trainer",)
+
+    @property
+    def total_months(self):
+        """Calculate total months in the period"""
+        return (self.end_year - self.start_year) * 12 + (self.end_month - self.start_month) + 1
 
 
 class Result(BaseModel):

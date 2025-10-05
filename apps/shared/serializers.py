@@ -100,6 +100,11 @@ class TrainerSnapshotSerializer(serializers.Serializer):
 class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
     sport_institution = serializers.PrimaryKeyRelatedField(queryset=SportInstitution.objects.all(), required=True)
     sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=True)
+    start_year = serializers.IntegerField(required=True)
+    start_month = serializers.IntegerField(required=True)
+    end_year = serializers.IntegerField(required=True)
+    end_month = serializers.IntegerField(required=True)
+    workload = serializers.FloatField(required=True)
 
     def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
         """
@@ -126,6 +131,11 @@ class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
                 "id": str(sport.id),
                 "name": sport.name
             } if sport else None,
+            "start_year": validated_data.get("start_year"),
+            "start_month": validated_data.get("start_month"),
+            "end_year": validated_data.get("end_year"),
+            "end_month": validated_data.get("end_month"),
+            "workload": validated_data.get("workload"),
         }
 
 

@@ -3,6 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
 from django.http import HttpResponse
+from django.db.models import Q, Prefetch, QuerySet
 
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -73,9 +74,15 @@ class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
         context["request"] = self.request
         return context
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[WorkPlace]:
         user = self.request.user
-        return self.queryset.filter(trainer__user=user).select_related("sport_institution", "sport", "request")
+        return self.queryset.filter(
+            trainer__user=user
+        ).select_related(
+            "sport_institution",
+            "sport",
+            "request__federation",
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

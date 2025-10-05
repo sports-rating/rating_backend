@@ -155,6 +155,11 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
             "id",
             "sport_institution",
             "sport",
+            "start_year",
+            "start_month",
+            "end_year",
+            "end_month",
+            "workload",
             "message",
             "created_time"
         ]
@@ -163,7 +168,25 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
     def validate(self, attrs: dict) -> dict:
         sport_institution: SportInstitution = attrs.get("sport_institution")
         sport: Sport = attrs.get("sport")
+        start_year = attrs.get("start_year")
+        end_year = attrs.get("end_year")
+        start_month = attrs.get("start_month")
+        end_month = attrs.get("end_month")
         user = self.request.user  # type: ignore
+
+        start_date = (start_year, start_month)
+        end_date = (end_year, end_month)
+        if start_date >= end_date:
+            raise_validation_error(message=_("Start date must be before end date."))
+
+        if WorkPlace.objects.filter(
+            trainer__user=user,
+            sport_institution=sport_institution,
+            sport=sport,
+            start_year=start_year,
+            start_month=start_month
+        ).exists():
+            raise_validation_error(message=_("You already have a workplace entry for this period."))
 
         if not sport_institution.sports.filter(id=sport.id).exists():
             raise_validation_error(message=_("This sport is not offered by the selected sport institution."))
@@ -185,16 +208,18 @@ class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerialize
 
         new_snapshot: dict = TrainerWorkPlaceSnapshotSerializer().to_new_snapshot(validated_data)
 
-        user_request: UserRequest = UserRequest.objects.create(
+        user_request, message, success = UserRequestService.create_request(
             sender=trainer.user,
+            receivers=receivers,
             federation=federation,
             request_type=enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
             old_data={},
             new_data=new_snapshot,
             message_from_sender=message_from_sender
         )
-        user_request.receivers.set(receivers)
-        user_request.save()
+        if not success:
+            raise_validation_error(message=message)
+
         logger.info(f"WorkPlace UserRequest created: {user_request}")  # LOGGING
         return user_request
 
