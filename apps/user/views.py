@@ -326,6 +326,7 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
 
 class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
+    queryset = User.objects.all()
     serializer_class = serializers.RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = SportsmanFilter
@@ -354,7 +355,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
                 to_attr="prefetched_profile_photos",
             ),
             "results",
-        )
+        ).order_by('-sportsman_profile__points')
         return queryset
 
     def get_permissions(self):
@@ -488,7 +489,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
                 queryset=UserMedia.objects.filter(is_profile_photo=True),
                 to_attr="prefetched_profile_photos",
             ),
-        )
+        ).order_by('-trainer_profile__points')
         return queryset
 
     def get_permissions(self):

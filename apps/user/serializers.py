@@ -60,6 +60,7 @@ SEND_VERIFICATION_ACTION = (
     ("login", "login"),
     ("forgot_password", "forgot_password"),
     ("change_phone_number", "change_phone_number"),
+    ("sport_institution_verify", "sport_institution_verify"),
 )
 
 
