@@ -592,9 +592,15 @@ class SportsmanResultListCreateAPIView(generics.ListCreateAPIView):
     queryset = Result.objects.all()
     serializer_class = serializers.SportsmanResultSerializer
 
-    def get_queryset(self):
-        user = self.request.user
-        return self.queryset.filter(user=user)
+    def get_queryset(self) -> QuerySet[Result]:
+        user: User = self.request.user  # type: ignore
+        return self.queryset.filter(user=user).select_related(
+            "user",
+            "trainer__user",
+            "age_group__age_group",
+            "archived_trainer",
+            "tournament",
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
