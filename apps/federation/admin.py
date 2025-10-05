@@ -16,20 +16,6 @@ class FederationAdmin(admin.ModelAdmin):
     list_filter = ["is_national", "region"]
     readonly_fields = ["created_time", "age_groups", "documents", "user_objs"]
 
-    # @admin.display(description="Age Groups")
-    # def age_groups(self, obj: Federation) -> str:
-    #     """Display the age groups associated with this federation"""
-    #     age_groups = AgeGroup.objects.filter(federation_links__federation=obj)
-    #     links = [
-    #         format_html(
-    #             '<a href="{}">{}</a>',
-    #             reverse("admin:federation_agegroup_change", args=[age_group.id]),
-    #             str(age_group.name)
-    #         )
-    #         for age_group in age_groups.all()
-    #     ]
-    #     return format_html("<br>".join(links)) if links else "-"
-
     @admin.display(description="Age Groups")
     def age_groups(self, obj: Federation) -> str:
         """Display the age groups associated with this federation"""
