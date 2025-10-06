@@ -49,7 +49,7 @@ class Education(BaseModel):
 class WorkPlace(BaseModel):
     QUARTER_TIME = 0.25
     HALF_TIME = 0.5
-    FULL_TIME = 1.0
+    FULL_TIME = 1
 
     WORKLOAD_CHOICES = [
         (QUARTER_TIME, '25% (1/4 time)'),
