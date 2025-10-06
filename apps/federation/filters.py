@@ -3,7 +3,8 @@ from django.db.models import F, Q
 
 from apps.shared.utils.filters import BaseFilterSet
 from apps.federation.models import (
-    Federation
+    Federation,
+    FederationAgeGroup
 )
 from apps.user.models import (
     UserRequest,
@@ -72,3 +73,15 @@ class FederationUserRequestFilter(BaseFilterSet):
         if mapped_value:
             return queryset.filter(request_type=mapped_value)
         return queryset
+
+
+class FederationAgeGroupFilter(BaseFilterSet):
+    sport = filters.CharFilter(field_name="age_group__sport__id")
+    is_active = filters.BooleanFilter(field_name="is_active")
+
+    class Meta:
+        model = FederationAgeGroup
+        fields = [
+            "sport",
+            "is_active"
+        ]

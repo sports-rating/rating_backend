@@ -44,7 +44,8 @@ from apps.sport.models import Tournament
 from apps.federation.filters import (
     FederationFilter,
     FederationUserRequestFilter,
-    FederationUsersFilter
+    FederationUsersFilter,
+    FederationAgeGroupFilter
 )
 
 from apps.shared.utils.types import *
@@ -309,6 +310,7 @@ class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
     queryset = FederationAgeGroup.objects.all()
     pagination_class = CustomPagination
     filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
+    filterset_class = FederationAgeGroupFilter
     search_fields = [
         "age_group__name",
         "age_group__sport__name",
