@@ -298,3 +298,66 @@ class FederationTournamentListAPIView(generics.ListAPIView):
             message=_("Federation Tournament list retrieved successfully"),
             code=status.HTTP_200_OK
         )
+
+
+class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
+    permission_classes = (
+        permissions.IsAuthenticated,
+        IsFederationAdmin,
+    )
+    serializer_class = serializer.FederationAgeGroupSerializer
+    queryset = FederationAgeGroup.objects.all()
+    pagination_class = CustomPagination
+    filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
+    search_fields = [
+        "age_group__name",
+        "age_group__sport__name",
+    ]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializer.AgeGroupSerializer
+        return serializer.FederationAgeGroupSerializer
+
+    def get_serializer_context(self) -> dict[str, t.Any]:
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        context["federation_id"] = self.kwargs.get('pk')
+        return context
+
+    def get_queryset(self) -> QuerySet[FederationAgeGroup]:
+        federation_id: UUID = self.kwargs.get('pk')
+        return FederationAgeGroup.objects.filter(
+            federation_id=federation_id
+        ).select_related('age_group__sport')
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Federation Age Group list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class AgeGroupRetrieveUpdateDeleteAPIView(generics.RetrieveAPIView):
+    permission_classes = (
+        permissions.IsAuthenticated,
+        IsFederationAdmin,
+    )
+    serializer_class = serializer.AgeGroupSerializer
+    queryset = AgeGroup.objects.all()
+
+    def get_serializer_context(self) -> dict[str, t.Any]:
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        instance: AgeGroup = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Age Group retrieved successfully"),
+            code=status.HTTP_200_OK,
+        )

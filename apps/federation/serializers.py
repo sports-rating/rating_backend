@@ -96,6 +96,15 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             raise_validation_error(message=_(f"Invalid age group name format. Use {self.PATTERN_1}, {self.PATTERN_3}, or {self.PATTERN_2}."))
         return attrs
 
+    def to_representation(self, instance: AgeGroup) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        return data
+
 
 class FederationDocumentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -384,3 +393,16 @@ class FederationUserListSerializer(serializers.ModelSerializer):
         if instance.user_role == "sportsman":
             return instance.sportsman_profile.trainer.user
         return None
+
+
+class FederationAgeGroupSerializer(RequestContextMixin, serializers.ModelSerializer):
+    age_group = AgeGroupSerializer(read_only=True)
+
+    class Meta:
+        model = FederationAgeGroup
+        fields = [
+            "age_group",
+            "is_active",
+            "created_time"
+        ]
+        read_only_fields = ["created_time"]
