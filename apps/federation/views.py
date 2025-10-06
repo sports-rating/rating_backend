@@ -153,7 +153,6 @@ class FederationUserListAPIView(generics.ListAPIView):
     serializer_class = serializer.FederationUserListSerializer
     permission_classes = (
         permissions.IsAuthenticated,
-        IsFederationAdmin,
     )
     filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
     filterset_class = FederationUsersFilter
@@ -304,7 +303,6 @@ class FederationTournamentListAPIView(generics.ListAPIView):
 class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
     permission_classes = (
         permissions.IsAuthenticated,
-        IsFederationAdmin,
     )
     serializer_class = serializer.FederationAgeGroupSerializer
     queryset = FederationAgeGroup.objects.all()
