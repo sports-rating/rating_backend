@@ -90,7 +90,7 @@ class UserRequestService:
         notification_data: dict
     ) -> None:
         user_request.processed_by = receiver
-        user_request.processed_time = timezone.now()
+        user_request.processed_time = timezone.now().replace(microsecond=0)
         user_request.status = enums.UserRequestStatus.ACCEPTED.value
         user_request.save()
 
@@ -127,7 +127,7 @@ class UserRequestService:
         notification_data: dict
     ) -> None:
         user_request.processed_by = receiver
-        user_request.processed_time = timezone.now()
+        user_request.processed_time = timezone.now().replace(microsecond=0)
         user_request.status = enums.UserRequestStatus.REJECTED.value
         user_request.save()
 
