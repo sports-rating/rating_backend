@@ -401,8 +401,9 @@ class FederationAgeGroupSerializer(RequestContextMixin, serializers.ModelSeriali
     class Meta:
         model = FederationAgeGroup
         fields = [
+            "id",
             "age_group",
             "is_active",
             "created_time"
         ]
-        read_only_fields = ["created_time"]
+        read_only_fields = ["id", "created_time"]
