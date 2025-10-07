@@ -47,21 +47,28 @@ class ScoringService:
         Subtracts old score and adds new score.
         """
         # --- Step 1: old score ---
-        old_score = tournament.get_score(old_rating)
+        old_score = tournament.get_score(old_rating) if old_rating else 0
         logger.info(f"Old score: {old_score}")  # LOGGING
 
         # --- Step 2: new score ---
         logger.info(f"Rating: {new_rating}")  # LOGGING
-        new_score = tournament.get_score(new_rating)
+        new_score = tournament.get_score(new_rating) if new_rating else 0
         logger.info(f"New score: {new_score}")  # LOGGING
 
-        sportsman.sportsman_profile.points = F("points") - old_score + new_score
-        sportsman.sportsman_profile.save(update_fields=["points"])
+        delta = new_score - old_score
+        if delta != 0:
+            sportsman.sportsman_profile.points = F("points") + delta
+            sportsman.sportsman_profile.save(update_fields=["points"])
+            sportsman.sportsman_profile.refresh_from_db(fields=["points"])
+            logger.info(
+                f"Updated points for {sportsman.username}: {delta:+} → {sportsman.sportsman_profile.points}"
+            )
+        # sportsman.sportsman_profile.points = F("points") - old_score + new_score
+        # sportsman.sportsman_profile.save(update_fields=["points"])
 
-        sportsman.sportsman_profile.refresh_from_db(fields=["points"])
+        # sportsman.sportsman_profile.refresh_from_db(fields=["points"])
 
-        logger.info(f"Updated points for {sportsman}: {sportsman.sportsman_profile.points}")  # LOGGING
-        return sportsman.sportsman_profile
+        # logger.info(f"Updated points for {sportsman}: {sportsman.sportsman_profile.points}")  # LOGGING
 
     @staticmethod
     def update_trainer_points(
@@ -70,19 +77,40 @@ class ScoringService:
             rating: int | None
         ):
         """
-        Update trainer's points when result is firstly created.
+        Update trainer's points whenever a result involving them is created or modified.
+        New logic:
+        - Sum all verified results' scores where this trainer is assigned
+        - Divide by distinct count of sportsmen (user) in those results
         """
-        qs = trainer.trainer_profile.sportsmen.all()
-        result = qs.aggregate(total_points=Sum('points'), count=Count('user_id'))
+        if not trainer or not hasattr(trainer, "trainer_profile"):
+            logger.warning("Trainer not found or has no trainer profile.")
+            return
 
-        total_points = result['total_points'] or 0
-        count = result['count'] or 0
+        results_qs = trainer.trainer_profile.assisted_results.filter(is_verified=True)
 
-        trainer.trainer_profile.points = (
-            total_points / count if count > 0 else 0
-        )
+        if not results_qs.exists():
+            trainer.trainer_profile.points = 0
+        else:
+            # --- Sum of all scores ---
+            total_points = sum(result.tournament.get_score(result.rating) for result in results_qs)
+
+            # --- Count of distinct sportsmen trained in those results ---
+            distinct_sportsmen_count = results_qs.values("user").distinct().count()
+
+            # --- Compute average ---
+            trainer_points = (
+                total_points / distinct_sportsmen_count if distinct_sportsmen_count > 0 else 0
+            )
+
+            if trainer.trainer_profile.points != trainer_points:
+                logger.info(
+                    f"Updated points for trainer {trainer.username}: "
+                    f"{trainer.trainer_profile.points} → {trainer_points}"
+                )
+                trainer.trainer_profile.points = trainer_points
+
         logger.info(f"Updated points for trainer {trainer}: {trainer.trainer_profile.points}")  # LOGGING
-        trainer.trainer_profile.save(update_fields=['points'])
+        trainer.trainer_profile.save(update_fields=["points"])
 
     @staticmethod
     def recalculate_points_for_tournament(tournament_id: UUID) -> None:
