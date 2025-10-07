@@ -325,9 +325,10 @@ class UserRequestService:
             if requested_rating:
                 ScoringService.update_points(
                     sportsman=sender,
+                    trainer=receiver,
                     old_rating=None,
                     tournament=tournament,
-                    new_rating=requested_rating
+                    new_rating=requested_rating,
                 )
 
             result = Result(

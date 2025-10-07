@@ -656,8 +656,10 @@ class SportsmanResultRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyA
     def delete(self, request, *args, **kwargs):
         result = self.get_object()
         user = request.user
+        trainer = result.trainer.user if result.trainer else None
         ScoringService.update_points(
             sportsman=user,
+            trainer=trainer,
             old_rating=result.rating,
             new_rating=0,  # Assuming 0 means no rating after deletion
             tournament=result.tournament

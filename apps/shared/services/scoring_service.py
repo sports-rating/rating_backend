@@ -17,6 +17,7 @@ class ScoringService:
     @staticmethod
     def update_points(
         sportsman: User,
+        trainer: User | None,
         old_rating: int | None,
         new_rating: int | None,
         tournament: Tournament
@@ -27,7 +28,8 @@ class ScoringService:
         ScoringService.update_sportsman_points(sportsman, old_rating, new_rating, tournament)
 
         sportsman_profile = sportsman.sportsman_profile
-        trainer_profile = sportsman_profile.trainer
+        # trainer_profile = sportsman_profile.trainer
+        trainer_profile = trainer.trainer_profile if trainer else None
 
         if trainer_profile:
             logger.info(f"Updating trainer points for {trainer_profile.user.username}")
@@ -62,7 +64,11 @@ class ScoringService:
         return sportsman.sportsman_profile
 
     @staticmethod
-    def update_trainer_points(trainer, tournament, rating):
+    def update_trainer_points(
+            trainer: User | None,
+            tournament: Tournament,
+            rating: int | None
+        ):
         """
         Update trainer's points when result is firstly created.
         """
