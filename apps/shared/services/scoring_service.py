@@ -99,7 +99,8 @@ class ScoringService:
 
             # --- Compute average ---
             trainer_points = (
-                total_points / distinct_sportsmen_count if distinct_sportsmen_count > 0 else 0
+                round(total_points / distinct_sportsmen_count, 2)
+                if distinct_sportsmen_count > 0 else 0
             )
 
             if trainer.trainer_profile.points != trainer_points:
@@ -173,7 +174,7 @@ class ScoringService:
                 )
                 trainers_to_update = []
                 for t in trainers:
-                    t.points = (t.total_points or 0) / (t.count or 1) if t.count else 0
+                    t.points = round((t.total_points or 0) / (t.count or 1), 2) if t.count else 0
                     trainers_to_update.append(t)
                 if trainers_to_update:
                     Trainer.objects.bulk_update(trainers_to_update, ["points"])
@@ -240,7 +241,7 @@ class ScoringService:
                     if distinct_sportsmen_count == 0:
                         trainer_points = 0
                     else:
-                        trainer_points = total_points / distinct_sportsmen_count
+                        trainer_points = round((total_points / distinct_sportsmen_count), 2)
 
                     if trainer.points != trainer_points:
                         logger.info(f"Updating points for trainer {trainer.user.username} from {trainer.points} to {trainer_points}")
