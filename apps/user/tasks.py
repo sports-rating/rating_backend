@@ -6,6 +6,7 @@ from apps.shared.utils.logging import logger
 from apps.shared.services.scoring_service import ScoringService
 
 
+### TODO:CoderB7 This shared task is never used!
 @shared_task
 def recalculate_user_points_task(tournament_id):
     """
@@ -13,3 +14,12 @@ def recalculate_user_points_task(tournament_id):
     """
     logger.info(f"Recalculating user points for tournament {tournament_id}...")
     ScoringService.recalculate_points_for_tournament(tournament_id)
+
+
+@shared_task
+def recalculate_all_users_points_task():
+    """
+    Recalculates points for all sportsmen and their trainers.
+    """
+    logger.info("Recalculating points for all users...")
+    ScoringService.recalculate_all_points()

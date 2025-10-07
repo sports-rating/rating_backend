@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django.db.models import QuerySet, Model
 from django.utils.functional import Promise
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from apps.shared.utils.types import *
 from apps.shared.utils.notifications import send_notification_to_user
@@ -19,7 +20,8 @@ from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
     SportsmanSnapshotSerializer,
     TrainerSnapshotSerializer,
-    TrainerWorkPlaceSnapshotSerializer
+    TrainerWorkPlaceSnapshotSerializer,
+    EducationSnapshotSerializer,
 )
 from apps.shared.entities import (
     User,
@@ -28,6 +30,7 @@ from apps.shared.entities import (
     Federation,
     Tournament,
     Result,
+    Education
 )
 
 
@@ -87,6 +90,7 @@ class UserRequestService:
         notification_data: dict
     ) -> None:
         user_request.processed_by = receiver
+        user_request.processed_time = timezone.now().replace(microsecond=0)
         user_request.status = enums.UserRequestStatus.ACCEPTED.value
         user_request.save()
 
@@ -123,6 +127,7 @@ class UserRequestService:
         notification_data: dict
     ) -> None:
         user_request.processed_by = receiver
+        user_request.processed_time = timezone.now().replace(microsecond=0)
         user_request.status = enums.UserRequestStatus.REJECTED.value
         user_request.save()
 
@@ -151,6 +156,8 @@ class UserRequestService:
             return UserRequestService._handle_result_verification_request(user_request, validated_data, receiver)
         elif request_type == enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value:
             return UserRequestService._handle_trainer_workplace_verification_request(user_request, validated_data, receiver)
+        elif request_type == enums.UserRequestTypes.EDUCATION_VERIFICATION_REQUEST.value:
+            return UserRequestService._handle_education_verification_request(user_request, validated_data, receiver)
         return _("Invalid request type!"), False
 
     @staticmethod
@@ -315,22 +322,24 @@ class UserRequestService:
             tournament: Tournament = result_data.get("tournament")
             logger.info(f"Requested rating: {requested_rating}")  # LOGGING
 
-            if requested_rating:
-                ScoringService.update_points(
-                    sportsman=sender,
-                    old_rating=None,
-                    tournament=tournament,
-                    new_rating=requested_rating
-                )
-
             result = Result(
                 user=sender,
                 trainer=receiver.trainer_profile,
+                request=user_request,
                 is_verified=True,
                 status=enums.ResultVerificationStatus.VERIFIED.value, # remove this field later
                 **result_data
             )
             result.save()
+
+            if requested_rating:
+                ScoringService.update_points(
+                    sportsman=sender,
+                    trainer=receiver,
+                    old_rating=None,
+                    tournament=tournament,
+                    new_rating=requested_rating,
+                )
 
             notification_body = f"Your result verification request has been accepted."
             notification_data = {
@@ -341,67 +350,6 @@ class UserRequestService:
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
         return _("Request handled successfully."), True
-
-    # @transaction.atomic
-    # @staticmethod
-    # def _handle_result_verification_request(
-    #         user_request: UserRequest,
-    #         validated_data: dict,
-    #         receiver: User
-    #     ) -> tuple[t.Union[Promise, str], bool]:
-    #     sender: User = user_request.sender
-    #     status = validated_data.get("status")
-    #     new_data: dict = user_request.new_data or {}
-
-    #     result_id: UUID = UUID(new_data.get('id'))
-    #     sportsman_result: Result = t.cast(Result, Result.objects.filter(id=result_id).first())
-
-    #     if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-    #         # If the request is accepted, update the result for the sender
-    #         if receiver:
-
-    #             # Applying the requested rating here
-    #             requested_rating: str | None = new_data.get("rating")
-    #             logger.info(f"Requested rating: {requested_rating}")  # LOGGING
-    #             if requested_rating:
-    #                 ScoringService.update_points(
-    #                     sportsman=sender,
-    #                     old_rating=sportsman_result.rating,
-    #                     tournament=sportsman_result.tournament,
-    #                     new_rating=requested_rating
-    #                 )
-
-    #             # --- APPLY SNAPSHOT FIELDS ---
-    #             new_snapshot = user_request.new_data or {}
-    #             if new_snapshot:
-    #                 # new_snapshot.pop("trainer", None) # Trainer is set separately below
-    #                 SnapshotService.apply_snapshot(sportsman_result, new_snapshot)
-
-    #             sender.sportsman_profile.save()
-    #             sportsman_result.trainer = receiver.trainer_profile
-    #             sportsman_result.is_verified = True
-    #             sportsman_result.status = enums.ResultVerificationStatus.VERIFIED.value
-    #             sportsman_result.save()
-
-    #             notification_body = f"{receiver.full_name} has accepted your request."
-    #             notification_data = {
-    #                 "request_type": "sportsman_result_verification_request",
-    #                 "result_id": str(result_id),
-    #             }
-    #             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
-    #         else:
-    #             return _("Receiver must be a valid trainer!"), False
-    #     else:
-    #         sportsman_result.status = enums.ResultVerificationStatus.REJECTED.value
-    #         sportsman_result.save()
-
-    #         notification_body = f"{receiver.full_name} has declined your request."
-    #         notification_data = {
-    #             "request_type": "sportsman_result_verification_request",
-    #             "result_id": str(result_id),
-    #         }
-    #         UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
-    #     return _("Request handled successfully."), True
 
     def _handle_trainer_workplace_verification_request(
             user_request: UserRequest,
@@ -432,7 +380,6 @@ class UserRequestService:
                 request=user_request,
                 **work_place_data
             )
-            logger.info(f"New data as snapshot 1: {user_request.new_data}")  # LOGGING
             notification_body = f"Your workplace verification request has been accepted."
             notification_data = {
                 "request_type": "trainer_workplace_verification_request",
@@ -441,5 +388,46 @@ class UserRequestService:
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
-        logger.info(f"New data as snapshot 2: {user_request.new_data}")  # LOGGING
+        return _("Request handled successfully."), True
+
+    def _handle_education_verification_request(
+        user_request: UserRequest,
+        validated_data: dict,
+        receiver: User
+    ) -> tuple[t.Union[Promise, str], bool]:
+        status: t.Union[str, None] = validated_data.get("status")
+        sender: User = user_request.sender
+        message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
+
+        if status == enums.UserRequestStatus.REJECTED.value:
+            notification_body = f"Your education verification request has been rejected."
+            notification_data = {
+                "request_type": "education_verification_request",
+                "message_from_receiver": message_from_receiver,
+            }
+            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
+
+        elif user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+            new_data: dict = copy.deepcopy(user_request.new_data)
+
+            serializer = EducationSnapshotSerializer(data=new_data)
+            serializer.is_valid(raise_exception=True)
+            education_data = serializer.validated_data
+
+            education = Education(
+                user=sender,
+                trainer=receiver.trainer_profile,
+                is_verified=True,
+                **education_data
+            )
+            education.save()
+
+            notification_body = f"Your education verification request has been accepted."
+            notification_data = {
+                "request_type": "education_verification_request",
+                "education_id": str(education.id),
+                "message_from_receiver": message_from_receiver,
+            }
+            UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
+
         return _("Request handled successfully."), True

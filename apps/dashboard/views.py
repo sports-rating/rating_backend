@@ -63,9 +63,14 @@ class UserListView(generics.ListAPIView):
 
     def get_queryset(self) -> QuerySet[User]:
         queryset = User.objects.exclude(user_role__in=["ordinary", "admin", "super_admin"]).select_related(
-            "sportsman_profile", "trainer_profile"
+            "sportsman_profile__trainer",
+            "sportsman_profile__sport",
+            "trainer_profile__sport",
+            "region",
+            "district",
         ).prefetch_related(
-            "sportsman_profile__trainer"
+            "media",
+            "results",
         )
         return queryset
 

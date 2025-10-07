@@ -57,11 +57,19 @@ class UserRoles(BaseEnum):
     SPORTSMAN = "sportsman"
     TRAINER = "trainer"
     FEDERATION = "federation"
+    SPORT_INSTITUTION_ADMIN = "sport_institution_admin"
 
 
-class SchoolChoices(BaseEnum):
-    ORDINARY = "ordinary"
-    CLUB = "club"
+class SportInstitutionChoices(BaseEnum):
+    SPORT_SCHOOL = "sport_school"
+    SPORT_CLUB = "sport_club"
+    SPORT_COMPLEX = "sport_complex"
+
+
+class SportInstitutionRequestStatus(BaseEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class LanguageTypes(BaseEnum):
@@ -78,6 +86,7 @@ class UserRequestTypes(BaseEnum):
     FEDERATION_ADMIN_REQUEST = "federation_admin_request"
     SPORTSMAN_RESULT_VERIFICATION_REQUEST = "sportsman_result_verification_request"
     TRAINER_WORKPLACE_VERIFICATION_REQUEST = "trainer_workplace_verification_request"
+    EDUCATION_VERIFICATION_REQUEST = "education_verification_request"
 
 
 class UserRequestStatus(BaseEnum):

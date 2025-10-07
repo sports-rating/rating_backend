@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('education', '0005_school_district_school_federation_school_latitude_and_more'),
+        # ('education', '0005_school_district_school_federation_school_latitude_and_more'),
         ('federation', '0007_remove_agegroup_age_remove_agegroup_sign_and_more'),
         ('sport', '0025_remove_result_transaction'),
         ('user', '0029_sportsman_is_result_paid'),

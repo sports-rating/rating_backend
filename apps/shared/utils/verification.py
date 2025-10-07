@@ -10,6 +10,8 @@ from django.conf import settings
 # custom
 from apps.shared.utils.logging import logger
 from apps.shared.utils.redis_utils import get_redis_connection
+from apps.shared.utils.utils import send_sms_message
+
 
 redis_connection = get_redis_connection()
 
@@ -88,34 +90,6 @@ def check_existence_of_verification(
     #     return 400, "Phone number already verified", None, None
 
     return None, None, verification_code_key, verified_phone_number_key
-
-
-def send_sms_message(phone_number: str, text: str) -> int:
-    response = requests.post(
-        settings.PLAY_MOBILE_URL,
-        json=create_sms_payload(phone_number, text),
-        auth=(settings.PLAY_MOBILE_LOGIN, settings.PLAY_MOBILE_PASSWORD),
-    )
-
-    if response.status_code != 200:
-        logger.error(f"Error on send_sms: {response.status_code=} {response.text=}")
-
-    return response.status_code
-
-
-def create_sms_payload(phone_number: str, text: str) -> dict:
-    return {
-        "messages": [
-            {
-                "recipient": phone_number,
-                "message-id": "7srating-{}".format(uuid.uuid4()),
-                "sms": {
-                    "originator": settings.PLAY_MOBILE_ORIGINATOR,
-                    "content": {"text": text},
-                },
-            }
-        ]
-    }
 
 
 def check_verification_status(phone_number: str) -> tuple[bool, str]:

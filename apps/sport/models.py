@@ -17,6 +17,7 @@ from apps.shared.utils.utils import (
     handle_file_delete,
     CorrectPath
 )
+from apps.shared.utils import enums
 
 
 class Sport(BaseModel):
@@ -48,6 +49,70 @@ class Sport(BaseModel):
     def delete(self, *args, **kwargs):
         handle_file_delete(self, 'logo')
         super().delete(*args, **kwargs)
+
+
+class SportInstitution(BaseModel):
+    user = models.ForeignKey(
+        "user.User",
+        on_delete=models.CASCADE,
+        related_name="sport_institutions",
+        null=True,
+        blank=True
+    )
+    name = models.CharField(max_length=255)
+    phone_number = models.CharField(max_length=13)
+    director = models.CharField(max_length=255, blank=True, null=True)
+    type = models.CharField(max_length=50, choices=enums.SportInstitutionChoices.choices(), default=enums.SportInstitutionChoices.SPORT_SCHOOL.value)
+    work_time = models.CharField(max_length=100, null=True, blank=True)
+
+    address = models.TextField(null=True, blank=True)
+    latitude = models.FloatField(default="0.0")
+    longitude = models.FloatField(default="0.0")
+    region = models.ForeignKey(
+        "shared.Region",
+        on_delete=models.SET_NULL,
+        related_name="region_schools",
+        null=True,
+        blank=True
+    )
+    district = models.ForeignKey(
+        "shared.District",
+        on_delete=models.SET_NULL,
+        related_name="district_schools",
+        null=True,
+        blank=True
+    )
+
+    sports = models.ManyToManyField(Sport, related_name='institutions')
+
+    class Meta:
+        db_table = "sport_institution"
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["phone_number"])
+        ]
+        verbose_name = "Sport Institution"
+        verbose_name_plural = "Sport Institutions"
+
+    repr_fields = ("name",)
+
+
+class SportInstitutionMedia(BaseMedia):
+    sport_institution = models.ForeignKey(
+        SportInstitution,
+        on_delete=models.CASCADE,
+        related_name='media',
+        blank=True,
+        null=True
+    )
+
+    class Meta:
+        db_table = "sport_institution_media"
+        verbose_name = "Sport Institution Media"
+        verbose_name_plural = "Sport Institution Media"
+
+    def save(self, *args, **kwargs):
+        return super().save(*args, **kwargs)
 
 
 class Tournament(BaseModel):
@@ -114,43 +179,6 @@ class ScoringPolicy(BaseModel):
     repr_fields = ("tournament", "position", "score")
 
 
-class Result(BaseModel):
-    country = models.CharField(max_length=100, null=True, blank=True)
-    year = models.PositiveIntegerField(
-        default=1800,
-        null=True,
-        validators=[
-            MinValueValidator(1800)
-        ]
-    )
-    currently_participating = models.BooleanField(default=False)
-
-    user = models.ForeignKey("user.User", on_delete=models.CASCADE, related_name="results", blank=True, null=True)
-    trainer = models.ForeignKey("user.Trainer", on_delete=models.SET_NULL, related_name='assisted_results', blank=True, null=True)
-    archived_trainer = models.ForeignKey("user.ArchivedTrainer", on_delete=models.SET_NULL, related_name='archived_assisted_results', blank=True, null=True)
-
-    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="tournament_results", blank=True, null=True)
-    additional_attributes = models.JSONField(null=True, blank=True)
-    is_verified = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=ResultVerificationStatus.choices(), default=ResultVerificationStatus.PENDING.value)
-
-    rating = models.PositiveIntegerField(default=0)
-
-    gold = models.PositiveIntegerField(default=0)
-    silver = models.PositiveIntegerField(default=0)
-    bronze = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        db_table = "result"
-        ordering = ["-created_time"]
-
-    repr_fields = ("tournament", "is_verified")
-
-    @property
-    def score(self) -> float:
-        return self.tournament.get_score(self.rating) if self.tournament else 0
-
-
 class Team(BaseModel):
     name = models.CharField(max_length=250, unique=True)
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='teams')
@@ -190,3 +218,47 @@ class Team(BaseModel):
     def delete(self, *args, **kwargs):
         handle_file_delete(self, 'logo')
         super().delete(*args, **kwargs)
+
+
+class SportInstitutionRequest(BaseModel):
+
+    # User who sent the request
+    manager_first_name = models.CharField(max_length=255)
+    manager_last_name = models.CharField(max_length=255)
+    manager_phone_number = models.CharField(max_length=13)
+
+    # Sport Institution details
+    school_name = models.CharField(max_length=255)
+    school_phone_number = models.CharField(max_length=13)
+    school_director = models.CharField(max_length=255, blank=True, null=True)
+    school_type = models.CharField(max_length=50, choices=enums.SportInstitutionChoices.choices(), default=enums.SportInstitutionChoices.SPORT_SCHOOL.value)
+    school_address = models.TextField(null=True, blank=True)
+    school_latitude = models.FloatField(default="0.0")
+    school_longitude = models.FloatField(default="0.0")
+    school_region = models.CharField(max_length=100)
+    school_district = models.CharField(max_length=100)
+    school_sports = models.JSONField(default=list)
+
+    processed_by = models.ForeignKey(
+        "user.User",
+        on_delete=models.SET_NULL,
+        related_name="processed_sport_institution_requests",
+        null=True,
+        blank=True
+    )
+    processed_time = models.DateTimeField(null=True, blank=True, help_text="Time when the request was processed")
+
+    additional_info = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=50, choices=enums.SportInstitutionRequestStatus.choices(), default=enums.SportInstitutionRequestStatus.PENDING.value)
+
+    class Meta:
+        db_table = "sport_institution_request"
+        indexes = [
+            models.Index(fields=["manager_phone_number"]),
+            models.Index(fields=["school_name"]),
+            models.Index(fields=["status"]),
+        ]
+        verbose_name = "Sport Institution Request"
+        verbose_name_plural = "Sport Institution Requests"
+
+    repr_fields = ("manager_phone_number", "school_name", "status")

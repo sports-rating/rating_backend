@@ -31,7 +31,7 @@ from apps.sport.models import (
 from apps.federation.models import (
     Federation
 )
-from apps.user.managers import UserManager
+from apps.user.managers import UserManager, UserStatisticsManager
 
 fake = Faker()
 
@@ -57,6 +57,7 @@ class User(AbstractUser, BaseModel):
     is_verified = models.BooleanField(default=False)
 
     objects = UserManager()
+    stats = UserStatisticsManager()
 
     class Meta:
         db_table = "user"
@@ -71,11 +72,14 @@ class User(AbstractUser, BaseModel):
         return self.federations.first()
 
     @property
-    def profile_photo(self) -> t.Optional["UserMedia"]:
-        profile_photo = self.media.filter(is_profile_photo=True).first()
-        if profile_photo:
-            return profile_photo
-        return None
+    def sport_institution(self):
+        return self.sport_institutions.first()
+
+    @property
+    def profile_photo(self: "User") -> t.Optional["UserMedia"]:
+        if hasattr(self, 'prefetched_profile_photos'):
+            return self.prefetched_profile_photos[0] if self.prefetched_profile_photos else None
+        return self.media.filter(is_profile_photo=True).first()
 
     repr_fields = ("first_name", "last_name", "phone_number")
 
@@ -274,6 +278,7 @@ class UserRequest(BaseModel):
         null=True, blank=True,
         help_text="The user who processed this request"
     )
+    processed_time = models.DateTimeField(null=True, blank=True, help_text="Time when the request was processed")
 
     request_type = models.CharField(max_length=100, choices=enums.UserRequestTypes.choices(), default=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value)
     status = models.CharField(max_length=50, choices=enums.UserRequestStatus.choices(), default=enums.UserRequestStatus.PENDING.value)
@@ -326,40 +331,3 @@ class UserNotification(BaseModel):
         verbose_name_plural = "User Notifications"
 
     repr_fields = ("user", "title", "is_read")
-
-
-class WorkPlace(BaseModel):
-    trainer = models.ForeignKey(
-        Trainer,
-        on_delete=models.CASCADE,
-        related_name="work_places"
-    )
-    school = models.ForeignKey(
-        "education.School",
-        on_delete=models.CASCADE,
-        related_name="school_trainer_work_places",
-        null=True,
-        blank=True
-    )
-    sport = models.ForeignKey(
-        "sport.Sport",
-        on_delete=models.SET_NULL,
-        related_name="sport_trainer_work_places",
-        null=True,
-        blank=True
-    )
-    request = models.OneToOneField(
-        UserRequest,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="trainer_work_place"
-    )
-
-
-    class Meta:
-        db_table = "work_place"
-        verbose_name = "Work Place"
-        verbose_name_plural = "Work Places"
-
-    repr_fields = ("trainer", "federation")

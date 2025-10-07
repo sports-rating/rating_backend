@@ -10,8 +10,8 @@ Sport = apps.get_model('sport', 'Sport')
 Result = apps.get_model('sport', 'Result')
 Tournament = apps.get_model('sport', 'Tournament')
 
-Education = apps.get_model('education', 'Education')
-School = apps.get_model('education', 'School')
+Education = apps.get_model('career', 'Education')
+School = apps.get_model('sport', 'School')
 
 
 class SportFactory(factory.django.DjangoModelFactory):

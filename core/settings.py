@@ -11,6 +11,8 @@ from django.utils.translation import gettext_lazy as _
 from firebase_admin import initialize_app, credentials
 
 
+IS_LOCAL: bool = os.getenv("IS_LOCAL", "true").lower() == "true"
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(os.path.join(BASE_DIR, "apps"))
 
@@ -35,7 +37,8 @@ PACKAGES = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "fcm_django",
-    "django_celery_beat"
+    "django_celery_beat",
+    "storages",
 ]
 
 BACKEND_APPS = [
@@ -45,7 +48,8 @@ BACKEND_APPS = [
     "sport",
     "education",
     "payment",
-    "federation"
+    "federation",
+    "career",
 ]
 
 INTERNAL_APPS = [
@@ -84,7 +88,7 @@ SECURE_HSTS_SECONDS = 3600
 
 CORS_ALLOW_HEADERS = ["*"]
 CORS_ORIGIN_ALLOW_ALL = False
-# CORS_ALLOW_CREDENTIALS = True # extra added
+
 
 CORS_ALLOWED_HEADERS = [
     "content-type",
@@ -231,14 +235,13 @@ LANGUAGES = [
     ("ru", _("Russian")),
 ]
 
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "static/"
 # Directory for static files after collectstatic
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
-# Media files (user-uploaded content)
-MEDIA_URL = "/media/"  # URL for serving media files
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Directory for storing media files
 
 AUTH_USER_MODEL = "user.User"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -294,6 +297,48 @@ CELERY_TASK_SOFT_TIME_LIMIT = 300
 CELERY_TASK_TIME_LIMIT = 600
 CELERY_TASK_DEFAULT_RATE_LIMIT = "10/m"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+
+if not IS_LOCAL:
+    S3_MEDIA_BUCKET = os.getenv("S3_MEDIA_BUCKET")
+    S3_STATIC_BUCKET = os.getenv("S3_STATIC_BUCKET")
+    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+    S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
+    S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
+    S3_MEDIA_LOCATION = "media"
+    S3_STATIC_LOCATION = "static"
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "apps.shared.utils.storage_backends.CustomMediaStorage",
+            "OPTIONS": {
+                "bucket_name": S3_MEDIA_BUCKET,
+                "location": S3_MEDIA_LOCATION,
+                "endpoint_url": S3_ENDPOINT_URL,
+                "access_key": S3_ACCESS_KEY,
+                "secret_key": S3_SECRET_KEY,
+                "addressing_style": "path", # virtual",
+                "default_acl": None,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "apps.shared.utils.storage_backends.CustomStaticStorage",
+            "OPTIONS": {
+                "bucket_name": S3_STATIC_BUCKET,
+                "location": S3_STATIC_LOCATION,
+                "endpoint_url": S3_ENDPOINT_URL,
+                "access_key": S3_ACCESS_KEY,
+                "secret_key": S3_SECRET_KEY,
+                "addressing_style": "path", # "virtual",
+                "default_acl": None,
+            },
+        },
+    }
+else:
+    # Media files (user-uploaded content)
+    MEDIA_URL = "/media/"  # URL for serving media files
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Directory for storing media files
+
 
 # Jazzmin settings for Django Admin
 JAZZMIN_SETTINGS = {
@@ -473,6 +518,7 @@ FCM_DJANGO_SETTINGS = {
 cred = credentials.Certificate(BASE_DIR / "sportsrating-firebase.json")
 
 FIREBASE_APP = initialize_app(cred, {"projectId": "sportsrating"})
+
 
 # Payme
 PAYME_ID = os.getenv("PAYME_ID")

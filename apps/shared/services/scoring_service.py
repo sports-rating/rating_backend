@@ -1,8 +1,8 @@
 from uuid import UUID
 
 from django.utils.translation import gettext_lazy as _
-from django.db.models import F, Count, Sum
-from django.db import transaction
+from django.db.models import F, Count, Sum, Prefetch
+from django.db import transaction, models
 from collections import defaultdict
 
 from apps.shared.utils.logging import logger
@@ -17,6 +17,7 @@ class ScoringService:
     @staticmethod
     def update_points(
         sportsman: User,
+        trainer: User | None,
         old_rating: int | None,
         new_rating: int | None,
         tournament: Tournament
@@ -27,7 +28,8 @@ class ScoringService:
         ScoringService.update_sportsman_points(sportsman, old_rating, new_rating, tournament)
 
         sportsman_profile = sportsman.sportsman_profile
-        trainer_profile = sportsman_profile.trainer
+        # trainer_profile = sportsman_profile.trainer
+        trainer_profile = trainer.trainer_profile if trainer else None
 
         if trainer_profile:
             logger.info(f"Updating trainer points for {trainer_profile.user.username}")
@@ -45,38 +47,71 @@ class ScoringService:
         Subtracts old score and adds new score.
         """
         # --- Step 1: old score ---
-        old_score = tournament.get_score(old_rating)
+        old_score = tournament.get_score(old_rating) if old_rating else 0
         logger.info(f"Old score: {old_score}")  # LOGGING
 
         # --- Step 2: new score ---
         logger.info(f"Rating: {new_rating}")  # LOGGING
-        new_score = tournament.get_score(new_rating)
+        new_score = tournament.get_score(new_rating) if new_rating else 0
         logger.info(f"New score: {new_score}")  # LOGGING
 
-        sportsman.sportsman_profile.points = F("points") - old_score + new_score
-        sportsman.sportsman_profile.save(update_fields=["points"])
+        delta = new_score - old_score
+        if delta != 0:
+            sportsman.sportsman_profile.points = F("points") + delta
+            sportsman.sportsman_profile.save(update_fields=["points"])
+            sportsman.sportsman_profile.refresh_from_db(fields=["points"])
+            logger.info(
+                f"Updated points for {sportsman.username}: {delta:+} → {sportsman.sportsman_profile.points}"
+            )
+        # sportsman.sportsman_profile.points = F("points") - old_score + new_score
+        # sportsman.sportsman_profile.save(update_fields=["points"])
 
-        sportsman.sportsman_profile.refresh_from_db(fields=["points"])
+        # sportsman.sportsman_profile.refresh_from_db(fields=["points"])
 
-        logger.info(f"Updated points for {sportsman}: {sportsman.sportsman_profile.points}")  # LOGGING
-        return sportsman.sportsman_profile
+        # logger.info(f"Updated points for {sportsman}: {sportsman.sportsman_profile.points}")  # LOGGING
 
     @staticmethod
-    def update_trainer_points(trainer, tournament, rating):
+    def update_trainer_points(
+            trainer: User | None,
+            tournament: Tournament,
+            rating: int | None
+        ):
         """
-        Update trainer's points when result is firstly created.
+        Update trainer's points whenever a result involving them is created or modified.
+        New logic:
+        - Sum all verified results' scores where this trainer is assigned
+        - Divide by distinct count of sportsmen (user) in those results
         """
-        qs = trainer.trainer_profile.sportsmen.all()
-        result = qs.aggregate(total_points=Sum('points'), count=Count('user_id'))
+        if not trainer or not hasattr(trainer, "trainer_profile"):
+            logger.warning("Trainer not found or has no trainer profile.")
+            return
 
-        total_points = result['total_points'] or 0
-        count = result['count'] or 0
+        results_qs = trainer.trainer_profile.assisted_results.filter(is_verified=True)
 
-        trainer.trainer_profile.points = (
-            total_points / count if count > 0 else 0
-        )
+        if not results_qs.exists():
+            trainer.trainer_profile.points = 0
+        else:
+            # --- Sum of all scores ---
+            total_points = sum(result.tournament.get_score(result.rating) for result in results_qs)
+
+            # --- Count of distinct sportsmen trained in those results ---
+            distinct_sportsmen_count = results_qs.values("user").distinct().count()
+
+            # --- Compute average ---
+            trainer_points = (
+                round(total_points / distinct_sportsmen_count, 2)
+                if distinct_sportsmen_count > 0 else 0
+            )
+
+            if trainer.trainer_profile.points != trainer_points:
+                logger.info(
+                    f"Updated points for trainer {trainer.username}: "
+                    f"{trainer.trainer_profile.points} → {trainer_points}"
+                )
+                trainer.trainer_profile.points = trainer_points
+
         logger.info(f"Updated points for trainer {trainer}: {trainer.trainer_profile.points}")  # LOGGING
-        trainer.trainer_profile.save(update_fields=['points'])
+        trainer.trainer_profile.save(update_fields=["points"])
 
     @staticmethod
     def recalculate_points_for_tournament(tournament_id: UUID) -> None:
@@ -139,7 +174,79 @@ class ScoringService:
                 )
                 trainers_to_update = []
                 for t in trainers:
-                    t.points = (t.total_points or 0) / (t.count or 1) if t.count else 0
+                    t.points = round((t.total_points or 0) / (t.count or 1), 2) if t.count else 0
                     trainers_to_update.append(t)
                 if trainers_to_update:
                     Trainer.objects.bulk_update(trainers_to_update, ["points"])
+
+    @staticmethod
+    def recalculate_all_points() -> None:
+        """
+        Recalculate points for all sportsmen and their trainers.
+        """
+        from apps.user.models import Sportsman, Trainer
+        from apps.sport.models import Tournament
+        from apps.career.models import Result
+
+        with transaction.atomic():
+            # --- Step 1: Recalculate Sportsman Points ---
+            sportsmen = (
+                Sportsman.objects
+                .select_related("user")
+                .prefetch_related(
+                    Prefetch(
+                        "user__results",
+                        queryset=Result.objects.filter(is_verified=True)
+                        .select_related("tournament"),
+                        to_attr="verified_results"
+                    )
+                )
+            )
+
+            for sportsman in sportsmen:
+                total_points = 0
+                for result in getattr(sportsman.user, "verified_results", []):
+                    if result.tournament and result.rating:
+                        score = result.tournament.get_score(result.rating)
+                        total_points += float(score)
+
+                if sportsman.points != total_points:
+                    logger.info(f"Updating points for sportsman {sportsman.user.username} from {sportsman.points} to {total_points}")
+                    sportsman.points = total_points
+                    sportsman.save(update_fields=["points"])
+
+            logger.info(f"Recalculated points for {sportsmen.count()} sportsmen.")
+
+            # --- Step 2: Recalculate Trainer Points ---
+            trainers = Trainer.objects.prefetch_related("assisted_results")
+
+            for trainer in trainers:
+                results = trainer.assisted_results.all()
+                total_points = 0
+                trainer_points = 0
+                if not results.exists():
+                    trainer.points = 0
+                else:
+                    # Sum all result scores
+                    for result in results:
+                        if result.tournament and result.rating:
+                            score = result.score
+                            logger.info(f"Result {result.id} | Rating: {result.rating} | score: {score}")  # LOGGING
+                            total_points += float(score)
+
+                    # Count distinct sportsmen this trainer worked with
+                    distinct_sportsmen_count = results.values("user").distinct().count()
+
+                    # Avoid division by zero (if no valid sportsmen)
+                    if distinct_sportsmen_count == 0:
+                        trainer_points = 0
+                    else:
+                        trainer_points = round((total_points / distinct_sportsmen_count), 2)
+
+                    if trainer.points != trainer_points:
+                        logger.info(f"Updating points for trainer {trainer.user.username} from {trainer.points} to {trainer_points}")
+                        trainer.points = trainer_points
+
+                trainer.save(update_fields=["points"])
+
+            logger.info(f"Recalculated points for {trainers.count()} trainers.")

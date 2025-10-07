@@ -20,7 +20,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import BasePermission
 
 from apps.shared.utils.exceptions import raise_validation_error
-from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin
+from apps.shared.utils.permissions import IsAdmin, IsAdminOrSuperAdmin, IsFederationAdmin
 from apps.shared.utils.pagination import CustomPagination
 from apps.shared.utils.utils import (
     success_response,
@@ -44,7 +44,8 @@ from apps.sport.models import Tournament
 from apps.federation.filters import (
     FederationFilter,
     FederationUserRequestFilter,
-    FederationUserListFilter
+    FederationUsersFilter,
+    FederationAgeGroupFilter
 )
 
 from apps.shared.utils.types import *
@@ -151,11 +152,10 @@ class FederationUserListAPIView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = serializer.FederationUserListSerializer
     permission_classes = (
-        permissions.AllowAny,
-        # permissions.IsAuthenticated,
+        permissions.IsAuthenticated,
     )
     filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
-    filterset_class = FederationUserListFilter
+    filterset_class = FederationUsersFilter
     pagination_class = CustomPagination
     search_fields = [
         "first_name",
@@ -235,7 +235,10 @@ class RegionalFederationListCreateAPIView(generics.ListCreateAPIView):
 
 
 class FederationUserRequestListAPIView(generics.ListAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (
+        permissions.IsAuthenticated,
+        IsFederationAdmin,
+    )
     serializer_class = serializer.FederationUserRequestSerializer
     queryset = UserRequest.objects.all()
     pagination_class = CustomPagination
@@ -276,7 +279,10 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
 
 
 class FederationTournamentListAPIView(generics.ListAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (
+        permissions.IsAuthenticated,
+        IsFederationAdmin,
+    )
     serializer_class = sport_serializers.TournamentSerializer
     queryset = Tournament.objects.all()
     pagination_class = CustomPagination
@@ -291,4 +297,67 @@ class FederationTournamentListAPIView(generics.ListAPIView):
             data=response.data,
             message=_("Federation Tournament list retrieved successfully"),
             code=status.HTTP_200_OK
+        )
+
+
+class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
+    permission_classes = (
+        permissions.IsAuthenticated,
+    )
+    serializer_class = serializer.FederationAgeGroupSerializer
+    queryset = FederationAgeGroup.objects.all()
+    pagination_class = CustomPagination
+    filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
+    filterset_class = FederationAgeGroupFilter
+    search_fields = [
+        "age_group__name",
+        "age_group__sport__name",
+    ]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializer.AgeGroupSerializer
+        return serializer.FederationAgeGroupSerializer
+
+    def get_serializer_context(self) -> dict[str, t.Any]:
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        context["federation_id"] = self.kwargs.get('pk')
+        return context
+
+    def get_queryset(self) -> QuerySet[FederationAgeGroup]:
+        federation_id: UUID = self.kwargs.get('pk')
+        return FederationAgeGroup.objects.filter(
+            federation_id=federation_id
+        ).select_related('age_group__sport')
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Federation Age Group list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class AgeGroupRetrieveUpdateDeleteAPIView(generics.RetrieveAPIView):
+    permission_classes = (
+        permissions.IsAuthenticated,
+        IsFederationAdmin,
+    )
+    serializer_class = serializer.AgeGroupSerializer
+    queryset = AgeGroup.objects.all()
+
+    def get_serializer_context(self) -> dict[str, t.Any]:
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        instance: AgeGroup = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("Age Group retrieved successfully"),
+            code=status.HTTP_200_OK,
         )

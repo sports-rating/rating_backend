@@ -1,5 +1,7 @@
+import typing as t
+import os
 from datetime import datetime
-from typing import Optional
+from pathlib import Path
 
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
@@ -7,40 +9,47 @@ from django.contrib.auth.models import update_last_login
 from django.utils import timezone
 from django.db.models import Sum
 from django.conf import settings
+from django.core.files import File
 
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.general import (
     get_file_full_url,
     calculate_file_size,
     check_uniqueness,
+    check_phone_valid,
+    send_sport_institution_message
 )
 
 from apps.sport.models import (
     Sport,
     Tournament,
-    Result,
+    SportInstitution,
     Team,
     ScoringPolicy,
+    SportInstitutionRequest,
+    SportInstitutionMedia
 )
 from apps.federation.models import (
     Federation,
 )
-
 from apps.user.models import (
     User,
     Trainer,
-    ArchivedTrainer
+    ArchivedTrainer,
 )
+from apps.shared.models import Region, District
 
 from apps.dashboard.serializers import (
     UserListSerializer
 )
 # from apps.user.tasks import recalculate_user_points_task
 from apps.shared.services.scoring_service import ScoringService
+from apps.shared.utils import enums
 
 
 class SportSerializer(serializers.ModelSerializer):
@@ -64,6 +73,120 @@ class SportSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["logo"] = get_file_full_url(instance.logo.url) if instance.logo else None
+        return data
+
+
+class SportInstitutionMediaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SportInstitutionMedia
+        fields = [
+            "id",
+            "sport_institution",
+            "media_type",
+            "size",
+            "extension",
+            "file",
+            "created_time"
+        ]
+        read_only_fields = ["id", "size", "extension", "media_type", "created_time"]
+
+    def validate(self, data):
+        """
+        Validate the file size for PDFs
+        """
+        file = data.get("file")
+        if file:
+            if file.name.lower().endswith(".pdf"):
+                if file.size > settings.MAX_PDF_SIZE_BYTES:
+                    size_in_mb = file.size / (1024 * 1024)
+                    raise_validation_error(
+                        message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
+                    )
+        return data
+
+
+class SportInstitutionSerializer(serializers.ModelSerializer):
+    media = SportInstitutionMediaSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SportInstitution
+        fields = [
+            "id",
+            "name",
+            "phone_number",
+            "director",
+            "type",
+            "work_time",
+            "address",
+            "latitude",
+            "longitude",
+            "region",
+            "district",
+            "sports",
+            "media",
+            "created_time",
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def validate(self, attrs: dict) -> dict:
+        instance = getattr(self, 'instance', None)
+
+        check_uniqueness("name", attrs, SportInstitution, instance)
+        check_uniqueness("phone_number", attrs, SportInstitution, instance)
+
+        return attrs
+
+    def create(self, validated_data: dict) -> SportInstitution:
+        sports: list[Sport] = validated_data.pop("sports", None)
+
+        with transaction.atomic():
+            sport_institution = SportInstitution.objects.create(**validated_data)
+
+            if sports:
+                sport_institution.sports.set(sports)
+
+        return sport_institution
+
+    def update(self, instance: SportInstitution, validated_data: dict) -> SportInstitution:
+        sports: list[Sport] = validated_data.pop("sports", [])
+
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            if sports:
+                instance.sports.set(sports)
+
+        return instance
+
+    def to_representation(self, instance: SportInstitution) -> dict:
+        data =  super().to_representation(instance)
+        data["user"] = {
+            "id": instance.user.id,
+            "full_name": instance.user.full_name,
+            "phone_number": instance.user.phone_number,
+        } if instance.user else None
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        data["sports"] = SportSerializer(
+            instance.sports.all(),
+            many=True
+        ).data
+        data["trainers"] = [
+            {
+                "id": work_place.trainer.user_id,
+                "full_name": work_place.trainer.user.full_name,
+                "phone_number": work_place.trainer.user.phone_number,
+            }
+            for work_place in instance.institution_trainer_work_places.select_related("trainer").distinct('trainer').all()
+        ]
         return data
 
 
@@ -181,87 +304,6 @@ class TournamentSerializer(serializers.ModelSerializer):
         return data
 
 
-class ResultCreateSerializer(serializers.ModelSerializer):
-    tournament_id = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), source="tournament", write_only=True)
-    trainer_id = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), source="trainer", required=False, allow_null=True)
-    archived_trainer_name = serializers.CharField(max_length=255, required=False, allow_null=True)
-
-    class Meta:
-        model = Result
-        fields = [
-            "id",
-            "country",
-            "tournament_id",
-            "trainer_id",
-            "archived_trainer_name",
-            "year",
-            "currently_participating",
-            "rating",
-            "additional_attributes",
-            "score",
-            "gold",
-            "silver",
-            "bronze",
-        ]
-        read_only_fields = ("id", "score")
-        extra_kwargs = {"id": {"read_only": True}, "country": {"required": False}}
-
-    def create(self, validated_data):
-        tournament = validated_data.pop('tournament')
-        trainer = validated_data.pop("trainer")
-        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
-        if trainer:
-            result = Result.objects.create(trainer=trainer, tournament=tournament, **validated_data)
-        elif archived_trainer_name:
-            archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-            result = Result.objects.create(archived_trainer=archived_trainer, tournament=tournament, **validated_data)
-        else:
-            result = Result.objects.create(tournament=tournament, **validated_data)
-        return result
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["tournament_id"] = instance.tournament.id
-        data["tournament_name"] = instance.tournament.name
-
-        data["trainer_id"] = instance.trainer.user.id if instance.trainer else None
-        data["trainer_name"] = str(instance.trainer.user) if instance.trainer else None
-
-        data["archived_trainer_id"] = instance.archived_trainer.id if instance.archived_trainer else None
-        data["archived_trainer_name"] = instance.archived_trainer.name if instance.archived_trainer else None
-        return data
-
-
-class ResultSerializer(serializers.ModelSerializer):
-    tournament = TournamentSerializer(many=False)
-
-    class Meta:
-        model = Result
-        fields = (
-            "id",
-            "country",
-            "year",
-            "currently_participating",
-            "rating",
-            "tournament",
-            "additional_attributes",
-            "score",
-            "gold",
-            "silver",
-            "bronze",
-        )
-        read_only_fields = ("id", "score")
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['trainer_id'] = instance.trainer.user.id if instance.trainer else None
-        data['trainer_name'] = str(instance.traier.user) if instance.trainer else None
-
-        data['archived_trainer_id'] = instance.archived_trainer.id if instance.archived_trainer else None
-        data['archived_trainer_name'] = instance.archived_trainer.name if instance.archived_trainer else None
-        return data
-
-
 class TeamCreateSerializer(serializers.ModelSerializer):
     logo = serializers.ImageField(required=False)
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source='sport', write_only=True)
@@ -363,3 +405,209 @@ class TeamSerializer(serializers.ModelSerializer):
             "losses",
             "draws",
         ]
+
+
+class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
+    class Meta:
+        model = SportInstitutionRequest
+        fields = [
+            "id",
+            "manager_first_name",
+            "manager_last_name",
+            "manager_phone_number",
+            "school_name",
+            "school_phone_number",
+            "school_director",
+            "school_type",
+            "school_address",
+            "school_latitude",
+            "school_longitude",
+            "school_region",
+            "school_district",
+            "school_sports",
+            "processed_by",
+            "processed_time",
+            "additional_info",
+            "status",
+            "created_time",
+        ]
+        read_only_fields = [
+            "id",
+            "created_time",
+        ]
+
+    def validate(self, attrs: dict) -> dict:
+        phone_number: str = attrs.get("manager_phone_number")
+        school_phone_number: str = attrs.get("school_phone_number")
+
+        instance = getattr(self, 'instance', None)
+        attrs["name"] = attrs.get("school_name", None)
+        check_uniqueness("name", attrs, SportInstitution, instance)
+        attrs.pop("name", None)  # remove temporary field
+
+        check_phone_valid(phone_number)
+        check_phone_valid(school_phone_number)
+        return attrs
+
+    def create(self, validated_data: dict) -> SportInstitutionRequest:
+        request = SportInstitutionRequest.objects.create(**validated_data)
+        return request
+
+    @transaction.atomic
+    def update(self, instance: SportInstitutionRequest, validated_data: dict) -> SportInstitutionRequest:
+        status = validated_data.get("status", None)
+        processed_by = self.request.user
+
+        if status in [enums.SportInstitutionRequestStatus.APPROVED.value, enums.SportInstitutionRequestStatus.REJECTED.value]:
+            if not processed_by:
+                raise_validation_error(message=_("Processed by must be set when approving or rejecting a request."))
+            instance.processed_by = processed_by
+            instance.processed_time = timezone.now()
+            instance.status = status
+
+        additional_info = validated_data.get("additional_info", None)
+        if additional_info:
+            instance.additional_info = additional_info
+
+        instance.save()
+
+        if status == enums.SportInstitutionRequestStatus.APPROVED.value:
+            # Create SportInstitution
+            sport_institution = self._create_sport_institution(instance)
+            # Create SportInstitution Admin user
+            admin_user = self._create_sport_institution_admin(instance, sport_institution)
+
+            sport_institution.user = admin_user
+            sport_institution.save()
+
+        # Send SMS to the manager with login details
+        status_code = send_sport_institution_message(instance.school_name, instance.manager_phone_number, status)
+        if status_code != 200:
+            logger.error(f"Failed to send SMS to {instance.manager_phone_number} for Sport Institution '{instance.school_name}'. Status code: {status_code}")
+            raise_validation_error(message=_("Failed to send SMS notification. Please try again later."))
+
+        return instance
+
+    def _create_sport_institution(self, request: SportInstitutionRequest) -> SportInstitution:
+        sport_institution = SportInstitution.objects.create(
+            name=request.school_name,
+            phone_number=request.school_phone_number,
+            director=request.school_director,
+            type=request.school_type,
+            address=request.school_address,
+            latitude=request.school_latitude,
+            longitude=request.school_longitude,
+            region_id=request.school_region,
+            district_id=request.school_district,
+        )
+        if request.school_sports:
+            sports = Sport.objects.filter(id__in=request.school_sports)
+            sport_institution.sports.set(sports)
+
+        # Assign default media
+        default_path = os.path.join(settings.STATICFILES_DIRS[0], 'default_institution_image.png')
+        with open(default_path, 'rb') as f:
+            sport_institution_media = SportInstitutionMedia(
+                sport_institution=sport_institution,
+            )
+            sport_institution_media.file.save('default_institution_image.png', File(f), save=True)
+
+        return sport_institution
+
+    def _create_sport_institution_admin(self, request: SportInstitutionRequest, sport_institution: SportInstitution) -> User:
+        # Create a user for the sport institution manager
+        # password = User.objects.make_random_password()
+        user = User(
+            first_name=request.manager_first_name,
+            last_name=request.manager_last_name,
+            phone_number=request.manager_phone_number,
+            user_role=enums.UserRoles.SPORT_INSTITUTION_ADMIN.value,
+            is_active=True,
+        )
+        user.save()
+
+        return user
+
+    def to_representation(self, instance: SportInstitutionRequest) -> dict:
+        data = super().to_representation(instance)
+        region = Region.objects.filter(id=instance.school_region).first()
+        district = District.objects.filter(id=instance.school_district).first()
+        sports = Sport.objects.filter(id__in=instance.school_sports).all()
+        data["school_region"] = {
+            "id": region.id,
+            "name": region.name
+        } if region else None
+        data["school_district"] = {
+            "id": district.id,
+            "name": district.name
+        } if district else None
+        data["school_sports"] = SportSerializer(sports, many=True).data
+        data["processed_by"] = {
+            "id": instance.processed_by.id,
+            "full_name": instance.processed_by.full_name,
+            "phone_number": instance.processed_by.phone_number,
+        } if instance.processed_by else None
+        return data
+
+
+class SportInstitutionUsersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "phone_number",
+            "birth_date",
+            "region",
+            "district",
+            "gender",
+            "user_role",
+            "created_time"
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
+        sport: Sport | None = self._get_sport(instance)
+        trainer: User | None = self._get_trainer(instance)
+        data["full_name"] = instance.full_name
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        data["sport"] = {
+            "id": sport.id,
+            "name": sport.name,
+            "logo": get_file_full_url(sport.logo.url) if sport.logo else None
+        } if sport else None
+        if instance.user_role == enums.UserRoles.SPORTSMAN.value:
+            data["trainer"] = {
+                "id": trainer.id,
+                "full_name": trainer.full_name,
+                "user_role": trainer.user_role,
+                "phone_number": trainer.phone_number,
+            } if trainer else None
+        else:
+            data["federation"] = {
+                "id": instance.trainer_profile.federation.id,
+                "name": instance.trainer_profile.federation.name
+            }
+        return data
+
+    def _get_sport(self, instance: User) -> t.Union[Sport, None]:
+        if instance.user_role == "sportsman":
+            return instance.sportsman_profile.sport
+        elif instance.user_role == "trainer":
+            return instance.trainer_profile.sport
+        return None
+
+    def _get_trainer(self, instance: User) -> t.Union[User, None]:
+        if instance.user_role == "sportsman":
+            return instance.sportsman_profile.trainer.user
+        return None

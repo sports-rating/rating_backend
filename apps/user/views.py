@@ -31,11 +31,13 @@ from apps.user.models import (
     ArchivedTrainer,
     UserMedia,
     UserNotification,
-    UserRequest,
-    WorkPlace
+    UserRequest
+)
+from apps.career.models import (
+    Result
 )
 from apps.sport.models import (
-    Result
+    SportInstitutionMedia,
 )
 from apps.shared.models import (
     Region,
@@ -59,7 +61,7 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
 from apps.shared.utils import enums
-from apps.shared.utils.permissions import IsAdminOrSuperAdmin
+from apps.shared.utils.permissions import IsAdminOrSuperAdmin, IsSuperAdmin
 from apps.user.tasks import recalculate_user_points_task
 from apps.shared.services.scoring_service import ScoringService
 
@@ -225,8 +227,20 @@ class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
             return serializers.UsersMeSerializer
         return self.serializer_class
 
+    def get_queryset(self):
+        return self.queryset.select_related(
+            "sportsman_profile__sport",
+            "sportsman_profile__trainer",
+            "trainer_profile__sport",
+            "region",
+            "district",
+        ).prefetch_related(
+            "media",
+            "results",
+        )
+
     def get_object(self):
-        return User.objects.get(id=self.request.user.id)
+        return self.get_queryset().get(id=self.request.user.id)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -312,6 +326,7 @@ class UserPhoneUpdateConfirmView(generics.UpdateAPIView):
 
 class SportsmanListCreateView(generics.ListCreateAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
+    queryset = User.objects.all()
     serializer_class = serializers.RegistrationSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = SportsmanFilter
@@ -328,9 +343,19 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
         return context
 
     def get_queryset(self):
-        queryset = User.objects.filter(user_role='sportsman').select_related(
-            'sportsman_profile__sport', 'sportsman_profile__trainer',
-        )
+        queryset = User.stats.with_sportsman_statistics().filter(
+            user_role='sportsman'
+        ).select_related(
+            'sportsman_profile__sport',
+            'sportsman_profile__trainer__user',
+        ).prefetch_related(
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
+            "results",
+        ).order_by('-sportsman_profile__points')
         return queryset
 
     def get_permissions(self):
@@ -359,14 +384,35 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 
 class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
-    queryset = User.objects.all().select_related(
-        "sportsman_profile", "sportsman_profile__sport", "sportsman_profile__trainer"
-    ).prefetch_related("media", "educations", "results")
+    queryset = User.objects.all()
     serializer_class = serializers.UserUpdateSerializer
+
+    def get_queryset(self):
+        queryset = User.stats.with_sportsman_statistics().filter(
+            user_role='sportsman'
+        ).select_related(
+            'sportsman_profile__sport',
+            'sportsman_profile__trainer__user',
+            'sportsman_profile__trainer__sport',
+            'sportsman_profile__trainer__federation',
+            'region',
+            'district',
+        ).prefetch_related(
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
+            Prefetch(
+                "results",
+                queryset=Result.objects.select_related("trainer", "tournament", "archived_trainer"),
+            ),
+        )
+        return queryset
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return serializers.UsersMeSerializer # Because assigning sportsman or trainer profile during presentation by looking into user_role
+            return serializers.SportsmanUserSerializer
         return super().get_serializer_class()
 
     def get_permissions(self):
@@ -375,7 +421,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return super().get_permissions()
 
     def get_object(self):
-        user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+        user_profile = self.get_queryset().filter(pk=self.kwargs.get("pk")).first()
         if not user_profile:
             raise_validation_error(message=_("Sportsman Profile not found"), code=status.HTTP_404_NOT_FOUND)
         return user_profile
@@ -433,9 +479,17 @@ class TrainerListCreateView(generics.ListCreateAPIView):
         return context
 
     def get_queryset(self):
-        queryset = User.objects.filter(user_role='trainer').prefetch_related(
-            "trainer_profile__sport",
-        )
+        queryset = User.stats.with_trainer_statistics().filter(
+            user_role='trainer'
+        ).select_related(
+            'trainer_profile__sport',
+        ).prefetch_related(
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
+        ).order_by('-trainer_profile__points')
         return queryset
 
     def get_permissions(self):
@@ -464,9 +518,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 
 class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
-    queryset = User.objects.all().select_related(
-        "trainer_profile", "trainer_profile__sport"
-    ).prefetch_related("media", "educations", "results")
+    queryset = User.objects.all()
     serializer_class = serializers.UserUpdateSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_Class = TrainerFilter
@@ -474,16 +526,30 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return serializers.UsersMeSerializer # Because I am assigning sportsman or trainer profile during presentation by looking into user_role
+            return serializers.TrainerUserSerializer
         return super().get_serializer_class()
 
-    def get_object(self):
-        user_profile = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+    def get_queryset(self) -> QuerySet[User]:
+        queryset = User.objects.filter(
+            user_role='trainer'
+        ).select_related(
+            'trainer_profile__sport',
+        ).prefetch_related(
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
+        )
+        return queryset
+
+    def get_object(self) -> User:
+        user_profile = self.get_queryset().filter(pk=self.kwargs.get("pk")).first()
         if not user_profile:
             raise_validation_error(message=_("Trainer Profile not found"), code=404)
         return user_profile
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict[str, t.Any]:
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
         return context
@@ -493,8 +559,8 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             return (permissions.AllowAny(),)
         return super().get_permissions()
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        instance: User = self.get_object()
         serializer = self.get_serializer(instance)
         return success_response(
             data=serializer.data,
@@ -502,8 +568,8 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             code=200,
         )
 
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        instance: User = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -513,8 +579,8 @@ class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             code=200,
         )
 
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
+    def delete(self, request: Request, *args, **kwargs) -> Response:
+        instance: User = self.get_object()
         instance.delete()
         return success_response(
             message=_("Trainer deleted successfully"),
@@ -527,9 +593,15 @@ class SportsmanResultListCreateAPIView(generics.ListCreateAPIView):
     queryset = Result.objects.all()
     serializer_class = serializers.SportsmanResultSerializer
 
-    def get_queryset(self):
-        user = self.request.user
-        return self.queryset.filter(user=user)
+    def get_queryset(self) -> QuerySet[Result]:
+        user: User = self.request.user  # type: ignore
+        return self.queryset.filter(user=user).select_related(
+            "user",
+            "trainer__user",
+            "age_group__age_group",
+            "archived_trainer",
+            "tournament",
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -584,8 +656,10 @@ class SportsmanResultRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyA
     def delete(self, request, *args, **kwargs):
         result = self.get_object()
         user = request.user
+        trainer = result.trainer.user if result.trainer else None
         ScoringService.update_points(
             sportsman=user,
+            trainer=trainer,
             old_rating=result.rating,
             new_rating=0,  # Assuming 0 means no rating after deletion
             tournament=result.tournament
@@ -597,62 +671,34 @@ class SportsmanResultRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyA
         )
 
 
-class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
-    queryset = WorkPlace.objects.all()
-    serializer_class = serializers.TrainerWorkPlaceSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    # filterset_class = UserRequestFilter
-    pagination_class = CustomPagination
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context["request"] = self.request
-        return context
-
-    def get_queryset(self):
-        user = self.request.user
-        return self.queryset.filter(trainer__user=user).select_related("school", "sport", "request")
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return success_response(
-            data=serializer.data,
-            message=_("Trainer WorkPlace sent for verification successfully"),
-            code=status.HTTP_201_CREATED
-        )
-
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
-        return success_response(
-            data=response.data,
-            message=_("Trainer WorkPlace requests retrieved successfully"),
-            code=status.HTTP_200_OK
-        )
-
-
 class MediaUploadView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = UserMedia.objects.all()
-    serializer_class = serializers.BaseMediaSerializer
+    serializer_class = serializers.UserMediaSerializer
 
     def get_queryset(self) -> QuerySet:
         model_type: str = self.request.data.get("type")
         model: t.Optional[t.Type[Model]] = self._get_model(model_type=model_type)
         return model.objects.all() if model else UserMedia.objects.none()
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict:
         context = super().get_serializer_context()
         context["request"] = self.request  # Pass the request to the serializer
         model_type: str = self.request.data.get("type")  # user, sportcomplex
         if model_type:
             context["model"] = self._get_model(model_type=model_type)
-        self.request.data.pop("type")
+        # self.request.data.pop("type")
         return context
 
-    def create(self, request, *args, **kwargs):
+    def get_serializer_class(self):
+        model_type: str = self.request.data.get("type")
+        serializer_mapping = {
+            "user": serializers.UserMediaSerializer,
+            "sport_institution": sport_serializers.SportInstitutionMediaSerializer,
+        }
+        return serializer_mapping.get(model_type, serializers.UserMediaSerializer)
+
+    def create(self, request: Request, *args, **kwargs) -> Response:
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self._handle_media(request, serializer)
@@ -662,11 +708,16 @@ class MediaUploadView(generics.CreateAPIView):
             code=200
         )
 
-    def _handle_media(self, request, serializer):
-        user = request.user if request.user.is_authenticated else None
-        if user.user_role == "admin" or user.user_role == "superadmin":
-            user = None
-        serializer.save(user=user)
+    def _handle_media(self, request: Request, serializer) -> None:
+        model_type: str = request.data.get("type")
+        if model_type == "user":
+            user: User = request.user if request.user.is_authenticated else None  # type: ignore
+            if user.user_role == "admin" or user.user_role == "superadmin":
+                user = None
+            serializer.save(user=user)
+        else:
+            serializer.save()
+        request.data.pop("type", None)
 
     def _get_model(self, model_type: str) -> t.Optional[t.Type[Model]]:
         """
@@ -674,6 +725,7 @@ class MediaUploadView(generics.CreateAPIView):
         """
         model_mapping = {
             "user": UserMedia,
+            "sport_institution": SportInstitutionMedia,
             "other": None
         }
         return model_mapping.get(model_type)
@@ -682,7 +734,18 @@ class MediaUploadView(generics.CreateAPIView):
 class MediaDeleteView(generics.DestroyAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     queryset = UserMedia.objects.all()
-    serializer_class = serializers.BaseMediaSerializer
+    serializer_class = serializers.UserMediaSerializer
+
+    def get_queryset(self) -> QuerySet:
+        model_type: str = self.request.query_params.get("type", "user")
+        model: t.Optional[t.Type[Model]] = self._get_model(model_type=model_type)
+        return model.objects.all() if model else UserMedia.objects.all()
+
+    def get_object(self):
+        media = self.get_queryset().filter(pk=self.kwargs.get("pk")).first()
+        if not media:
+            raise_validation_error(message=_("Media not found"), code=404)
+        return media
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -692,6 +755,16 @@ class MediaDeleteView(generics.DestroyAPIView):
             code=204
         )
 
+    def _get_model(self, model_type: str) -> t.Optional[t.Type[Model]]:
+        """
+        Returns the appropriate model based on the media type
+        """
+        model_mapping = {
+            "user": UserMedia,
+            "sport_institution": SportInstitutionMedia,
+            "other": None
+        }
+        return model_mapping.get(model_type)
 
 class ArchivedTrainerCreateListView(generics.ListCreateAPIView):
     permission_classes = (permissions.AllowAny,)
@@ -960,7 +1033,7 @@ class NeighborhoodListView(generics.ListAPIView):
 class UserMediaListView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = UserMedia.objects.all()
-    serializer_class = serializers.BaseMediaSerializer
+    serializer_class = serializers.UserMediaSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = UserMediaFilter
 
@@ -979,5 +1052,17 @@ class UserMediaListView(generics.ListAPIView):
         return success_response(
             data=response.data,
             message=_("User media list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class RecalculatePointsAPIView(generics.GenericAPIView):
+    permission_classes = (IsSuperAdmin,)
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        from apps.user.tasks import recalculate_all_users_points_task
+        recalculate_all_users_points_task.delay()
+        return success_response(
+            message=_("Points recalculation has been initiated."),
             code=status.HTTP_200_OK
         )

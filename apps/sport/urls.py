@@ -11,6 +11,37 @@ urlpatterns = [
     path("team/", views.TeamListCreateView.as_view(), name='team-create-list'),
     path("team/<uuid:pk>/", views.TeamRetrieveUpdateDeleteView.as_view(), name='team-retrieve-update-delete'),
 
+    path(
+        "sport-institutions/",
+        views.SportInstitutionListCreateView.as_view(),
+        name='sport-institution-create-list'
+    ),
+    path(
+        "sport-institutions/<uuid:pk>/",
+        views.SportInstitutionRetrieveUpdateDeleteView.as_view(),
+        name='sport-institution-retrieve-update-delete'
+    ),
+    path(
+        "sport-institution-request/",
+        views.SportInstitutionRequestListCreateView.as_view(),
+        name='sport-institution-request-create-list'
+    ),
+    path(
+        "sport-institution-request/<uuid:pk>/",
+        views.SportInstitutionRequestRetrieveUpdateDeleteView.as_view(),
+        name='sport-institution-request-retrieve-update-delete'
+    ),
+    path(
+        "sport-institution/<uuid:pk>/users/",
+        views.SportInstitutionUsersListView.as_view(),
+        name='sport-institution-users-list'
+    ),
+    path(
+        "sport-institution/<uuid:pk>/media/",
+        views.SportInstitutionMediaListView.as_view(),
+        name='sport-institution-media-list'
+    ),
+
     path("", views.SportListCreateView.as_view(), name='sport-create-list'),
     path("<uuid:pk>/", views.SportRetrieveUpdateDeleteView.as_view(), name='sport-retrieve-update-delete'),
 ]

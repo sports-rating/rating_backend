@@ -20,8 +20,7 @@ from django.utils.translation import gettext as _
 
 from fcm_django.models import DeviceType, FCMDevice
 
-from apps.education.models import Education
-from apps.education.serializers import EducationCreateSerializer
+from apps.career.models import Education
 from apps.shared.models import District, Neighborhood, Region
 from apps.shared.utils import enums
 from apps.shared.utils.exceptions import raise_validation_error
@@ -30,15 +29,14 @@ from apps.shared.utils.general import get_file_full_url
 from apps.shared.utils.logging import logger
 from apps.shared.utils.notifications import send_notification_to_user
 from apps.shared.utils.utils import CorrectPath
-from apps.sport.models import Result, Sport, Tournament
+from apps.sport.models import Sport, Tournament
+from apps.career.models import Result
 from apps.federation.models import Federation
-from apps.sport.serializers import ResultCreateSerializer, SportSerializer
+from apps.career.serializers import ResultCreateSerializer, EducationSerializer
 from apps.user.models import (
     ArchivedTrainer, Sportsman, Trainer, User,
-    UserMedia, UserNotification, UserRequest,
-    WorkPlace
+    UserMedia, UserNotification, UserRequest
 )
-from apps.education.models import School
 from apps.user.utils import (
     calculate_sportsman_statistics,
     calculate_trainer_statistics
@@ -53,7 +51,6 @@ from apps.shared.utils.payloads import (
     SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
 )
 from apps.shared.serializers import (
-    TrainerWorkPlaceSnapshotSerializer,
     SportsmanResultSnapshotSerializer
 )
 
@@ -63,6 +60,7 @@ SEND_VERIFICATION_ACTION = (
     ("login", "login"),
     ("forgot_password", "forgot_password"),
     ("change_phone_number", "change_phone_number"),
+    ("sport_institution_verify", "sport_institution_verify"),
 )
 
 
@@ -125,22 +123,20 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
         return data
 
 
-class BaseMediaSerializer(serializers.ModelSerializer):
-    type = serializers.CharField(write_only=True, required=False)
-
+class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
     class Meta:
         model = UserMedia
         fields = (
             "id",
+            "user",
             "media_type",
             "size",
             "extension",
-            "created_time",
             "file",
-            "type",
             "is_profile_photo",
+            "created_time",
         )
-        read_only_fields = ["created_time", "size", "extension", "media_type"]
+        read_only_fields = ("id", "user", "media_type", "size", "extension", "created_time")
 
     def validate(self, data):
         """
@@ -156,18 +152,10 @@ class BaseMediaSerializer(serializers.ModelSerializer):
                     )
         return data
 
-    def create(self, validated_data):
-        model = self.context.get("model")
-        media_instance = model(**validated_data)
-        media_instance.save()
-        return media_instance
 
-
-class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
-    media = BaseMediaSerializer(many=True)
-    educations = EducationCreateSerializer(many=True, required=False)
+class BaseUserSerializer(serializers.ModelSerializer):
+    media = UserMediaSerializer(many=True)
     results = ResultCreateSerializer(many=True, required=False)
-    profile_photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -183,27 +171,57 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             "region",
             "district",
             "birth_date",
-            "is_superuser",
+            "media",
+            "results",
+            "user_role",
+            "is_verified",
+            "created_time",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        return data
+
+
+class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
+    media = UserMediaSerializer(many=True)
+    educations = EducationSerializer(many=True, required=False)
+    results = ResultCreateSerializer(many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "pinfl",
+            "phone_number",
+            "email",
+            "gender",
+            "region",
+            "district",
+            "birth_date",
             "media",
             "educations",
             "results",
             "user_role",
-            "profile_photo",
             "is_verified",
             "created_time",
         ]
-        read_only_fields = ["id", "created_time", "is_verified", "profile_photo"]
+        read_only_fields = ["id", "created_time", "is_verified", "user_role"]
 
-    def get_profile_photo(self, obj):
-        """
-        Returns the URL of the user's profile photo if it exists.
-        """
-        profile_photo = self.instance.media.filter(is_profile_photo=True).first()
-        if profile_photo:
-            return get_file_full_url(profile_photo.file.url)
-        return None
-
-    def to_representation(self, instance):
+    def to_representation(self, instance: User) -> dict:
         data = super().to_representation(instance)
         if instance.user_role == "sportsman":
             data["sportsman_profile"] = SportsmanProfileSerializer(instance.sportsman_profile, context=self.context).data
@@ -215,6 +233,13 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
                 "name": instance.federation.name,
                 "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
             } if instance.federation else None
+        elif instance.user_role == "sport_institution_admin":
+            data["sport_institution"] = {
+                "id": instance.sport_institution.id,
+                "name": instance.sport_institution.name,
+            }
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
         data["region"] = {
             "id": instance.region.id,
             "name": instance.region.name
@@ -256,7 +281,12 @@ class SportsmanListSerializer(serializers.ModelSerializer):
         return data
 
     def get_statistics(self, obj) -> Dict[str, Any]:
-        return calculate_sportsman_statistics(sportsman=obj)
+        return {
+            "total_gold": getattr(obj, "total_gold", 0),
+            "total_silver": getattr(obj, "total_silver", 0),
+            "total_bronze": getattr(obj, "total_bronze", 0),
+            "total_competitions": getattr(obj, "total_competitions", 0),
+        }
 
 
 class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerializer):
@@ -289,8 +319,6 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         read_only_fields = ["is_sportsman_verified", "is_result_paid", "statistics"]
 
     def validate(self, attrs: dict) -> dict:
-        height = attrs.get("height", None)
-        weight = attrs.get("weight", None)
         sport = attrs.get("sport", None)
         trainer = attrs.get("trainer", None)
         if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:
@@ -345,8 +373,8 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
         return instance
 
-    def get_statistics(self, obj) -> Dict[str, Any]:
-        return calculate_sportsman_statistics(sportsman=obj.user)
+    def get_statistics(self, obj: Sportsman) -> Dict[str, Any]:
+        return User.stats.get_sportsman_statistics(user=obj.user)
 
     def to_representation(self, instance: Sportsman) -> dict:
         data = super().to_representation(instance)
@@ -432,6 +460,13 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         return sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type, send_request
 
 
+class SportsmanUserSerializer(BaseUserSerializer):
+    sportsman_profile = SportsmanProfileSerializer()
+
+    class Meta(BaseUserSerializer.Meta):
+        fields = BaseUserSerializer.Meta.fields + ["sportsman_profile"]
+
+
 class TrainerListSerializer(serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
     # logo = serializers.SerializerMethodField()
@@ -461,7 +496,24 @@ class TrainerListSerializer(serializers.ModelSerializer):
         return data
 
     def get_statistics(self, obj) ->  List[Dict[str, Any]]:
-        return calculate_trainer_statistics(trainer=obj)
+        stats = {
+            "own_statistics": {
+                "gold": obj.own_total_gold,
+                "silver": obj.own_total_silver,
+                "bronze": obj.own_total_bronze,
+            },
+            "students_statistics": {
+                "gold": obj.students_total_gold,
+                "silver": obj.students_total_silver,
+                "bronze": obj.students_total_bronze,
+            },
+            "total_statistics": {
+                "gold": obj.own_total_gold + obj.students_total_gold,
+                "silver": obj.own_total_silver + obj.students_total_silver,
+                "bronze": obj.own_total_bronze + obj.students_total_bronze,
+            },
+        }
+        return stats
 
 
 class TrainerProfileSerializer(serializers.ModelSerializer):
@@ -545,8 +597,8 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
         return instance
 
-    def get_statistics(self, obj) -> Dict[str, Any]:
-        return calculate_trainer_statistics(trainer=obj.user)
+    def get_statistics(self, obj: Trainer) ->  List[Dict[str, Any]]:
+        return User.stats.get_trainer_statistics(user=obj.user)
 
     def to_representation(self, instance: Trainer) -> dict:
         data = super().to_representation(instance)
@@ -625,13 +677,20 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         return sender, trainer_data, new_federation, old_federation, send_request, message_from_sender, request_type, receivers
 
 
+class TrainerUserSerializer(BaseUserSerializer):
+    trainer_profile = TrainerProfileSerializer()
+
+    class Meta(BaseUserSerializer.Meta):
+        fields = BaseUserSerializer.Meta.fields + ["trainer_profile"]
+
+
 class RegistrationSerializer(serializers.ModelSerializer):
-    educations = EducationCreateSerializer(many=True, required=True)
+    educations = EducationSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
     sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    media = BaseMediaSerializer(many=True, required=False, read_only=True)
+    media = UserMediaSerializer(many=True, required=False, read_only=True)
 
     class Meta:
         model = User
@@ -938,8 +997,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
-    media = BaseMediaSerializer(many=True, required=False)
-    educations = EducationCreateSerializer(many=True, required=False)
+    media = UserMediaSerializer(many=True, required=False)
+    educations = EducationSerializer(many=True, required=False)
     results = ResultCreateSerializer(many=True, required=False)
     profile_photo = serializers.SerializerMethodField()
 
@@ -1142,6 +1201,8 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
             "message_from_receiver",
             "old_data",
             "new_data",
+            "processed_by",
+            "processed_time",
             "created_time",
         ]
         read_only_fields = ["id", "sender", "created_time"]
@@ -1200,6 +1261,14 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                     "is_national": federation.is_national,
                 } if federation else None
             }
+            data["processed_by"] = {
+                "federation": {
+                    "id": federation.id,
+                    "name": federation.name,
+                    "phone_number": federation.phone_number,
+                    "is_national": federation.is_national,
+                } if federation else None
+            }
         else:
             data["receiver"] = {
                 "id": receiver.id,
@@ -1207,6 +1276,12 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                 "user_role": receiver.user_role,
                 "phone_number": receiver.phone_number,
             }
+            data["processed_by"] = {
+                "id": instance.processed_by.id,
+                "full_name": instance.processed_by.full_name,
+                "phone_number": instance.processed_by.phone_number,
+            } if instance.processed_by else None
+        data["processed_time"] = instance.processed_time
         data.pop("receivers")
         return data
 
@@ -1225,6 +1300,8 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "archived_trainer_name",
             "year",
             "currently_participating",
+            "age_group",
+            "weight",
             "rating",
             "score",
             "message",
@@ -1238,17 +1315,19 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status", "score"]
 
     def validate(self, attrs: dict) -> dict:
-        sportsman: User = self.request.user # type: ignore
-        federation: Federation = sportsman.sportsman_profile.trainer.federation
+        user: User = self.request.user # type: ignore
+        federation: Federation = user.sportsman_profile.trainer.federation
         tournament = attrs.get("tournament", None)
         trainer = attrs.get("trainer", None)
         rating = attrs.get("rating", None)
         year = attrs.get("year", None)
+        age_group = attrs.get("age_group", None)
+        weight = attrs.get("weight", None)
         instance: Result = self.instance
         # if instance and tournament:
         #     if instance.tournament != tournament:
         #         raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
-        if Result.objects.filter(user=sportsman, tournament=tournament, trainer=trainer, year=year).exists():
+        if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
         if not trainer:
             raise_validation_error(message=_("You must specify a trainer to submit results."))
@@ -1260,21 +1339,9 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
         if rating and not tournament.scoring_policies.filter(position=rating).exists():
             raise_validation_error(message=_("Invalid rating for this tournament."))
-        if instance and Result.objects.exclude(pk=instance.pk).filter(user=sportsman, tournament=tournament, trainer=trainer, year=year).exists():
+        if instance and Result.objects.exclude(pk=instance.pk).filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
-        if UserRequest.objects.filter(
-            sender=sportsman,
-            status=enums.UserRequestStatus.PENDING.value,
-            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
-            federation=federation,
-        ).exists():
-            raise_validation_error(message=_("You already have a pending request!"))
         return attrs
-
-    # def create(self, validated_data: dict) -> Result:
-    #     sender: User = self.request.user  # type: ignore
-    #     result = self._save_result(sender, validated_data)
-    #     return result
 
     def create(self, validated_data: dict) -> t.Union[Result, UserRequest]:
         sender: User = self.request.user  # type: ignore
@@ -1306,55 +1373,6 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
 
         return user_request
 
-    def _save_result(self, sender, validated_data):
-        new_trainer = validated_data.pop("trainer", None)
-        archived_trainer_name = validated_data.pop("archived_trainer_name", None)
-        message_from_sender = validated_data.pop("message", None)
-
-        # Handle archived trainer case
-        if archived_trainer_name:
-            return self._handle_archived_trainer(sender, archived_trainer_name, validated_data)
-
-        # Handle trainer case (with snapshot + request if needed)
-        return self._handle_trainer(sender, new_trainer, validated_data, message_from_sender)
-
-    def _handle_archived_trainer(self, sender, archived_trainer_name, validated_data):
-        archived_trainer = ArchivedTrainer.objects.create(name=archived_trainer_name)
-        result = Result.objects.create(user=sender, archived_trainer=archived_trainer, **validated_data)
-        return result
-
-    @transaction.atomic
-    def _handle_trainer(self, sender, new_trainer, validated_data, message_from_sender):
-        rating = validated_data.pop("rating")
-        tournament: Tournament = validated_data.get("tournament", None)
-        score = tournament.get_score(rating) if tournament and rating else None
-        result: Result = None
-
-        if new_trainer:
-            result = Result.objects.create(user=sender, **validated_data)
-            _, new_snapshot, result_data = self._handle_snapshot(result, validated_data)
-
-            # Create result first
-            new_snapshot['score'] = str(score)
-            new_snapshot['id'] = str(result.id)
-            new_snapshot['rating'] = str(rating)
-
-            logger.info(f"New Snapshot: {new_snapshot}")  # LOGGING
-            # Create verification request
-            request_type = enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value
-            user_request, message, success = UserRequestService.create_request(
-                sender=sender,
-                receivers=User.objects.filter(id=new_trainer.user.id),
-                request_type=request_type,
-                old_data={},
-                new_data=new_snapshot,
-                message_from_sender=message_from_sender
-            )
-            if not success:
-                raise_validation_error(message=message)
-
-            return result
-
     def to_representation(self, instance: Result) -> t.Optional[dict]:
         if isinstance(instance, UserRequest):
             return UserRequestSerializer(instance).data
@@ -1373,107 +1391,12 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "id": instance.archived_trainer.id,
             "name": instance.archived_trainer.name,
         } if instance.archived_trainer else None
-        return data
-
-    # ----------------------------
-    # Helpers
-    # ----------------------------
-    def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
-        filtered = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                # Recursively filter nested dictionaries
-                filtered[k] = self._filter_critical_fields(v, critical_fields)
-            elif k not in critical_fields:
-                filtered[k] = v
-        return filtered
-
-    def _handle_snapshot(
-        self,
-        instance: Result,
-        result_data: dict
-    ) -> tuple[dict | None, dict | None, dict | None]:
-        critical_fields = SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
-
-        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-            model=instance,
-            data=result_data,
-            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value
-        )
-        result_data = self._filter_critical_fields(result_data, critical_fields)
-
-        return old_snapshot, new_snapshot, result_data
-
-
-class TrainerWorkPlaceSerializer(RequestContextMixin, serializers.ModelSerializer):
-    message = serializers.CharField(required=False, allow_blank=True, max_length=500)
-
-    class Meta:
-        model = WorkPlace
-        fields = [
-            "id",
-            "school",
-            "sport",
-            "message",
-            "created_time"
-        ]
-        read_only_fields = ["id", "created_time"]
-
-    def validate(self, attrs: dict) -> dict:
-        school: School = attrs.get("school")
-        sport: Sport = attrs.get("sport")
-        user = self.request.user  # type: ignore
-
-        if not school.sports.filter(id=sport.id).exists():
-            raise_validation_error(message=_("This sport is not offered by the selected school."))
-
-        if UserRequest.objects.filter(
-            sender=user,
-            request_type=enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
-            status=enums.UserRequestStatus.PENDING.value
-        ).exists():
-            raise_validation_error(message=_("You already have a pending workplace verification request."))
-
-        return super().validate(attrs)
-
-    def create(self, validated_data: dict) -> t.Union[WorkPlace, UserRequest]:
-        trainer: Trainer = self.request.user.trainer_profile  # type: ignore
-        message_from_sender: str | None = validated_data.pop("message", None)
-        federation: Federation = trainer.federation
-        receivers: QuerySet[User] = federation.users.filter(user_role="federation")
-
-        new_snapshot: dict = TrainerWorkPlaceSnapshotSerializer().to_new_snapshot(validated_data)
-
-        user_request: UserRequest = UserRequest.objects.create(
-            sender=trainer.user,
-            federation=federation,
-            request_type=enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
-            old_data={},
-            new_data=new_snapshot,
-            message_from_sender=message_from_sender
-        )
-        user_request.receivers.set(receivers)
-        user_request.save()
-        logger.info(f"UserRequest created: {user_request}")  # LOGGING
-        return user_request
-
-    def to_representation(self, instance: WorkPlace) -> t.Optional[dict]:
-        if isinstance(instance, UserRequest):
-            return UserRequestSerializer(instance).data
-        data = super().to_representation(instance)
-        data["school"] = {
-            "id": instance.school.id,
-            "name": instance.school.name,
-        } if instance.school else None
-        data["sport"] = {
-            "id": instance.sport.id,
-            "name": instance.sport.name,
-        } if instance.sport else None
-        processed_federation = instance.request.federation if instance.request else None
-        data["processed_by"] = {
-            "id": processed_federation.id if processed_federation else None,
-            "name": processed_federation.name if processed_federation else None
-        }
+        data["age_group"] = {
+            "id": instance.age_group.id,
+            "name": instance.age_group.age_group.name,
+            "min_age": instance.age_group.age_group.min_age,
+            "max_age": instance.age_group.age_group.max_age,
+        } if instance.age_group else None
         return data
 
 

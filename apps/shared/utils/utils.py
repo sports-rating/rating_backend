@@ -23,6 +23,7 @@ from rest_framework.response import Response
 from firebase_admin import messaging
 
 from apps.shared.utils.logging import logger
+from apps.shared.utils.payloads import create_sms_payload
 
 
 DATETIME_FORMAT: str = "%Y-%m-%d %H:%M:%S"
@@ -132,3 +133,16 @@ def handle_file_delete(instance, field_name):
     file = getattr(instance, field_name, None)
     if file and os.path.isfile(file.path):
         os.remove(file.path)
+
+
+def send_sms_message(phone_number: str, text: str) -> int:
+    response = requests.post(
+        settings.PLAY_MOBILE_URL,
+        json=create_sms_payload(phone_number, text),
+        auth=(settings.PLAY_MOBILE_LOGIN, settings.PLAY_MOBILE_PASSWORD),
+    )
+
+    if response.status_code != 200:
+        logger.error(f"Error on send_sms: {response.status_code=} {response.text=}")
+
+    return response.status_code

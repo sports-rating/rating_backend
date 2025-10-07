@@ -42,6 +42,32 @@ class IsAdminOrSuperAdmin(IsAuthenticated):
         )
 
 
+class IsFederationAdmin(IsAuthenticated):
+    message = _("You must be federation admin!")
+
+    def has_permission(self, request, view):
+        return bool(
+            super().has_permission(request, view)
+            and request.user.user_role in (
+                UserRoles.SUPER_ADMIN.value,
+                UserRoles.ADMIN.value,
+                UserRoles.FEDERATION.value,
+            )
+        )
+
+
+class IsSportInstitutionAdmin(IsAuthenticated):
+    message = _("You must be sport institution admin!")
+
+    def has_permission(self, request, view):
+        return bool(
+            super().has_permission(request, view)
+            and request.user.user_role in (
+                UserRoles.SPORT_INSTITUTION_ADMIN.value,
+            )
+        )
+
+
 class IsOrdinaryUser(IsAuthenticated):
     message = "You must be ordinary user"
 

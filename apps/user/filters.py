@@ -57,7 +57,8 @@ class UserNotificationFilter(BaseFilterSet):
 class UserRequestFilter(BaseFilterSet):
     REQUEST_ROLE_MAPPING = {
         "sportsman_trainer": UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value,
-        "sportsman_result": UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value
+        "sportsman_result": UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+        "trainer_workplace": UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value
     }
 
     status = filters.ChoiceFilter(choices=UserRequestStatus.choices())
@@ -68,12 +69,12 @@ class UserRequestFilter(BaseFilterSet):
         model = UserRequest
         fields = [
             "status",
-            "date"
+            "date",
+            "request_type"
         ]
 
     def filter_request_type(self, queryset, name, value):
         mapped_value = self.REQUEST_ROLE_MAPPING.get(value)
-        print(mapped_value)
         if mapped_value:
             return queryset.filter(request_type=mapped_value)
         return queryset

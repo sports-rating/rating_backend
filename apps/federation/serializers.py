@@ -96,6 +96,15 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             raise_validation_error(message=_(f"Invalid age group name format. Use {self.PATTERN_1}, {self.PATTERN_3}, or {self.PATTERN_2}."))
         return attrs
 
+    def to_representation(self, instance: AgeGroup) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        return data
+
 
 class FederationDocumentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -261,6 +270,12 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "receivers",
             "request_type",
             "status",
+            "message_from_sender",
+            "message_from_receiver",
+            "old_data",
+            "new_data",
+            "processed_by",
+            "processed_time",
             "created_time",
         ]
         read_only_fields = ["id", "sender", "created_time"]
@@ -306,6 +321,11 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "name": sport.name,
             "logo": get_file_full_url(sport.logo.url) if sport.logo else None
         } if sport else None
+        data["processed_by"] = {
+            "id": instance.processed_by.id,
+            "full_name": instance.processed_by.full_name,
+            "phone_number": instance.processed_by.phone_number,
+        } if instance.processed_by else None
         data.pop("receivers", None)
         return data
 
@@ -347,12 +367,19 @@ class FederationUserListSerializer(serializers.ModelSerializer):
             "name": sport.name,
             "logo": get_file_full_url(sport.logo.url) if sport.logo else None
         } if sport else None
-        data["trainer"] = {
-            "id": trainer.id,
-            "full_name": trainer.full_name,
-            "user_role": trainer.user_role,
-            "phone_number": trainer.phone_number,
-        } if trainer else None
+        if instance.user_role == enums.UserRoles.SPORTSMAN.value:
+            data["trainer"] = {
+                "id": trainer.id,
+                "full_name": trainer.full_name,
+                "user_role": trainer.user_role,
+                "phone_number": trainer.phone_number,
+            } if trainer else None
+            data["is_result_paid"] = instance.sportsman_profile.is_result_paid
+        elif instance.user_role == enums.UserRoles.TRAINER.value:
+            data["federation"] = {
+                "id": instance.trainer_profile.federation.id,
+                "name": instance.trainer_profile.federation.name
+            }
         return data
 
     def _get_sport(self, instance: User) -> t.Union[Sport, None]:
@@ -366,3 +393,17 @@ class FederationUserListSerializer(serializers.ModelSerializer):
         if instance.user_role == "sportsman":
             return instance.sportsman_profile.trainer.user
         return None
+
+
+class FederationAgeGroupSerializer(RequestContextMixin, serializers.ModelSerializer):
+    age_group = AgeGroupSerializer(read_only=True)
+
+    class Meta:
+        model = FederationAgeGroup
+        fields = [
+            "id",
+            "age_group",
+            "is_active",
+            "created_time"
+        ]
+        read_only_fields = ["id", "created_time"]

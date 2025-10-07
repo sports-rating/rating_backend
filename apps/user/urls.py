@@ -23,8 +23,6 @@ urlpatterns = [
 
     path("profile/trainer/", views.TrainerListCreateView.as_view(), name='trainer-register-list'),
     path("profile/trainer/<uuid:pk>/", views.TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-retrieve"),
-    path("profile/trainer/workplace/", views.TrainerWorkPlaceListCreateView.as_view(), name='trainer-workplace-list-create'),
-    # path("profile/trainer/workplace/<uuid:pk>/", views.TrainerWorkPlaceRetrieveUpdateDeleteView.as_view(), name='trainer-workplace-retrieve-update-delete'),
 
     path("profile/archived-trainer/", views.ArchivedTrainerCreateListView.as_view(), name='archived-trainer-register-list'),
     path("profile/archived-trainer/<uuid:pk>/", views.ArchivedTrainerRetrieveUpdateDeleteView.as_view(), name='archived-trainer-retrieve-update-delete'),
@@ -41,6 +39,8 @@ urlpatterns = [
     path("regions/", views.RegionListView.as_view(), name='region-list'),
     path("districts/", views.DistrictListView.as_view(), name='district-list'),
     path("neighborhoods/", views.NeighborhoodListView.as_view(), name='neighborhood-list'),
+
+    path("recalculate-points/", views.RecalculatePointsAPIView.as_view(), name='recalculate-points'),
 ]
 
 if settings.DEBUG:
