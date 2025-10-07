@@ -222,6 +222,7 @@ class ScoringService:
             for trainer in trainers:
                 results = trainer.assisted_results.all()
                 total_points = 0
+                trainer_points = 0
                 if not results.exists():
                     trainer.points = 0
                 else:
@@ -241,9 +242,9 @@ class ScoringService:
                     else:
                         trainer_points = total_points / distinct_sportsmen_count
 
-                    if trainer.points != total_points:
-                        logger.info(f"Updating points for trainer {trainer.user.username} from {trainer.points} to {total_points}")
-                        trainer.points = total_points
+                    if trainer.points != trainer_points:
+                        logger.info(f"Updating points for trainer {trainer.user.username} from {trainer.points} to {trainer_points}")
+                        trainer.points = trainer_points
 
                 trainer.save(update_fields=["points"])
 
