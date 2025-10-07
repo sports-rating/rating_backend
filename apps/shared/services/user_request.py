@@ -325,6 +325,7 @@ class UserRequestService:
             result = Result(
                 user=sender,
                 trainer=receiver.trainer_profile,
+                request=user_request,
                 is_verified=True,
                 status=enums.ResultVerificationStatus.VERIFIED.value, # remove this field later
                 **result_data

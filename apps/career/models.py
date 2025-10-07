@@ -123,6 +123,13 @@ class Result(BaseModel):
     additional_attributes = models.JSONField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=enums.ResultVerificationStatus.choices(), default=enums.ResultVerificationStatus.PENDING.value)
+    request = models.OneToOneField(
+        UserRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="requested_result"
+    )
 
     age_group = models.ForeignKey("federation.FederationAgeGroup", on_delete=models.SET_NULL, related_name="federation_results", blank=True, null=True)
     weight = models.CharField(max_length=10, null=True, blank=True)
