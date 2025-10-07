@@ -288,7 +288,7 @@ class ResultCreateSerializer(serializers.ModelSerializer):
         data["tournament_name"] = instance.tournament.name
 
         data["trainer_id"] = instance.trainer.user.id if instance.trainer else None
-        data["trainer_name"] = str(instance.trainer.user) if instance.trainer else None
+        data["trainer_name"] = str(instance.trainer.user.full_name) if instance.trainer else None
 
         data["archived_trainer_id"] = instance.archived_trainer.id if instance.archived_trainer else None
         data["archived_trainer_name"] = instance.archived_trainer.name if instance.archived_trainer else None
