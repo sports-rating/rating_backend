@@ -322,15 +322,6 @@ class UserRequestService:
             tournament: Tournament = result_data.get("tournament")
             logger.info(f"Requested rating: {requested_rating}")  # LOGGING
 
-            if requested_rating:
-                ScoringService.update_points(
-                    sportsman=sender,
-                    trainer=receiver,
-                    old_rating=None,
-                    tournament=tournament,
-                    new_rating=requested_rating,
-                )
-
             result = Result(
                 user=sender,
                 trainer=receiver.trainer_profile,
@@ -339,6 +330,15 @@ class UserRequestService:
                 **result_data
             )
             result.save()
+
+            if requested_rating:
+                ScoringService.update_points(
+                    sportsman=sender,
+                    trainer=receiver,
+                    old_rating=None,
+                    tournament=tournament,
+                    new_rating=requested_rating,
+                )
 
             notification_body = f"Your result verification request has been accepted."
             notification_data = {
