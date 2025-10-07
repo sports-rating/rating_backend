@@ -61,7 +61,7 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
 from apps.shared.utils import enums
-from apps.shared.utils.permissions import IsAdminOrSuperAdmin
+from apps.shared.utils.permissions import IsAdminOrSuperAdmin, IsSuperAdmin
 from apps.user.tasks import recalculate_user_points_task
 from apps.shared.services.scoring_service import ScoringService
 
@@ -1052,5 +1052,17 @@ class UserMediaListView(generics.ListAPIView):
         return success_response(
             data=response.data,
             message=_("User media list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class RecalculatePointsAPIView(generics.GenericAPIView):
+    permission_classes = (IsSuperAdmin,)
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        from apps.user.tasks import recalculate_all_users_points_task
+        recalculate_all_users_points_task.delay()
+        return success_response(
+            message=_("Points recalculation has been initiated."),
             code=status.HTTP_200_OK
         )

@@ -39,6 +39,8 @@ urlpatterns = [
     path("regions/", views.RegionListView.as_view(), name='region-list'),
     path("districts/", views.DistrictListView.as_view(), name='district-list'),
     path("neighborhoods/", views.NeighborhoodListView.as_view(), name='neighborhood-list'),
+
+    path("recalculate-points/", views.RecalculatePointsAPIView.as_view(), name='recalculate-points'),
 ]
 
 if settings.DEBUG:

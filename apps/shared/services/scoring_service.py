@@ -1,8 +1,8 @@
 from uuid import UUID
 
 from django.utils.translation import gettext_lazy as _
-from django.db.models import F, Count, Sum
-from django.db import transaction
+from django.db.models import F, Count, Sum, Prefetch
+from django.db import transaction, models
 from collections import defaultdict
 
 from apps.shared.utils.logging import logger
@@ -149,3 +149,59 @@ class ScoringService:
                     trainers_to_update.append(t)
                 if trainers_to_update:
                     Trainer.objects.bulk_update(trainers_to_update, ["points"])
+
+    @staticmethod
+    def recalculate_all_points() -> None:
+        """
+        Recalculate points for all sportsmen and their trainers.
+        """
+        from apps.user.models import Sportsman, Trainer
+        from apps.sport.models import Tournament
+        from apps.career.models import Result
+
+        with transaction.atomic():
+            # --- Step 1: Recalculate Sportsman Points ---
+            sportsmen = (
+                Sportsman.objects
+                .select_related("user")
+                .prefetch_related(
+                    Prefetch(
+                        "user__results",
+                        queryset=Result.objects.filter(is_verified=True)
+                        .select_related("tournament"),
+                        to_attr="verified_results"
+                    )
+                )
+            )
+
+            for sportsman in sportsmen:
+                total_points = 0
+                for result in getattr(sportsman.user, "verified_results", []):
+                    if result.tournament and result.rating:
+                        score = result.tournament.get_score(result.rating)
+                        total_points += float(score)
+
+                if sportsman.points != total_points:
+                    logger.info(f"Updating points for sportsman {sportsman.user.username} from {sportsman.points} to {total_points}")
+                    sportsman.points = total_points
+                    sportsman.save(update_fields=["points"])
+
+            logger.info(f"Recalculated points for {sportsmen.count()} sportsmen.")
+
+            # --- Step 2: Recalculate Trainer Points ---
+            trainers = Trainer.objects.prefetch_related("sportsmen")
+
+            for trainer in trainers:
+                sportsmen = trainer.sportsmen.all()
+                if not sportsmen.exists():
+                    trainer.points = 0
+                else:
+                    total_sportsman_points = sum(s.points for s in sportsmen)
+                    trainer_points = total_sportsman_points / sportsmen.count()
+                    if trainer.points != trainer_points:
+                        logger.info(f"Updating points for trainer {trainer.user.username} from {trainer.points} to {trainer_points}")
+                        trainer.points = trainer_points
+
+                trainer.save(update_fields=["points"])
+
+            logger.info(f"Recalculated points for {trainers.count()} trainers.")
