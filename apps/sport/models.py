@@ -63,6 +63,7 @@ class SportInstitution(BaseModel):
     phone_number = models.CharField(max_length=13)
     director = models.CharField(max_length=255, blank=True, null=True)
     type = models.CharField(max_length=50, choices=enums.SportInstitutionChoices.choices(), default=enums.SportInstitutionChoices.SPORT_SCHOOL.value)
+    work_time = models.CharField(max_length=100, null=True, blank=True)
 
     address = models.TextField(null=True, blank=True)
     latitude = models.FloatField(default="0.0")

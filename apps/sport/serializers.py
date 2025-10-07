@@ -116,6 +116,7 @@ class SportInstitutionSerializer(serializers.ModelSerializer):
             "phone_number",
             "director",
             "type",
+            "work_time",
             "address",
             "latitude",
             "longitude",
