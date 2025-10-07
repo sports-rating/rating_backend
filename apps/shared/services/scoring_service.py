@@ -189,18 +189,33 @@ class ScoringService:
             logger.info(f"Recalculated points for {sportsmen.count()} sportsmen.")
 
             # --- Step 2: Recalculate Trainer Points ---
-            trainers = Trainer.objects.prefetch_related("sportsmen")
+            trainers = Trainer.objects.prefetch_related("assisted_results")
 
             for trainer in trainers:
-                sportsmen = trainer.sportsmen.all()
-                if not sportsmen.exists():
+                results = trainer.assisted_results.all()
+                total_points = 0
+                if not results.exists():
                     trainer.points = 0
                 else:
-                    total_sportsman_points = sum(s.points for s in sportsmen)
-                    trainer_points = total_sportsman_points / sportsmen.count()
-                    if trainer.points != trainer_points:
-                        logger.info(f"Updating points for trainer {trainer.user.username} from {trainer.points} to {trainer_points}")
-                        trainer.points = trainer_points
+                    # Sum all result scores
+                    for result in results:
+                        if result.tournament and result.rating:
+                            score = result.score
+                            logger.info(f"Result {result.id} | Rating: {result.rating} | score: {score}")  # LOGGING
+                            total_points += float(score)
+
+                    # Count distinct sportsmen this trainer worked with
+                    distinct_sportsmen_count = results.values("user").distinct().count()
+
+                    # Avoid division by zero (if no valid sportsmen)
+                    if distinct_sportsmen_count == 0:
+                        trainer_points = 0
+                    else:
+                        trainer_points = total_points / distinct_sportsmen_count
+
+                    if trainer.points != total_points:
+                        logger.info(f"Updating points for trainer {trainer.user.username} from {trainer.points} to {total_points}")
+                        trainer.points = total_points
 
                 trainer.save(update_fields=["points"])
 
