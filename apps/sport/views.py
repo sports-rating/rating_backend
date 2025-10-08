@@ -104,7 +104,7 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self) -> Tournament:
         tournament_id: UUID = self.kwargs.get("pk")
-        tournament: Tournament = self.queryset.filter(tournament_id=tournament_id).first()
+        tournament: Tournament = self.queryset.filter(pk=tournament_id).first()
         if not tournament:
             raise_validation_error(message=_("Tournament not found"), code=status.HTTP_404_NOT_FOUND)
         return tournament
@@ -258,7 +258,7 @@ class TeamRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self) -> Team:
         team_id: UUID = self.kwargs.get("pk")
-        team: Team = self.queryset.filter(team_id=team_id).first()
+        team: Team = self.queryset.filter(pk=team_id).first()
         if not team:
             raise_validation_error(message=_("Team not found"), code=status.HTTP_404_NOT_FOUND)
         return team

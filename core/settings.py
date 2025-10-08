@@ -50,6 +50,7 @@ BACKEND_APPS = [
     "payment",
     "federation",
     "career",
+    "review",
 ]
 
 INTERNAL_APPS = [
