@@ -124,9 +124,16 @@ class SportInstitutionSerializer(serializers.ModelSerializer):
             "district",
             "sports",
             "media",
+            "rating",
+            "review_count",
             "created_time",
         ]
-        read_only_fields = ["id", "created_time"]
+        read_only_fields = [
+            "id",
+            "rating",
+            "review_count",
+            "created_time"
+        ]
 
     def validate(self, attrs: dict) -> dict:
         instance = getattr(self, 'instance', None)

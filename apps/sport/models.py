@@ -82,6 +82,8 @@ class SportInstitution(BaseModel):
         null=True,
         blank=True
     )
+    rating = models.FloatField(default=0.0)
+    review_count = models.PositiveIntegerField(default=0)
 
     sports = models.ManyToManyField(Sport, related_name='institutions')
 

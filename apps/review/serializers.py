@@ -7,7 +7,7 @@ from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
 from django.contrib.auth.models import update_last_login
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from django.conf import settings
 from django.core.files import File
 from django.contrib.contenttypes.models import ContentType
@@ -63,6 +63,7 @@ class CommentSerializer(RequestContextMixin, serializers.ModelSerializer):
 
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data: t.Dict) -> Comment:
         user = self.request.user
         sport_institution = validated_data.pop("sport_institution")
@@ -74,7 +75,20 @@ class CommentSerializer(RequestContextMixin, serializers.ModelSerializer):
         )
 
         # Optionally, you can update the average rating of the sport institution here
+        self._update_sport_institution_rating(sport_institution)
         return comment
+
+    def _update_sport_institution_rating(self, sport_institution: SportInstitution):
+        agg_result = Comment.objects.filter(
+            sport_institution=sport_institution
+        ).aggregate(avg_rating=Sum('rating'), count=Count('id'))
+
+        avg_rating = agg_result['avg_rating'] or 0
+        count = agg_result['count'] or 0
+
+        sport_institution.rating = round((avg_rating / count), 1) if count > 0 else 0
+        sport_institution.review_count = count
+        sport_institution.save()
 
     def to_representation(self, instance: Comment) -> t.Dict:
         data = super().to_representation(instance)
