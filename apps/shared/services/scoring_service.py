@@ -184,7 +184,7 @@ class ScoringService:
                         for result in results:
                             if result.tournament and result.rating:
                                 score = result.score
-                                logger.info(f"Result {result.id} | Rating: {result.rating} | score: {score}")  # LOGGING
+                                logger.info(f"Trainer: Result {result.id} | Rating: {result.rating} | score: {score}")  # LOGGING
                                 total_points += float(score)
                             else:
                                 logger.warning(f"Skipping result {result.id}: no rating")

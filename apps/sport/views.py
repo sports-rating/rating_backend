@@ -60,9 +60,16 @@ class TournamentListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self) -> QuerySet[Tournament]:
         name: str = self.request.query_params.get("name")
+        queryset = self.queryset.select_related(
+            "sport",
+            "federation"
+        ).prefetch_related(
+            "scoring_policies",
+            "tournament_results"
+        )
         if name:
-            return self.queryset.select_related("sport").filter(name__icontains=name)
-        return self.queryset.select_related("sport")
+            return queryset.filter(name__icontains=name)
+        return queryset
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -95,7 +102,13 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = serializers.TournamentSerializer
 
     def get_queryset(self) -> QuerySet[Tournament]:
-        return self.queryset.select_related("sport")
+        return self.queryset.select_related(
+            "sport",
+            "federation"
+        ).prefetch_related(
+            "scoring_policies",
+            "tournament_results"
+        )
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -104,7 +117,7 @@ class TournamentRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self) -> Tournament:
         tournament_id: UUID = self.kwargs.get("pk")
-        tournament: Tournament = self.queryset.filter(pk=tournament_id).first()
+        tournament: Tournament = self.get_queryset().filter(pk=tournament_id).first()
         if not tournament:
             raise_validation_error(message=_("Tournament not found"), code=status.HTTP_404_NOT_FOUND)
         return tournament
