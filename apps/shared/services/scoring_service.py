@@ -125,6 +125,7 @@ class ScoringService:
         from apps.career.models import Result
 
         with transaction.atomic():
+            logger.info(f"Recalculating points for tournament {tournament_id}")
             # 1) Who is impacted by this tournament's policy change?
             impacted_user_ids = list(
                 Result.objects
@@ -154,6 +155,7 @@ class ScoringService:
             sportsmen = list(Sportsman.objects.filter(user_id__in=points_by_user.keys()))
             for s in sportsmen:
                 s.points = points_by_user.get(s.user_id, 0.0)
+                logger.info(f"Setting points for sportsman {s.user.full_name} to {s.points}")
             Sportsman.objects.bulk_update(sportsmen, ["points"])
 
             # 5) Recompute trainer averages ONLY for trainers of impacted sportsmen
