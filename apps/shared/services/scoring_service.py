@@ -121,7 +121,8 @@ class ScoringService:
         Then recompute points for their trainers (average of sportsmen points).
         """
         from apps.user.models import Sportsman, Trainer
-        from apps.sport.models import Result, Tournament  # adjust import paths
+        from apps.sport.models import Tournament  # adjust import paths
+        from apps.career.models import Result
 
         with transaction.atomic():
             # 1) Who is impacted by this tournament's policy change?
@@ -167,15 +168,37 @@ class ScoringService:
                 trainers = (
                     Trainer.objects
                         .filter(user_id__in=trainer_ids)
-                        .annotate(
-                            total_points=Sum("sportsmen__points"),
-                            count=Count("sportsmen__user_id"),
-                        )
+                        .prefetch_related("assisted_results__tournament")
                 )
                 trainers_to_update = []
-                for t in trainers:
-                    t.points = round((t.total_points or 0) / (t.count or 1), 2) if t.count else 0
-                    trainers_to_update.append(t)
+                for trainer in trainers:
+                    results = trainer.assisted_results.filter(is_verified=True)
+                    total_points = 0
+                    if not results.exists():
+                        trainer.points = 0
+                        trainers_to_update.append(trainer)
+                    else:
+                        # Sum all result scores
+                        for result in results:
+                            if result.tournament and result.rating:
+                                score = result.score
+                                logger.info(f"Result {result.id} | Rating: {result.rating} | score: {score}")  # LOGGING
+                                total_points += float(score)
+                            else:
+                                logger.warning(f"Skipping result {result.id}: no rating")
+                                continue
+
+                        # Count distinct sportsmen this trainer worked with
+                        distinct_sportsmen_count = results.values("user").distinct().count()
+
+                        # Avoid division by zero (if no valid sportsmen)
+                        if distinct_sportsmen_count == 0:
+                            trainer.points = 0
+                        else:
+                            trainer.points = round((total_points / distinct_sportsmen_count), 2)
+
+                        trainers_to_update.append(trainer)
+
                 if trainers_to_update:
                     Trainer.objects.bulk_update(trainers_to_update, ["points"])
 
@@ -218,10 +241,10 @@ class ScoringService:
             logger.info(f"Recalculated points for {sportsmen.count()} sportsmen.")
 
             # --- Step 2: Recalculate Trainer Points ---
-            trainers = Trainer.objects.prefetch_related("assisted_results")
+            trainers = Trainer.objects.prefetch_related("assisted_results__tournament")
 
             for trainer in trainers:
-                results = trainer.assisted_results.all()
+                results = trainer.assisted_results.filter(is_verified=True)
                 total_points = 0
                 trainer_points = 0
                 if not results.exists():
