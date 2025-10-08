@@ -64,7 +64,10 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
     filterset_class = FederationFilter
 
     def get_queryset(self) -> QuerySet[Federation]:
-        return Federation.objects.prefetch_related(
+        return Federation.objects.select_related(
+            "region",
+            "parent_federation"
+        ).prefetch_related(
             Prefetch(
                 'age_group_links__age_group',
                 queryset=AgeGroup.objects.select_related('sport')
@@ -72,7 +75,9 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
             Prefetch(
                 'documents',
                 queryset=FederationDocument.objects.all()
-            )
+            ),
+            "users",
+            "sports"
         )
 
     def get_permissions(self):
@@ -108,6 +113,30 @@ class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIVie
     permission_classes = (IsAdminOrSuperAdmin,)
     serializer_class = serializer.FederationSerializer
     queryset = Federation.objects.all()
+
+    def get_queryset(self) -> QuerySet[Federation]:
+        return Federation.objects.select_related(
+            "region",
+            "parent_federation"
+        ).prefetch_related(
+            Prefetch(
+                'age_group_links__age_group',
+                queryset=AgeGroup.objects.select_related('sport')
+            ),
+            Prefetch(
+                'documents',
+                queryset=FederationDocument.objects.all()
+            ),
+            "users",
+            "sports"
+        )
+
+    def get_object(self):
+        federation_id: UUID = self.kwargs.get("pk")
+        federation: Federation = self.get_queryset().filter(pk=federation_id).first()
+        if not federation:
+            raise_validation_error(message=_("Federation not found"), code=status.HTTP_404_NOT_FOUND)
+        return federation
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -169,10 +198,15 @@ class FederationUserListAPIView(generics.ListAPIView):
         federation_id: UUID = self.kwargs.get('pk')
 
         base_qs = User.objects.exclude(user_role__in=["ordinary", "admin", "super_admin"]).select_related(
-            "sportsman_profile", "trainer_profile"
-        ).prefetch_related(
             "sportsman_profile__trainer",
-            "trainer_profile__federation"
+            "sportsman_profile__sport",
+            "trainer_profile__sport",
+            "trainer_profile__federation",
+            "region",
+            "district",
+        ).prefetch_related(
+            "media",
+            "results",
         )
 
         if federation_id:
@@ -263,7 +297,17 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
         federation_id: UUID = self.kwargs.get('pk')
         user: User = self.request.user  # type: ignore
 
-        queryset: QuerySet[UserRequest] = UserRequest.objects.filter(
+        queryset: QuerySet[UserRequest] = UserRequest.objects.select_related(
+            "sender__sportsman_profile__sport",
+            "sender__trainer_profile__sport",
+            "sender__trainer_profile__federation",
+            "sender__region",
+            "sender__district",
+            "federation",
+            "processed_by",
+        ).prefetch_related(
+            "receivers",
+        ).filter(
             receivers=user,
             federation_id=federation_id
         )
@@ -289,7 +333,13 @@ class FederationTournamentListAPIView(generics.ListAPIView):
 
     def get_queryset(self) -> QuerySet[Tournament]:
         federation_id: UUID = self.kwargs.get('pk')
-        return Tournament.objects.filter(federation_id=federation_id)
+        return Tournament.objects.select_related(
+            "sport",
+            "federation"
+        ).prefetch_related(
+            "scoring_policies",
+            "tournament_results"
+        ).filter(federation_id=federation_id)
 
     def list(self, request: Request, *args, **kwargs) -> Response:
         response: Response = super().list(request, *args, **kwargs)
@@ -327,7 +377,10 @@ class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
 
     def get_queryset(self) -> QuerySet[FederationAgeGroup]:
         federation_id: UUID = self.kwargs.get('pk')
-        return FederationAgeGroup.objects.filter(
+        return FederationAgeGroup.objects.select_related(
+            "age_group__sport",
+            "federation"
+        ).filter(
             federation_id=federation_id
         ).select_related('age_group__sport')
 
@@ -347,6 +400,16 @@ class AgeGroupRetrieveUpdateDeleteAPIView(generics.RetrieveAPIView):
     )
     serializer_class = serializer.AgeGroupSerializer
     queryset = AgeGroup.objects.all()
+
+    def get_queryset(self) -> QuerySet[AgeGroup]:
+        return AgeGroup.objects.select_related('sport')
+
+    def get_object(self) -> AgeGroup:
+        age_group_id: UUID = self.kwargs.get('pk')
+        age_group = self.get_queryset().filter(pk=age_group_id).first()
+        if not age_group:
+            raise_validation_error(message=_("Age Group not found"), code=status.HTTP_404_NOT_FOUND)
+        return age_group
 
     def get_serializer_context(self) -> dict[str, t.Any]:
         context = super().get_serializer_context()

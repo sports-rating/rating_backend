@@ -228,15 +228,24 @@ class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         return self.serializer_class
 
     def get_queryset(self):
-        return self.queryset.select_related(
+        return User.objects.select_related(
             "sportsman_profile__sport",
-            "sportsman_profile__trainer",
+            "sportsman_profile__trainer__user",
+            "sportsman_profile__trainer__sport",
+            "sportsman_profile__trainer__federation",
             "trainer_profile__sport",
             "region",
             "district",
         ).prefetch_related(
-            "media",
-            "results",
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
+            Prefetch(
+                "results",
+                queryset=Result.objects.select_related("trainer", "tournament", "archived_trainer"),
+            ),
         )
 
     def get_object(self):
@@ -388,9 +397,7 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = serializers.UserUpdateSerializer
 
     def get_queryset(self):
-        queryset = User.stats.with_sportsman_statistics().filter(
-            user_role='sportsman'
-        ).select_related(
+        queryset = User.stats.with_sportsman_statistics().select_related(
             'sportsman_profile__sport',
             'sportsman_profile__trainer__user',
             'sportsman_profile__trainer__sport',
@@ -405,9 +412,11 @@ class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             ),
             Prefetch(
                 "results",
-                queryset=Result.objects.select_related("trainer", "tournament", "archived_trainer"),
+                queryset=Result.objects.select_related("user", "trainer", "tournament", "archived_trainer", "age_group__age_group"),
             ),
-        )
+        ).filter(
+            user_role='sportsman'
+        ).distinct()  # Add this line
         return queryset
 
     def get_serializer_class(self):
