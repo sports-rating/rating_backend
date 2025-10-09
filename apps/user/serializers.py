@@ -99,6 +99,19 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
             user = User.objects.filter(phone_number=phone_number).first()
             if not user:
                 raise_validation_error(message=_("User not found"))
+
+            data = {
+                'tokens': user.tokens(),
+                'user_role': user.user_role,
+            }
+            if user.user_role == enums.UserRoles.SPORTSMAN.value:
+                if getattr(user, "sportsman_profile", None):
+                    print('here')
+                    data["is_sportsman_verified"] = user.sportsman_profile.is_sportsman_verified
+            elif user.user_role == enums.UserRoles.TRAINER.value:
+                if getattr(user, "trainer_profile", None):
+                    data["is_trainer_verified"] = user.trainer_profile.is_trainer_verified
+
             if fcm_token:
                 FCMDevice.objects.update_or_create(
                     registration_id=fcm_token,
@@ -108,10 +121,7 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
                         'active': True,
                     }
                 )
-            return {
-                'tokens': user.tokens(),
-                'user_role': user.user_role
-            }
+            return data
         return None
 
     def to_representation(self, instance):
@@ -120,6 +130,10 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
             user_data = self.get_tokens()
             data["tokens"] = user_data.get('tokens')
             data["user_role"] = user_data.get('user_role')
+            if 'is_sportsman_verified' in user_data:
+                data['is_sportsman_verified'] = user_data.get('is_sportsman_verified')
+            elif 'is_trainer_verified' in user_data:
+                data['is_trainer_verified'] = user_data.get('is_trainer_verified')
         return data
 
 
