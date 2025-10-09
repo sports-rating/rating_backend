@@ -894,7 +894,6 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
         "receivers__first_name",
         "receivers__last_name",
         "request_type",
-        "message",
     ]
 
     def get_serializer_context(self):
@@ -912,10 +911,17 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         req_type = self.request.query_params.get("type")
+        queryset = UserRequest.objects.select_related(
+            "sender",
+            "federation",
+            "processed_by",
+        ).prefetch_related(
+            "receivers",
+        )
         if req_type == "sent":
-            return UserRequest.objects.filter(sender=self.request.user)
+            return queryset.filter(sender=self.request.user)
         elif req_type == "received":
-            return UserRequest.objects.filter(receivers=self.request.user)
+            return queryset.filter(receivers=self.request.user)
         return super().get_queryset()
 
     def create(self, request, *args, **kwargs):
