@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 from django.conf import settings
+from datetime import datetime
 
 from apps.shared.utils.logging import logger
 from core.celery import app
@@ -11,7 +12,7 @@ def compress_video_async(video_path: str, media_id: str) -> None:
     """
     Asynchronous task to compress a video file using ffmpeg.
     """
-
+    start = datetime.now()
     logger.info(f"Starting compression for video: {video_path}")
     input_path = Path(settings.MEDIA_ROOT) / video_path
     output_path = input_path.with_name(f"compressed_{input_path.name}")
@@ -33,7 +34,9 @@ def compress_video_async(video_path: str, media_id: str) -> None:
         after = output_path.stat().st_size
         reduction = 100 * (before - after) / before if before > 0 else 0
 
-        logger.info(f"Media: {media_id} | Compressed from {before/1e6:.2f}MB to {after/1e6:.2f}MB ({reduction:.1f}% smaller)")
+        end = datetime.now()
+        duration = (end - start).total_seconds()
+        logger.info(f"Media: {media_id} | {duration:.2f} seconds | Compressed from {before/1e6:.2f}MB to {after/1e6:.2f}MB ({reduction:.1f}% smaller)")
         # Optionally, replace the original file with the compressed one
         input_path.unlink()  # Remove original file
         output_path.rename(input_path)  # Rename compressed file to original name
