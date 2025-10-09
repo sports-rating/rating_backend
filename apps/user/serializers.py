@@ -106,7 +106,6 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
             }
             if user.user_role == enums.UserRoles.SPORTSMAN.value:
                 if getattr(user, "sportsman_profile", None):
-                    print('here')
                     data["is_sportsman_verified"] = user.sportsman_profile.is_sportsman_verified
             elif user.user_role == enums.UserRoles.TRAINER.value:
                 if getattr(user, "trainer_profile", None):
