@@ -57,6 +57,9 @@ from apps.shared.utils.utils import (
     success_response,
     error_response,
 )
+from apps.shared.tasks import (
+    compress_video_async,
+)
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
@@ -711,6 +714,10 @@ class MediaUploadView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self._handle_media(request, serializer)
+        media_instance = serializer.instance
+        if media_instance.media_type == enums.MediaChoices.VIDEO.value:
+            media_file_path = media_instance.media.path
+            compress_video_async.delay(media_id=media_instance.id, media_file_path=media_file_path)
         return success_response(
             data=serializer.data,
             message="Media uploaded successfully",
