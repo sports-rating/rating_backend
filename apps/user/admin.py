@@ -188,8 +188,10 @@ class TrainerAdmin(admin.ModelAdmin):
 
 @admin.register(UserMedia)
 class UserMediaAdmin(admin.ModelAdmin):
-    list_display = ["id", "media_type", "size", "extension"]
+    list_display = ["id", "media_type", "size", "extension", "created_time"]
     list_filter = ["media_type", "extension"]
+    search_fields = ["id", "file", "extension"]
+    ordering = ["-created_time"]
 
 
 @admin.register(ArchivedTrainer)
