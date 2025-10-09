@@ -163,6 +163,8 @@ class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
                     raise_validation_error(
                         message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
                     )
+        else:
+            raise_validation_error(message=_("File is required"))
         return data
 
 
