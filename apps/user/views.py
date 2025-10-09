@@ -894,7 +894,6 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
         "receivers__first_name",
         "receivers__last_name",
         "request_type",
-        "message",
     ]
 
     def get_serializer_context(self):
@@ -910,12 +909,19 @@ class UserRequestListCreateView(generics.ListCreateAPIView):
         elif request_type == "federation_admin_request":
             return _("You cannot create a new request while you have a pending federation admin request.")
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[UserRequest]:
         req_type = self.request.query_params.get("type")
+        queryset = UserRequest.objects.select_related(
+            "sender",
+            "federation",
+            "processed_by",
+        ).prefetch_related(
+            "receivers",
+        )
         if req_type == "sent":
-            return UserRequest.objects.filter(sender=self.request.user)
+            return queryset.filter(sender=self.request.user)
         elif req_type == "received":
-            return UserRequest.objects.filter(receivers=self.request.user)
+            return queryset.filter(receivers=self.request.user)
         return super().get_queryset()
 
     def create(self, request, *args, **kwargs):
@@ -945,8 +951,17 @@ class UserRequestRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView)
     queryset = UserRequest.objects.all()
     serializer_class = serializers.UserRequestSerializer
 
-    def get_object(self):
-        user_request = self.queryset.filter(pk=self.kwargs.get("pk")).first()
+    def get_queryset(self) -> QuerySet[UserRequest]:
+        return UserRequest.objects.select_related(
+            "sender",
+            "federation",
+            "processed_by",
+        ).prefetch_related(
+            "receivers",
+        )
+
+    def get_object(self) -> UserRequest:
+        user_request = self.get_queryset().filter(pk=self.kwargs.get("pk")).first()
         if not user_request:
             raise_validation_error(message=_("User Request not found"), code=status.HTTP_404_NOT_FOUND)
         return user_request
