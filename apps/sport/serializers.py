@@ -522,8 +522,10 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
         return sport_institution
 
     def _create_sport_institution_admin(self, request: SportInstitutionRequest, sport_institution: SportInstitution) -> User:
-        # Create a user for the sport institution manager
-        # password = User.objects.make_random_password()
+        phone_number = request.manager_phone_number
+        if User.objects.filter(phone_number=phone_number).exists():
+            logger.error(f"Sport Institution Request | User with phone number {phone_number} already exists.")
+            raise_validation_error(message=_(f"User with phone number {phone_number} already exists."))
         user = User(
             first_name=request.manager_first_name,
             last_name=request.manager_last_name,
