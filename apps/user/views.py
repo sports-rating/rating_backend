@@ -717,7 +717,7 @@ class MediaUploadView(generics.CreateAPIView):
         media_instance = serializer.instance
         if media_instance.media_type == enums.MediaChoices.VIDEO.value:
             logger.info(f"Scheduling video compression for media ID {media_instance.id}")
-            media_file_path = media_instance.media.path
+            media_file_path = media_instance.file.path
             logger.info(f"Media file path: {media_file_path}")
             compress_video_async.delay(media_id=media_instance.id, media_file_path=media_file_path)
         return success_response(
