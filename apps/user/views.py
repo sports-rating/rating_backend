@@ -716,13 +716,10 @@ class MediaUploadView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         self._handle_media(request, serializer)
         media_instance = serializer.instance
-        relative_path = get_file_relative_path(media_instance.file)
-        video_path = get_container_path(relative_path)
-        logger.info(f"Media file saved at: {video_path}")
+
         if media_instance.media_type == enums.MediaChoices.VIDEO.value:
             logger.info(f"Scheduling video compression for media ID {media_instance.id}")
-            logger.info(f"Media file path: {video_path}")
-            compress_video_async.delay(media_id=media_instance.id, video_path=video_path)
+            compress_video_async.delay(media_id=media_instance.id)
         return success_response(
             data=serializer.data,
             message="Media uploaded successfully",

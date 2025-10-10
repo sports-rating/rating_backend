@@ -1,19 +1,30 @@
 import subprocess
 import os
-
 from pathlib import Path
-from django.conf import settings
 from datetime import datetime
 
-from apps.shared.utils.logging import logger
+from django.conf import settings
+
 from core.celery import app
+
+from apps.shared.utils.logging import logger
+from apps.user.models import UserMedia
+from apps.shared.utils.general import get_file_relative_path, get_container_path
 
 
 @app.task
-def compress_video_async(video_path: str, media_id: str) -> None:
+def compress_video_async(media_id: str) -> None:
     """
     Asynchronous task to compress a video file using ffmpeg.
     """
+    media = UserMedia.objects.filter(id=media_id).first()
+    if not media:
+        logger.error(f"Media with ID {media_id} not found.")
+        return
+
+    relative_path = get_file_relative_path(media.file)
+    video_path = get_container_path(relative_path)
+
     start = datetime.now()
     logger.info(f"Starting compression for video: {video_path}")
 
@@ -56,17 +67,22 @@ def compress_video_async(video_path: str, media_id: str) -> None:
             return
 
         logger.info(f"Starting compression...")
-        before = input_path.stat().st_size
+        original_size = input_path.stat().st_size
         subprocess.run(command, check=True)
-        after = output_path.stat().st_size
-        reduction = 100 * (before - after) / before if before > 0 else 0
+        compressed_size = output_path.stat().st_size
 
-        end = datetime.now()
-        duration = (end - start).total_seconds()
-        logger.info(f"Media: {media_id} | {duration:.2f} seconds | Compressed from {before/1e6:.2f}MB to {after/1e6:.2f}MB ({reduction:.1f}% smaller)")
         # Optionally, replace the original file with the compressed one
         input_path.unlink()  # Remove original file
         output_path.rename(input_path)  # Rename compressed file to original name
+
+        media.size = compressed_size
+        media.save(update_fields=['size'])
+
+        reduction = 100 * (original_size - compressed_size) / original_size if original_size > 0 else 0
+        end = datetime.now()
+        duration = (end - start).total_seconds()
+        logger.info(f"Media: {media_id} | {duration:.2f} seconds | Compressed from {original_size/1e6:.2f}MB to {compressed_size/1e6:.2f}MB ({reduction:.1f}% smaller)")
+
     except subprocess.CalledProcessError as e:
         # Handle errors in compression
         logger.error(f"Media: {media_id} | Error compressing video: {e}")
