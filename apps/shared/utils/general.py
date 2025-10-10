@@ -39,16 +39,31 @@ def get_file_full_url(url: str) -> str:
     return f"{settings.BACKEND_URL.rstrip('/')}/{url}"
 
 
-def get_file_full_path(file) -> t.Optional[str]:
+def get_file_relative_path(file) -> str:
     """
-    Get the full path of a file.
-
-    :param file: FileField or ImageField instance
-    :return: Full path as a string or None if file is None
+    Get relative path from media root (media/filename.mp4)
+    This works everywhere because it's relative
     """
     if not file:
         return None
-    return os.path.join(settings.MEDIA_ROOT, str(file))
+    return file.name
+
+
+def get_container_path(relative_path: str) -> str:
+    """
+    Convert relative path to absolute path in current container
+    """
+
+    if relative_path.startswith('media/'):
+        relative_path = relative_path[6:]
+
+    if os.path.exists('/app/media'):
+        return f"/app/media/{relative_path}"
+    elif os.path.exists('/media'):
+        return f"/media/{relative_path}"
+    else:
+        # Fallback to Django's MEDIA_ROOT
+        return os.path.join(settings.MEDIA_ROOT, relative_path)
 
 
 def calculate_file_size(size) -> str:

@@ -60,7 +60,7 @@ from apps.shared.utils.utils import (
 from apps.shared.tasks import (
     compress_video_async,
 )
-from apps.shared.utils.general import get_file_full_path
+from apps.shared.utils.general import get_file_relative_path, get_container_path
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
@@ -716,12 +716,13 @@ class MediaUploadView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         self._handle_media(request, serializer)
         media_instance = serializer.instance
-        file_path = get_file_full_path(media_instance)
-        logger.info(f"Media file saved at: {file_path}")
+        relative_path = get_file_relative_path(media_instance.file)
+        video_path = get_container_path(relative_path)
+        logger.info(f"Media file saved at: {video_path}")
         if media_instance.media_type == enums.MediaChoices.VIDEO.value:
             logger.info(f"Scheduling video compression for media ID {media_instance.id}")
-            logger.info(f"Media file path: {file_path}")
-            compress_video_async.delay(media_id=media_instance.id, video_path=file_path)
+            logger.info(f"Media file path: {video_path}")
+            compress_video_async.delay(media_id=media_instance.id, video_path=video_path)
         return success_response(
             data=serializer.data,
             message="Media uploaded successfully",

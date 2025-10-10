@@ -1,4 +1,6 @@
 import subprocess
+import os
+
 from pathlib import Path
 from django.conf import settings
 from datetime import datetime
@@ -14,7 +16,23 @@ def compress_video_async(video_path: str, media_id: str) -> None:
     """
     start = datetime.now()
     logger.info(f"Starting compression for video: {video_path}")
-    input_path = Path(settings.MEDIA_ROOT) / video_path
+
+    # Fix: Use container-aware path resolution
+    if video_path.startswith('media/'):
+        filename = video_path[6:]
+    else:
+        filename = video_path
+
+    # Determine the correct input path based on current container
+    if os.path.exists('/app/media'):
+        input_path = Path('/app/media') / filename
+    elif os.path.exists('/media'):
+        input_path = Path('/media') / filename
+    else:
+        # Fallback to MEDIA_ROOT (local development)
+        input_path = Path(settings.MEDIA_ROOT) / filename
+
+
     output_path = input_path.with_name(f"compressed_{input_path.name}")
 
     command = [
@@ -29,6 +47,11 @@ def compress_video_async(video_path: str, media_id: str) -> None:
     ]
 
     try:
+        # Check if input file exists
+        if not input_path.exists():
+            logger.error(f"Media: {media_id} | Input file not found: {input_path}")
+            return
+
         before = input_path.stat().st_size
         subprocess.run(command, check=True)
         after = output_path.stat().st_size
@@ -43,3 +66,7 @@ def compress_video_async(video_path: str, media_id: str) -> None:
     except subprocess.CalledProcessError as e:
         # Handle errors in compression
         logger.error(f"Media: {media_id} | Error compressing video: {e}")
+    except FileNotFoundError as e:
+        logger.error(f"Media: {media_id} | File not found: {e}")
+    except Exception as e:
+        logger.error(f"Media: {media_id} | Unexpected error: {e}")
