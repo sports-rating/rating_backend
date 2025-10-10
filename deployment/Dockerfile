@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libmagic1 file && \
+    apt-get install -y --no-install-recommends gcc libmagic-dev file && \
     rm -rf /var/lib/apt/lists/*
 
 # RUN apt-get update && \
