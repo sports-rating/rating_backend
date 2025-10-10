@@ -1,5 +1,6 @@
 from attrs import field
 import openpyxl
+import typing as t
 
 import logging
 import os
@@ -27,7 +28,7 @@ from apps.shared.utils.enums import (
 from apps.shared.utils.utils import send_sms_message
 
 
-def get_file_full_url(url):
+def get_file_full_url(url: str) -> str:
     """
     Get the full URL of a file.
     """
@@ -38,7 +39,19 @@ def get_file_full_url(url):
     return f"{settings.BACKEND_URL.rstrip('/')}/{url}"
 
 
-def calculate_file_size(size):
+def get_file_full_path(file) -> t.Optional[str]:
+    """
+    Get the full path of a file.
+
+    :param file: FileField or ImageField instance
+    :return: Full path as a string or None if file is None
+    """
+    if not file:
+        return None
+    return os.path.join(settings.MEDIA_ROOT, str(file))
+
+
+def calculate_file_size(size) -> str:
     """
     Calculate the file size in a human-readable format.
     """
