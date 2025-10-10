@@ -20,20 +20,21 @@ def compress_video_async(video_path: str, media_id: str) -> None:
     # Fix: Use container-aware path resolution
     if video_path.startswith('media/'):
         filename = video_path[6:]
+        logger.info(f"Here 1")
     else:
         filename = video_path
+        logger.info(f"Here 2")
 
     # Determine the correct input path based on current container
     if os.path.exists('/app/media'):
         input_path = Path('/app/media') / filename
-    elif os.path.exists('/media'):
-        input_path = Path('/media') / filename
     else:
         # Fallback to MEDIA_ROOT (local development)
         input_path = Path(settings.MEDIA_ROOT) / filename
-
+    logger.info(f"Input path: {input_path}")
 
     output_path = input_path.with_name(f"compressed_{input_path.name}")
+    logger.info(f"Output path: {output_path}")
 
     command = [
         'ffmpeg',
@@ -52,6 +53,7 @@ def compress_video_async(video_path: str, media_id: str) -> None:
             logger.error(f"Media: {media_id} | Input file not found: {input_path}")
             return
 
+        logger.info(f"Starting compression...")
         before = input_path.stat().st_size
         subprocess.run(command, check=True)
         after = output_path.stat().st_size
