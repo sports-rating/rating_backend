@@ -25,7 +25,8 @@ FROM python:3.11-slim-bookworm AS final
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libmagic1 file
 
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
