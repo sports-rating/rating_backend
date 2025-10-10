@@ -193,7 +193,7 @@ class UserMediaAdmin(admin.ModelAdmin):
     list_filter = ["media_type", "extension"]
     search_fields = ["id", "file", "extension"]
     ordering = ["-created_time"]
-    readonly_fields = ["file_size", "created_time"]
+    readonly_fields = ["file_size", "created_time", "updated_time"]
 
     @admin.display(description="File Size")
     def file_size(self, obj):
