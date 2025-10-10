@@ -113,16 +113,16 @@ services:
       tail -f /dev/null
       "
 
-  ffmpeg:
-    image: jrottenberg/ffmpeg:6.0-ubuntu
-    container_name: ffmpeg
-    restart: unless-stopped
-    volumes:
-      - /var/www/media:/app/media
-    networks:
-      - backend
-    working_dir: /app/media
-    entrypoint: ["tail", "-f", "/dev/null"]
+  # ffmpeg:
+  #   image: jrottenberg/ffmpeg:6.0-ubuntu
+  #   container_name: ffmpeg
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /var/www/media:/app/media
+  #   networks:
+  #     - backend
+  #   working_dir: /app/media
+  #   entrypoint: ["tail", "-f", "/dev/null"]
 
 volumes:
   postgres_data:
