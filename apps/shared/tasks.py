@@ -38,12 +38,14 @@ def compress_video_async(video_path: str, media_id: str) -> None:
 
     command = [
         'ffmpeg',
+        '-loglevel', 'error',  # Show only errors
         "-i", str(input_path),
         "-vcodec", "libx264",
         "-crf", "28",          # 23 = high quality, 28 = smaller file
         "-preset", "veryfast", # tradeoff: slower = smaller
         "-acodec", "aac",
         "-b:a", "128k",
+        '-y',  # Overwrite output file without asking
         str(output_path)
     ]
 
