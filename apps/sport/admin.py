@@ -11,6 +11,7 @@ from apps.sport.models import (
     SportInstitutionMedia,
     SportInstitutionRequest,
 )
+from apps.shared.utils.general import calculate_file_size
 
 
 @admin.register(Tournament)
@@ -81,7 +82,7 @@ class SportInstitutionMediaAdmin(admin.ModelAdmin):
     list_display = ["id", "sport_institution_obj", "file", "media_type", "created_time"]
     search_fields = ["sport_institution__name", "media_type"]
     list_filter = ["media_type", "created_time"]
-    readonly_fields = ["created_time", "sport_institution_obj"]
+    readonly_fields = ["created_time", "sport_institution_obj", "file_size"]
 
     @admin.display(description="Sport Institution")
     def sport_institution_obj(self, obj):
@@ -89,6 +90,10 @@ class SportInstitutionMediaAdmin(admin.ModelAdmin):
             url = reverse("admin:sport_sportinstitution_change", args=[obj.sport_institution.id])
             return format_html('<a href="{}">{}</a>', url, obj.sport_institution.name)
         return "N/A"
+
+    @admin.display(description="File Size")
+    def file_size(self, obj):
+        return calculate_file_size(obj.size)
 
 
 @admin.register(Team)

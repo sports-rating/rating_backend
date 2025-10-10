@@ -18,6 +18,7 @@ from apps.shared.models import (
     Neighborhood,
 )
 from apps.shared.utils.general import get_file_full_url
+from apps.shared.utils.general import calculate_file_size
 
 
 @admin.register(User)
@@ -192,6 +193,11 @@ class UserMediaAdmin(admin.ModelAdmin):
     list_filter = ["media_type", "extension"]
     search_fields = ["id", "file", "extension"]
     ordering = ["-created_time"]
+    readonly_fields = ["file_size", "created_time"]
+
+    @admin.display(description="File Size")
+    def file_size(self, obj):
+        return calculate_file_size(obj.size)
 
 
 @admin.register(ArchivedTrainer)
