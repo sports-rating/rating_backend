@@ -719,7 +719,7 @@ class MediaUploadView(generics.CreateAPIView):
             logger.info(f"Scheduling video compression for media ID {media_instance.id}")
             media_file_path = media_instance.file.path
             logger.info(f"Media file path: {media_file_path}")
-            compress_video_async.delay(media_id=media_instance.id, media_file_path=media_file_path)
+            compress_video_async.delay(media_id=media_instance.id, video_path=media_file_path)
         return success_response(
             data=serializer.data,
             message="Media uploaded successfully",
