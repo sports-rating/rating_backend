@@ -1,6 +1,7 @@
-from decimal import Decimal, InvalidOperation
 import typing as t
+import os
 
+from decimal import Decimal, InvalidOperation
 from datetime import date
 from typing import Any, Dict, List
 
@@ -44,6 +45,7 @@ from apps.user.utils import (
 from apps.shared.services.user_request import UserRequestService
 from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.services.scoring_service import ScoringService
+from apps.shared.serializers import BaseMediaSerializer
 from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.payloads import (
     SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
@@ -136,7 +138,7 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
         return data
 
 
-class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
+class UserMediaSerializer(BaseMediaSerializer):
     class Meta:
         model = UserMedia
         fields = (
@@ -151,21 +153,8 @@ class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
         )
         read_only_fields = ("id", "user", "media_type", "size", "extension", "created_time")
 
-    def validate(self, data):
-        """
-        Validate the file size for PDFs
-        """
-        file = data.get("file")
-        if file:
-            if file.name.lower().endswith(".pdf"):
-                if file.size > settings.MAX_PDF_SIZE_BYTES:
-                    size_in_mb = file.size / (1024 * 1024)
-                    raise_validation_error(
-                        message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
-                    )
-        else:
-            raise_validation_error(message=_("File is required"))
-        return data
+    def validate(self, data) -> dict:
+        return super().validate(data)
 
 
 class BaseUserSerializer(serializers.ModelSerializer):

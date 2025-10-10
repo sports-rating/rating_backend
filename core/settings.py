@@ -455,11 +455,17 @@ VERIFICATION_CODE_LENGTH: int = 6
 
 # IMAGE configuration
 IMAGE_DIMENSION = (500, 500)
-IMAGE_TYPES = ["heic", "heif", "jpeg", "jpg", "png"]
+IMAGE_TYPES = [".heic", ".heif", ".jpeg", ".jpg", ".png"]
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
 
-MAX_IMAGE_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
+# Video configuration
+VIDEO_TYPES = [".mp4", ".mov", ".avi", ".wmv"]
+MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB
 
-MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024 # 10 MB
+# Document configuration
+DOCUMENT_TYPES = [".pdf", ".doc", ".docx", ".txt"]
+MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024 # 10 MB
+
 
 # Logging
 LOGGING = {

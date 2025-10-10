@@ -1,11 +1,13 @@
 import uuid
 import os
 import mimetypes
+import magic
 import typing as t
 
 from django.db import models
 from apps.shared.utils.enums import MediaChoices
 from apps.shared.utils.utils import CorrectPath
+from apps.shared.utils.general import compress_image
 
 
 class BaseModel(models.Model):
@@ -76,14 +78,22 @@ class BaseMedia(BaseModel):
             _, ext = os.path.splitext(self.file.name)
             self.extension = ext.lower().lstrip('.')
 
-            guessed_type, _ = mimetypes.guess_type(self.file.name)
-            if guessed_type:
-                if guessed_type.startswith("image/"):
-                    self.media_type = MediaChoices.IMAGE.value
-                elif guessed_type.startswith("video/"):
-                    self.media_type = MediaChoices.VIDEO.value
-                else:
-                    self.media_type = MediaChoices.PDF.value
+            mime = magic.from_buffer(self.file.read(2048), mime=True)
+            self.file.seek(0)  # Reset file pointer after reading
+
+            # guessed_type, _ = mimetypes.guess_type(self.file.name)
+            # if guessed_type:
+            if mime.startswith("image/"):
+                self.media_type = MediaChoices.IMAGE.value
+
+                compressed_image = compress_image(self.file)
+                self.file = compressed_image
+                self.size = self.file.size  # Update size after compression
+
+            elif mime.startswith("video/"):
+                self.media_type = MediaChoices.VIDEO.value
+            else:
+                self.media_type = MediaChoices.PDF.value
         super().save(*args, **kwargs)  # Final save to ensure the object is saved
 
     def delete(self, *args, **kwargs):
