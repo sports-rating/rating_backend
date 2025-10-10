@@ -435,7 +435,8 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
 
     def validate(self, attrs: dict) -> dict:
         phone_number: str = attrs.get("manager_phone_number")
-        if User.objects.filter(phone_number=phone_number).exists():
+        status: str = attrs.get("status")
+        if User.objects.filter(phone_number=phone_number).exists() and status == enums.SportInstitutionRequestStatus.APPROVED.value:
             logger.error(f"Sport Institution Request: creation | User with phone number {phone_number} already exists.")
             raise_validation_error(message=_(f"User with phone number {phone_number} already exists."))
 
