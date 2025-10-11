@@ -11,8 +11,11 @@ from rest_framework.permissions import IsAuthenticated
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+def trigger_error(request):
+    division_by_zero = 1 / 0
 
 urlpatterns = [
+    path('sentry-debug-1377/', trigger_error),
     path("admin/", admin.site.urls),
     path("api/", include("apps.urls")),
     path('health-check/', include('health_check.urls')),

@@ -93,3 +93,4 @@ factory-boy==3.3.3
 pytest-factoryboy==2.7.0
 python-magic==0.4.27
 locust==2.32.8
+sentry-sdk==2.41.0

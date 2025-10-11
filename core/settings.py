@@ -1,22 +1,31 @@
 import os
 import sys
 import redis
+import sentry_sdk
+
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 from decouple import config
+from firebase_admin import initialize_app, credentials
 
 from django.utils.translation import gettext_lazy as _
 
-from firebase_admin import initialize_app, credentials
-
+load_dotenv()
 
 IS_LOCAL: bool = os.getenv("IS_LOCAL", "true").lower() == "true"
 
+if not IS_LOCAL:
+    SENTRY_DSN = os.getenv(
+        "SENTRY_DSN",
+        default="https://021b8769467f3571f152007e3aa870ac@o924416.ingest.us.sentry.io/4509486310883328",
+    )
+
+    sentry_sdk.init(dsn=SENTRY_DSN, send_default_pii=True)
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(os.path.join(BASE_DIR, "apps"))
-
-load_dotenv()
 
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=True, cast=bool)
