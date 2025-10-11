@@ -65,6 +65,7 @@ INTERNAL_APPS = [
 INSTALLED_APPS = PACKAGES + BACKEND_APPS + INTERNAL_APPS
 
 MIDDLEWARE = [
+    'core.middleware.AdminBasicAuthMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     'corsheaders.middleware.CorsMiddleware',
@@ -253,8 +254,8 @@ REST_FRAMEWORK = {
     #     "rest_framework.permissions.IsAuthenticated",
     # ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.BasicAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
