@@ -24,10 +24,11 @@ from apps.federation.models import Federation
 class SportsmanFilter(BaseFilterSet):
     # sport = filters.CharFilter(method='filter_sport')
     sport = filters.CharFilter(field_name="sportsman_profile__sport__id")
+    trainer = filters.CharFilter(field_name="sportsman_profile__trainer__user_id")
 
     class Meta:
         model = User
-        fields = ["sport"]
+        fields = ["sport", "trainer"]
 
     def filter_sport(self, queryset, name, value): # noqa
         return queryset.filter(sportsman_profile__sport__name=value)
@@ -37,10 +38,11 @@ class TrainerFilter(BaseFilterSet):
     # sport = filters.CharFilter(method='filter_sport')
     sport = filters.CharFilter(field_name="trainer_profile__sport__id")
     verified = filters.BooleanFilter(field_name='trainer_profile__is_trainer_verified')
+    federation = filters.CharFilter(field_name='federations__id')
 
     class Meta:
         model = User
-        fields = ["sport", "verified"]
+        fields = ["sport", "verified", "federation"]
 
     def filter_sport(self, queryset, name, value): # noqa
         return queryset.filter(trainer_profile__sport__name=value)

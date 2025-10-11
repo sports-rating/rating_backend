@@ -255,7 +255,7 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
         return data
 
 
-class SportsmanListSerializer(serializers.ModelSerializer):
+class PublicSportsmanListSerializer(RequestContextMixin, serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
 
     class Meta:
@@ -282,6 +282,45 @@ class SportsmanListSerializer(serializers.ModelSerializer):
             data["points"] = instance.sportsman_profile.points
         if instance.profile_photo:
             data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        return data
+
+    def get_statistics(self, obj) -> Dict[str, Any]:
+        return {
+            "total_gold": getattr(obj, "total_gold", 0),
+            "total_silver": getattr(obj, "total_silver", 0),
+            "total_bronze": getattr(obj, "total_bronze", 0),
+            "total_competitions": getattr(obj, "total_competitions", 0),
+        }
+
+
+class SportsmanListSerializer(RequestContextMixin, serializers.ModelSerializer):
+    statistics = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "user_role",
+            "statistics"
+        ]
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
+        if instance.sportsman_profile.sport:
+            data["sport"] = instance.sportsman_profile.sport.name
+            if instance.sportsman_profile.sport.logo:
+                data["logo"] = get_file_full_url(instance.sportsman_profile.sport.logo.url) if instance.sportsman_profile.sport.logo else None
+        if instance.sportsman_profile.trainer:
+            data["trainer_id"] = instance.sportsman_profile.trainer.user_id
+            data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
+        if getattr(instance, "sportsman_profile", None):
+            data["points"] = instance.sportsman_profile.points
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        data["is_result_paid"] = instance.sportsman_profile.is_result_paid
         return data
 
     def get_statistics(self, obj) -> Dict[str, Any]:
@@ -469,6 +508,55 @@ class SportsmanUserSerializer(BaseUserSerializer):
 
     class Meta(BaseUserSerializer.Meta):
         fields = BaseUserSerializer.Meta.fields + ["sportsman_profile"]
+
+
+class PublicTrainerListSerializer(serializers.ModelSerializer):
+    statistics = serializers.SerializerMethodField()
+    # logo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "user_role",
+            "statistics",
+            # "logo",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.trainer_profile.sport:
+            data["sport"] = instance.trainer_profile.sport.name
+            if instance.trainer_profile.sport.logo:
+                data["logo"] = get_file_full_url(instance.trainer_profile.sport.logo.url) if instance.trainer_profile.sport.logo else None
+        if getattr(instance, "trainer_profile", None):
+            data["points"] = instance.trainer_profile.points
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        return data
+
+    def get_statistics(self, obj) ->  List[Dict[str, Any]]:
+        stats = {
+            "own_statistics": {
+                "gold": obj.own_total_gold,
+                "silver": obj.own_total_silver,
+                "bronze": obj.own_total_bronze,
+            },
+            "students_statistics": {
+                "gold": obj.students_total_gold,
+                "silver": obj.students_total_silver,
+                "bronze": obj.students_total_bronze,
+            },
+            "total_statistics": {
+                "gold": obj.own_total_gold + obj.students_total_gold,
+                "silver": obj.own_total_silver + obj.students_total_silver,
+                "bronze": obj.own_total_bronze + obj.students_total_bronze,
+            },
+        }
+        return stats
 
 
 class TrainerListSerializer(serializers.ModelSerializer):
