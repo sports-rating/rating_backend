@@ -257,7 +257,7 @@ class UserNotificationAdmin(admin.ModelAdmin):
 class RegionAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "latitude", "longitude"]
     search_fields = ["id", "name",]
-
+    ordering = ['-updated_time', '-created_time']
 
 @admin.register(District)
 class DistrictAdmin(admin.ModelAdmin):

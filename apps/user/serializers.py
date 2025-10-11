@@ -1497,7 +1497,9 @@ class RegionSerializer(serializers.ModelSerializer):
         model = Region
         fields = [
             "id",
-            "name"
+            "name",
+            "latitude",
+            "longitude"
         ]
 
 
