@@ -255,7 +255,7 @@ class UserNotificationAdmin(admin.ModelAdmin):
 
 @admin.register(Region)
 class RegionAdmin(admin.ModelAdmin):
-    list_display = ["id", "name",]
+    list_display = ["id", "name", "latitude", "longitude"]
     search_fields = ["id", "name",]
 
 
