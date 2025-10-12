@@ -354,3 +354,28 @@ class MainStatsSerializer(serializers.Serializer):
             "user_growth_stats": User.stats.get_last_6_months_user_growth()
         }
         return data
+
+
+class PaymentStatsSerializer(serializers.Serializer):
+    total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_transactions = serializers.IntegerField()
+    total_revenue_month = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_transactions_month = serializers.IntegerField()
+    yearly_revenue = serializers.ListField()
+    by_user_role = serializers.DictField()
+    by_payment_method = serializers.DictField()
+
+    def to_representation(self, instance) -> dict:
+        data = Transaction.stats.get_detailed_statistics()
+        data["total_revenue"] = float(data["total_revenue"])
+        data["total_transactions"] = int(data["total_transactions"])
+        data["total_revenue_month"] = float(data["total_revenue_month"])
+        data["total_transactions_month"] = int(data["total_transactions_month"])
+        data["yearly_revenue"] = [
+            {
+                "month": item["month"],
+                "total_revenue": float(item["total_revenue"])
+            }
+            for item in data["yearly_revenue"]
+        ]
+        return data

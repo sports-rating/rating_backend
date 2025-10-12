@@ -284,3 +284,17 @@ class MainStatsAPIView(APIView):
             message=_("Dashboard general stats retrieved successfully"),
             code=status.HTTP_200_OK
         )
+
+
+class PaymentStatsAPIView(APIView):
+    serializer_class = serializers.PaymentStatsSerializer
+    permission_classes = [IsAdminOrSuperAdmin,]
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        serializer = serializers.PaymentStatsSerializer(instance={})
+
+        return success_response(
+            data=serializer.data,
+            message=_("Dashboard payment stats retrieved successfully"),
+            code=status.HTTP_200_OK
+        )

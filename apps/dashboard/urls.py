@@ -17,4 +17,5 @@ urlpatterns = [
     path("terms-of-condition/<uuid:pk>/", views.TermsOfConditionDetailUpdateDeleteView.as_view(), name="terms-of-condition-detail-update-delete"),
 
     path("stats/main/", views.MainStatsAPIView.as_view(), name="main-stats"),
+    path("stats/payments/", views.PaymentStatsAPIView.as_view(), name="payment-stats"),
 ]
