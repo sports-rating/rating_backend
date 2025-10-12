@@ -342,8 +342,10 @@ class GeneralCountSerializer(serializers.Serializer):
 class MainStatsSerializer(serializers.Serializer):
     general_counts = GeneralCountSerializer()
     revenue_stats = serializers.ListField()
+    user_growth_stats = serializers.ListField()
 
     def to_representation(self, dict):
         data = super().to_representation(dict)
         data['revenue_stats'] = Transaction.stats.get_last_6_months_revenue()
+        data['user_growth_stats'] = User.stats.get_last_6_months_user_growth()
         return data

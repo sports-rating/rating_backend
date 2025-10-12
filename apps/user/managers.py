@@ -3,8 +3,10 @@ import typing as t
 from django.contrib.auth.models import BaseUserManager
 from django.db import models
 from django.db.models import Count, Q, Sum, Value, Model, QuerySet
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, TruncMonth
 from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
 
 
 if t.TYPE_CHECKING:
@@ -55,6 +57,54 @@ class UserStatisticsManager(models.Manager):
             total_federation_admins=Count('id', filter=Q(user_role='federation')),
             total_admins=Count('id', filter=Q(user_role='admin')),
         )
+
+    def get_last_6_months_user_growth(self) -> t.List[dict[str, t.Any]]:
+        """
+        Get the user growth for the last 6 months.
+        """
+        now = timezone.now()
+        six_months_ago = now - timedelta(days=30 * 6)
+
+        qs = (
+            User.objects.filter(created_time__gte=six_months_ago)
+            .annotate(month=TruncMonth("created_time"))
+            .values("month")
+            .annotate(total_users=Count("id"))
+            .order_by("month")
+        )
+
+        result = [
+            {
+                "month": month_data["month"].strftime("%b"),  # e.g. Jan, Feb
+                "total_users": month_data["total_users"],
+            }
+            for month_data in qs
+        ]
+        return result
+
+    def get_yearly_user_growth(self) -> t.List[dict[str, t.Any]]:
+        """
+        Get the user growth for the current year.
+        """
+        now = timezone.now()
+
+        qs = (
+            User.objects.filter(created_time__year=now.year)
+            .annotate(month=TruncMonth("created_time"))
+            .values("month")
+            .annotate(total_users=Count("id"))
+            .order_by("month")
+        )
+
+        result = [
+            {
+                "month": month_data["month"].strftime("%b"),
+                "total_users": month_data["total_users"],
+            }
+            for month_data in qs
+        ]
+        return result
+
 
     def get_sportsman_statistics(self, user: "User") -> dict[str, int]:
         """
