@@ -19,6 +19,7 @@ class TransactionManager(models.Manager):
         """
         Get the monthly revenue for successful transactions.
         """
+        from apps.payment.models import Transaction
         now = timezone.now()
         return (
             Transaction.objects.filter(
@@ -34,12 +35,13 @@ class TransactionManager(models.Manager):
         """
         Get the revenue for the last 6 months.
         """
+        from apps.payment.models import Transaction
         now = timezone.now()
         six_months_ago = now - timedelta(days=30 * 6)
 
         qs = (
             Transaction.objects.filter(
-                status=enums.TransactionStatus.SUCCESS.value,
+                status=enums.TransactionStatus.COMMITTED.value,
                 performed_time__gte=six_months_ago,
             )
             .annotate(month=TruncMonth("performed_time"))
@@ -62,11 +64,12 @@ class TransactionManager(models.Manager):
         """
         Get the yearly revenue for successful transactions.
         """
+        from apps.payment.models import Transaction
         now = timezone.now()
 
         qs = (
             Transaction.objects.filter(
-                status=enums.TransactionStatus.SUCCESS.value,
+                status=enums.TransactionStatus.COMMITTED.value,
                 performed_time__year=now.year,
             )
             .annotate(month=TruncMonth("performed_time"))

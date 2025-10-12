@@ -306,15 +306,16 @@ class UsersCountSerializer(serializers.Serializer):
     total_federation_admins = serializers.IntegerField()
     total_admins = serializers.IntegerField()
 
-    def to_representation(self, data: dict) -> dict:
-        data = super().to_representation(data)
+    def to_representation(self, instance) -> dict:
         users_count = User.stats.get_total_users()
-        data['total_users'] = users_count['total_users']
-        data['total_sportsmen'] = users_count['total_sportsmen']
-        data['total_trainers'] = users_count['total_trainers']
-        data['total_sport_institution_admins'] = users_count['total_sport_institution_admins']
-        data['total_federation_admins'] = users_count['total_federation_admins']
-        data['total_admins'] = users_count['total_admins']
+        data = {
+            "total_users": users_count['total_users'],
+            "total_sportsmen": users_count['total_sportsmen'],
+            "total_trainers": users_count['total_trainers'],
+            "total_sport_institution_admins": users_count['total_sport_institution_admins'],
+            "total_federation_admins": users_count['total_federation_admins'],
+            "total_admins": users_count['total_admins'],
+        }
         return data
 
 
@@ -326,13 +327,15 @@ class GeneralCountSerializer(serializers.Serializer):
     total_pending_requests = serializers.IntegerField()
     total_monthly_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
 
-    def to_representation(self, data: dict) -> dict:
-        data = super().to_representation(data)
-        data['total_federations'] = Federation.stats.get_total_federations()
-        data['total_sport_institutions'] = SportInstitution.stats.get_total_sport_institutions()
-        data['total_sports'] = Sport.stats.get_total_sports()
-        data['total_pending_requests'] = self.get_total_pending_requests()
-        data['total_monthly_revenue'] = Transaction.stats.get_monthly_revenue()
+    def to_representation(self, instance) -> dict:
+        data = {
+            "users": UsersCountSerializer(instance={}).data,
+            "total_federations": Federation.stats.get_total_federations(),
+            "total_sport_institutions": SportInstitution.stats.get_total_sport_institutions(),
+            "total_sports": Sport.stats.get_total_sports(),
+            "total_pending_requests": self.get_total_pending_requests(),
+            "total_monthly_revenue": Transaction.stats.get_monthly_revenue(),
+        }
         return data
 
     def get_total_pending_requests(self) -> int:
@@ -344,8 +347,10 @@ class MainStatsSerializer(serializers.Serializer):
     revenue_stats = serializers.ListField()
     user_growth_stats = serializers.ListField()
 
-    def to_representation(self, dict):
-        data = super().to_representation(dict)
-        data['revenue_stats'] = Transaction.stats.get_last_6_months_revenue()
-        data['user_growth_stats'] = User.stats.get_last_6_months_user_growth()
+    def to_representation(self, instance) -> dict:
+        data = {
+            "general_counts": GeneralCountSerializer(instance={}).data,
+            "revenue_stats": Transaction.stats.get_last_6_months_revenue(),
+            "user_growth_stats": User.stats.get_last_6_months_user_growth()
+        }
         return data

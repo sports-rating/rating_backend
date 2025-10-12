@@ -62,6 +62,7 @@ class UserStatisticsManager(models.Manager):
         """
         Get the user growth for the last 6 months.
         """
+        from apps.user.models import User
         now = timezone.now()
         six_months_ago = now - timedelta(days=30 * 6)
 
@@ -86,6 +87,7 @@ class UserStatisticsManager(models.Manager):
         """
         Get the user growth for the current year.
         """
+        from apps.user.models import User
         now = timezone.now()
 
         qs = (
