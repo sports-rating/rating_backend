@@ -21,7 +21,12 @@ if not IS_LOCAL:
         default="https://021b8769467f3571f152007e3aa870ac@o924416.ingest.us.sentry.io/4509486310883328",
     )
 
-    sentry_sdk.init(dsn=SENTRY_DSN, send_default_pii=True)
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=os.getenv("SENTRY_ENVIRONMENT", default="development"),
+        traces_sample_rate=1.0,
+        send_default_pii=True
+    )
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
