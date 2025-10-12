@@ -10,11 +10,13 @@ from apps.user.models import (
     User,
     Sportsman,
     Trainer,
+    UserRequest
 )
 
 from apps.dashboard.models import PrivacyPolicy, TermsOfCondition
 from apps.federation.models import Federation
 from apps.sport.models import Sport, SportInstitution
+from apps.payment.models import Transaction
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
@@ -329,14 +331,19 @@ class GeneralCountSerializer(serializers.Serializer):
         data['total_federations'] = Federation.stats.get_total_federations()
         data['total_sport_institutions'] = SportInstitution.stats.get_total_sport_institutions()
         data['total_sports'] = Sport.stats.get_total_sports()
-        data['total_pending_requests'] = None
-        data['total_monthly_revenue'] = None
+        data['total_pending_requests'] = self.get_total_pending_requests()
+        data['total_monthly_revenue'] = Transaction.stats.get_monthly_revenue()
         return data
+
+    def get_total_pending_requests(self) -> int:
+        return UserRequest.objects.filter(status=enums.UserRequestStatus.PENDING.value).count()
 
 
 class MainStatsSerializer(serializers.Serializer):
     general_counts = GeneralCountSerializer()
+    revenue_stats = serializers.ListField()
 
     def to_representation(self, dict):
         data = super().to_representation(dict)
+        data['revenue_stats'] = Transaction.stats.get_last_6_months_revenue()
         return data
