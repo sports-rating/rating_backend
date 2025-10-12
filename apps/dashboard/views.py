@@ -270,3 +270,17 @@ class TermsOfConditionDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIVi
         if not condition:
             raise_validation_error(message=_("Terms of condition not found"), code=404)
         return condition
+
+
+class MainStatsAPIView(APIView):
+    serializer_class = serializers.MainStatsSerializer
+    permission_classes = [IsAdminOrSuperAdmin,]
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        serializer = serializers.MainStatsSerializer(instance={})
+
+        return success_response(
+            data=serializer.data,
+            message=_("Education stats retrieved successfully"),
+            code=status.HTTP_200_OK
+        )

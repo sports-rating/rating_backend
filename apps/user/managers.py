@@ -43,6 +43,16 @@ class UserManager(BaseUserManager):
 
 class UserStatisticsManager(models.Manager):
 
+    def get_total_users(self) -> int:
+        return self.get_queryset().aggregate(
+            total_users=Count('id'),
+            total_sportsmen=Count('id', filter=Q(user_role='sportsman')),
+            total_trainers=Count('id', filter=Q(user_role='trainer')),
+            total_sport_institution_admins=Count('id', filter=Q(user_role='sport_institution_admin')),
+            total_federation_admins=Count('id', filter=Q(user_role='federation')),
+            total_admins=Count('id', filter=Q(user_role='admin')),
+        )
+
     def get_sportsman_statistics(self, user: "User") -> dict[str, int]:
         """
         Calculate statistics for a sportsman based on their results.

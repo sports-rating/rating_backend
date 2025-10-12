@@ -292,3 +292,49 @@ class TermsOfConditionSerializer(serializers.ModelSerializer):
                     raise_validation_error(message=_("Terms of Conditions with this language already exists"))
 
         return attrs
+
+
+class UsersCountSerializer(serializers.Serializer):
+    total_users = serializers.IntegerField()
+    total_sportsmen = serializers.IntegerField()
+    total_trainers = serializers.IntegerField()
+    total_sport_institution_admins = serializers.IntegerField()
+    total_federation_admins = serializers.IntegerField()
+    total_admins = serializers.IntegerField()
+
+    def to_representation(self, data: dict) -> dict:
+        data = super().to_representation(data)
+        users_count = User.stats.get_total_users()
+        data['total_users'] = users_count['total_users']
+        data['total_sportsmen'] = users_count['total_sportsmen']
+        data['total_trainers'] = users_count['total_trainers']
+        data['total_sport_institution_admins'] = users_count['total_sport_institution_admins']
+        data['total_federation_admins'] = users_count['total_federation_admins']
+        data['total_admins'] = users_count['total_admins']
+        return data
+
+
+class GeneralCountSerializer(serializers.Serializer):
+    users = UsersCountSerializer()
+    total_federations = serializers.IntegerField()
+    total_sport_institutions = serializers.IntegerField()
+    total_sports = serializers.IntegerField()
+    total_pending_requests = serializers.IntegerField()
+    total_monthly_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    def to_representation(self, data: dict) -> dict:
+        data = super().to_representation(data)
+        data['total_federations'] = None
+        data['total_sport_institutions'] = None
+        data['total_sports'] = None
+        data['total_pending_requests'] = None
+        data['total_monthly_revenue'] = None
+        return data
+
+
+class MainStatsSerializer(serializers.Serializer):
+    general_counts = GeneralCountSerializer()
+
+    def to_representation(self, dict):
+        data = super().to_representation(dict)
+        return data
