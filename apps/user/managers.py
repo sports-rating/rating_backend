@@ -44,6 +44,9 @@ class UserManager(BaseUserManager):
 class UserStatisticsManager(models.Manager):
 
     def get_total_users(self) -> int:
+        """
+        Get the total number of users by role.
+        """
         return self.get_queryset().aggregate(
             total_users=Count('id'),
             total_sportsmen=Count('id', filter=Q(user_role='sportsman')),

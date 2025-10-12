@@ -18,6 +18,7 @@ from apps.shared.utils.utils import (
     CorrectPath
 )
 from apps.shared.utils import enums
+from apps.sport.managers import SportManager, SportInstitutionManager
 
 
 class Sport(BaseModel):
@@ -30,6 +31,10 @@ class Sport(BaseModel):
         null=True,
         blank=True
     )
+
+    objects = models.Manager()
+    stats = SportManager()
+
 
     class Meta:
         db_table = "sport"
@@ -86,6 +91,9 @@ class SportInstitution(BaseModel):
     review_count = models.PositiveIntegerField(default=0)
 
     sports = models.ManyToManyField(Sport, related_name='institutions')
+
+    objects = models.Manager()
+    stats = SportInstitutionManager()
 
     class Meta:
         db_table = "sport_institution"

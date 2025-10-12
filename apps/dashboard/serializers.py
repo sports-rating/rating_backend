@@ -11,8 +11,10 @@ from apps.user.models import (
     Sportsman,
     Trainer,
 )
+
 from apps.dashboard.models import PrivacyPolicy, TermsOfCondition
 from apps.federation.models import Federation
+from apps.sport.models import Sport, SportInstitution
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
@@ -324,9 +326,9 @@ class GeneralCountSerializer(serializers.Serializer):
 
     def to_representation(self, data: dict) -> dict:
         data = super().to_representation(data)
-        data['total_federations'] = None
-        data['total_sport_institutions'] = None
-        data['total_sports'] = None
+        data['total_federations'] = Federation.stats.get_total_federations()
+        data['total_sport_institutions'] = SportInstitution.stats.get_total_sport_institutions()
+        data['total_sports'] = Sport.stats.get_total_sports()
         data['total_pending_requests'] = None
         data['total_monthly_revenue'] = None
         return data
