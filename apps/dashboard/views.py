@@ -281,6 +281,6 @@ class MainStatsAPIView(APIView):
 
         return success_response(
             data=serializer.data,
-            message=_("Education stats retrieved successfully"),
+            message=_("Dashboard general stats retrieved successfully"),
             code=status.HTTP_200_OK
         )
