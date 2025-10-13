@@ -92,6 +92,9 @@ class TransactionManager(models.Manager):
         Get detailed statistics for transactions.
         """
         from apps.payment.models import Transaction
+        from apps.federation.models import Federation
+        from collections import defaultdict
+
         now = timezone.now()
 
         # Overall summary
@@ -197,5 +200,50 @@ class TransactionManager(models.Manager):
             for pm in payment_methods_stats
         }
         data["by_payment_method"] = payment_methods_dict
+
+        # Breakdown by federations
+        # Sportsmen-related transactions
+        sportsmen_stats = (
+            base_qs.filter(user__sportsman_profile__trainer__federation__isnull=False)
+            .values("user__sportsman_profile__trainer__federation__id", "user__sportsman_profile__trainer__federation__name")
+            .annotate(
+                revenue=Coalesce(Sum("amount"), Value(0, output_field=models.DecimalField())),
+                transactions=Count("id"),
+            )
+        )
+
+        # Trainer-related transactions
+        trainer_stats = (
+            base_qs.filter(user__trainer_profile__federation__isnull=False)
+            .values("user__trainer_profile__federation__id", "user__trainer_profile__federation__name")
+            .annotate(
+                revenue=Coalesce(Sum("amount"), Value(0, output_field=models.DecimalField())),
+                transactions=Count("id"),
+            )
+        )
+
+        federation_data = defaultdict(lambda: {"revenue": 0, "transactions": 0})
+
+        for row in sportsmen_stats:
+            fid = row["user__sportsman_profile__trainer__federation__id"]
+            federation_data[fid]["name"] = row["user__sportsman_profile__trainer__federation__name"]
+            federation_data[fid]["revenue"] += row["revenue"]
+            federation_data[fid]["transactions"] += row["transactions"]
+
+        for row in trainer_stats:
+            fid = row["user__trainer_profile__federation__id"]
+            federation_data[fid]["name"] = row["user__trainer_profile__federation__name"]
+            federation_data[fid]["revenue"] += row["revenue"]
+            federation_data[fid]["transactions"] += row["transactions"]
+
+        data["by_federation"] = {}
+
+        for federation in Federation.objects.all():
+            f_id = federation.id
+            stat = federation_data.get(f_id, {"name": federation.name, "revenue": 0, "transactions": 0})
+            data["by_federation"][stat["name"]] = {
+                "revenue": stat["revenue"],
+                "transactions": stat["transactions"],
+            }
 
         return data
