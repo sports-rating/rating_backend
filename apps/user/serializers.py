@@ -88,8 +88,12 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
     code = serializers.CharField()
     phone_number = serializers.CharField()
     action = serializers.ChoiceField(choices=SEND_VERIFICATION_ACTION, required=False)
+    tokens = serializers.DictField(read_only=True)
+    user_role = serializers.CharField(read_only=True)
     fcm_token = serializers.CharField(required=False)
     device_type = serializers.ChoiceField(choices=DeviceType.choices, required=False)
+    is_sportsman_verified = serializers.BooleanField(read_only=True)
+    is_trainer_verified = serializers.BooleanField(read_only=True)
 
     def get_tokens(self):  # noqa
         action = self.validated_data.get("action", None)
