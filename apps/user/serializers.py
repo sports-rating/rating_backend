@@ -201,6 +201,44 @@ class BaseUserSerializer(serializers.ModelSerializer):
         return data
 
 
+class PublicBaseUserSerializer(serializers.ModelSerializer):
+    profile_photo = serializers.CharField(read_only=True)
+    media = UserMediaSerializer(many=True)
+    results = ResultCreateSerializer(many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "gender",
+            "region",
+            "district",
+            "birth_date",
+            "media",
+            "results",
+            "user_role",
+            "is_verified",
+            "created_time",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        return data
+
+
 class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
     media = UserMediaSerializer(many=True)
     educations = EducationSerializer(many=True, required=False)
@@ -514,6 +552,55 @@ class SportsmanUserSerializer(BaseUserSerializer):
         fields = BaseUserSerializer.Meta.fields + ["sportsman_profile"]
 
 
+class PublicSportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerializer):
+    sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
+    trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
+    statistics = serializers.SerializerMethodField()
+    send_request = serializers.BooleanField(required=True, write_only=True)
+
+    class Meta:
+        model = Sportsman
+        fields = [
+            "sport_id",
+            "trainer_id",
+            "bio",
+            "division",
+            "sport_rank",
+            "points",
+            "user_metrics",
+            "height",
+            "weight",
+            "address",
+            "is_sportsman_verified",
+            "statistics",
+        ]
+        read_only_fields = ["is_sportsman_verified", "statistics"]
+
+    def get_statistics(self, obj: Sportsman) -> Dict[str, Any]:
+        return User.stats.get_sportsman_statistics(user=obj.user)
+
+    def to_representation(self, instance: Sportsman) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        data["trainer"] = {
+            "name": f'{instance.trainer.user}',
+            "sport": instance.trainer.sport.name if instance.trainer.sport else None,
+            "full_name": instance.trainer.user.full_name,
+        } if instance.trainer else None
+        data["sport_rank"] = _(instance.sport_rank) if instance.sport_rank else None
+        return data
+
+
+class PublicSportsmanUserSerializer(PublicBaseUserSerializer):
+    sportsman_profile = PublicSportsmanProfileSerializer()
+
+    class Meta(PublicBaseUserSerializer.Meta):
+        fields = PublicBaseUserSerializer.Meta.fields + ["sportsman_profile"]
+
+
 class PublicTrainerListSerializer(serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
     # logo = serializers.SerializerMethodField()
@@ -778,6 +865,49 @@ class TrainerUserSerializer(BaseUserSerializer):
 
     class Meta(BaseUserSerializer.Meta):
         fields = BaseUserSerializer.Meta.fields + ["trainer_profile"]
+
+
+class PublicTrainerProfileSerializer(serializers.ModelSerializer):
+    sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
+    statistics = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Trainer
+        fields = [
+            "sport_id",
+            "federation",
+            "skill_level",
+            "bio",
+            "division",
+            "user_metrics",
+            "height",
+            "weight",
+            "points",
+            "address",
+            "social_media",
+            "is_trainer_verified",
+            "statistics",
+        ]
+        read_only_fields = ["is_trainer_verified", "statistics"]
+
+    def to_representation(self, instance: Trainer) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        data["federation"] = {
+            "name": instance.federation.name,
+            "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
+        } if instance.federation else None
+        return data
+
+
+class PublicTrainerUserSerializer(PublicBaseUserSerializer):
+    trainer_profile = PublicTrainerProfileSerializer()
+
+    class Meta(PublicBaseUserSerializer.Meta):
+        fields = PublicBaseUserSerializer.Meta.fields + ["trainer_profile"]
 
 
 class RegistrationSerializer(serializers.ModelSerializer):

@@ -19,7 +19,7 @@ urlpatterns = [
     path("profile/media/", views.UserMediaListView.as_view(), name='user-media-list'),
 
     path("profile/sportsman/", views.SportsmanListCreateView.as_view(), name='sportsman-register-public-list'),
-    path("profile/sportsman/<uuid:pk>/", views.SportsmanRetrieveUpdateDeleteView.as_view(), name='sportsman-retrieve-update-delete'),
+    path("profile/sportsman/<uuid:pk>/", views.SportsmanRetrieveUpdateDeleteView.as_view(), name='sportsman-public-retrieve-update-delete'),
 
     path("profile/trainer/", views.TrainerListCreateView.as_view(), name='trainer-register-public-list'),
     path("profile/trainer/<uuid:pk>/", views.TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-retrieve"),
