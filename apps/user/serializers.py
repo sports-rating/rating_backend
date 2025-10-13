@@ -901,6 +901,9 @@ class PublicTrainerProfileSerializer(serializers.ModelSerializer):
         } if instance.federation else None
         return data
 
+    def get_statistics(self, obj: Trainer) ->  List[Dict[str, Any]]:
+        return User.stats.get_trainer_statistics(user=obj.user)
+
 
 class PublicTrainerUserSerializer(PublicBaseUserSerializer):
     trainer_profile = PublicTrainerProfileSerializer()
