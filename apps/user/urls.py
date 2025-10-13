@@ -22,13 +22,15 @@ urlpatterns = [
     path("profile/sportsman/<uuid:pk>/", views.SportsmanRetrieveUpdateDeleteView.as_view(), name='sportsman-public-retrieve-update-delete'),
 
     path("profile/trainer/", views.TrainerListCreateView.as_view(), name='trainer-register-public-list'),
-    path("profile/trainer/<uuid:pk>/", views.TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-retrieve"),
+    path("profile/trainer/<uuid:pk>/", views.TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-public-retrieve-update-delete"),
 
     path("profile/archived-trainer/", views.ArchivedTrainerCreateListView.as_view(), name='archived-trainer-register-list'),
     path("profile/archived-trainer/<uuid:pk>/", views.ArchivedTrainerRetrieveUpdateDeleteView.as_view(), name='archived-trainer-retrieve-update-delete'),
 
     path("sportsmen/", views.SportsmanListAPIView.as_view(), name='internal-sportsman-list'),
+    # path("sportsmen/<uuid:pk>/", views.SportsmanRetrieveAPIView.as_view(), name='internal-sportsman-retrieve'),
     path("trainers/", views.TrainerListAPIView.as_view(), name='internal-trainer-list'),
+    # path("trainers/<uuid:pk>/", views.TrainerRetrieveAPIView.as_view(), name='internal-trainer-retrieve'),
 
     path("media-upload/", views.MediaUploadView.as_view(), name='media-upload'),
     path("media/<uuid:pk>/", views.MediaDeleteView.as_view(), name='media-delete'),

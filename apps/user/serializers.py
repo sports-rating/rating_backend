@@ -556,7 +556,6 @@ class PublicSportsmanProfileSerializer(RequestContextMixin, serializers.ModelSer
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
     statistics = serializers.SerializerMethodField()
-    send_request = serializers.BooleanField(required=True, write_only=True)
 
     class Meta:
         model = Sportsman
