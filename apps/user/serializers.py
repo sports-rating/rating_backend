@@ -337,6 +337,7 @@ class PublicSportsmanListSerializer(RequestContextMixin, serializers.ModelSerial
 
 class SportsmanListSerializer(RequestContextMixin, serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
+    profile_photo = serializers.CharField(read_only=True)
 
     class Meta:
         model = User
@@ -346,7 +347,8 @@ class SportsmanListSerializer(RequestContextMixin, serializers.ModelSerializer):
             "middle_name",
             "last_name",
             "user_role",
-            "statistics"
+            "statistics",
+            "profile_photo"
         ]
 
     def to_representation(self, instance: User) -> dict:
