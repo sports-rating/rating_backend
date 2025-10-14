@@ -2,8 +2,9 @@ receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317
       http:
-
+        endpoint: 0.0.0.0:4318
   filelog:
     include: [/var/lib/docker/containers/*/*-json.log]
     poll_interval: 200ms
@@ -11,34 +12,20 @@ receivers:
     include_file_name: false
     include_file_path: false
     operators:
-      - type: json_parser
-        timestamp:
-          parse_from: attributes.time
-          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
-
-# exporters:
-#   clickhouse:
-#     dsn: tcp://clickhouse:9000?database=signoz_traces
-#   signozclickhousemetrics:
-#     dsn: tcp://clickhouse:9000?database=signoz_metrics
-#   clickhouselogs:
-#     dsn: tcp://clickhouse:9000?database=signoz_logs
-
-exporters:
-  clickhousetraces:
-    endpoint: tcp://clickhouse:9000
-    database: signoz_traces
-
-  signozclickhousemetrics:
-    endpoint: tcp://clickhouse:9000
-    database: signoz_metrics
-
-  clickhouselogsexporter:
-    endpoint: tcp://clickhouse:9000
-    database: signoz_logs
+      - id: container-parser
+        type: container
+        format: docker
 
 processors:
   batch:
+
+exporters:
+  otlp:
+    endpoint: "http://signoz:8080"
+    tls:
+      insecure: true
+  debug:
+    verbosity: normal
 
 extensions:
   health_check:
@@ -46,18 +33,17 @@ extensions:
   zpages:
 
 service:
+  extensions: [health_check, pprof, zpages]
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [clickhousetraces]
+      exporters: [otlp]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [signozclickhousemetrics]
+      exporters: [otlp]
     logs:
       receivers: [otlp, filelog]
       processors: [batch]
-      exporters: [clickhouselogsexporter]
-
-  extensions: [health_check, pprof, zpages]
+      exporters: [otlp]
