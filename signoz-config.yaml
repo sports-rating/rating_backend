@@ -21,7 +21,7 @@ processors:
 
 exporters:
   otlp:
-    endpoint: "http://signoz:4317"
+    endpoint: "http://signoz-otel-collector:4317"
     tls:
       insecure: true
   debug:
