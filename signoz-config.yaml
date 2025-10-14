@@ -25,19 +25,12 @@ receivers:
 #     dsn: tcp://clickhouse:9000?database=signoz_logs
 
 exporters:
-  clickhouse/traces:
-    endpoint: tcp://clickhouse:9000
-    database: signoz_traces
-    traces_table_name: signoz_traces
-
-  clickhouse/metrics:
-    endpoint: tcp://clickhouse:9000
-    database: signoz_metrics
-
-  clickhouse/logs:
-    endpoint: tcp://clickhouse:9000
-    database: signoz_logs
-    logs_table_name: signoz_logs
+  clickhousetraces:
+    dsn: tcp://clickhouse:9000?database=signoz_traces
+  signozclickhousemetrics:
+    dsn: tcp://clickhouse:9000?database=signoz_metrics
+  clickhouselogsexporter:
+    dsn: tcp://clickhouse:9000?database=signoz_logs
 
 processors:
   batch:
@@ -52,14 +45,14 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [clickhouse/traces]
+      exporters: [clickhousetraces]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [clickhouse/metrics]
+      exporters: [signozclickhousemetrics]
     logs:
       receivers: [otlp, filelog]
       processors: [batch]
-      exporters: [clickhouse/logs]
+      exporters: [clickhouselogsexporter]
 
   extensions: [health_check, pprof, zpages]
