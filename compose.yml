@@ -121,9 +121,13 @@ services:
     depends_on:
       - clickhouse
     environment:
-      - STORAGE=clickhouse
-      - CLICKHOUSE_HOST=clickhouse
-      - CLICKHOUSE_URL=tcp://clickhouse:9000
+      - STORAGE=${STORAGE}
+      - CLICKHOUSE_HOST=${CLICKHOUSE_HOST}
+      - CLICKHOUSE_URL=${CLICKHOUSE_URL}
+      - SIGNOZ_SAMPLE_RETENTION_DAYS=${SIGNOZ_SAMPLE_RETENTION_DAYS}
+      - SIGNOZ_LOGS_RETENTION_DAYS=${SIGNOZ_LOGS_RETENTION_DAYS}
+      - SIGNOZ_TRACES_RETENTION_DAYS=${SIGNOZ_TRACES_RETENTION_DAYS}
+      - SIGNOZ_JWT_SECRET=${SIGNOZ_JWT_SECRET}
     networks:
       - backend
 
@@ -148,7 +152,7 @@ services:
     ports:
       - "4318:4318" # HTTP
     environment:
-      - SIGNOZ_LOGS_BACKEND=clickhouse
+      - SIGNOZ_LOGS_BACKEND=${SIGNOZ_LOGS_BACKEND}
     depends_on:
       - signoz
     networks:

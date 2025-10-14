@@ -17,11 +17,11 @@ receivers:
 
 exporters:
   clickhousetraces:
-    endpoint: tcp://clickhouse:9000
+    dsn: tcp://clickhouse:9000?database=signoz_traces
   clickhousemetrics:
-    endpoint: tcp://clickhouse:9000
+    dsn: tcp://clickhouse:9000?database=signoz_metrics
   clickhouselogs:
-    endpoint: tcp://clickhouse:9000
+    dsn: tcp://clickhouse:9000?database=signoz_logs
 
 processors:
   batch:
