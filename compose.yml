@@ -123,6 +123,9 @@ services:
     environment:
       - STORAGE=clickhouse
       - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_URL=tcp://clickhouse:9000
+    networks:
+      - backend
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
@@ -133,16 +136,23 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+    networks:
+      - backend
 
-  otel-collector:
+  signoz-otel-collector:
     image: signoz/signoz-otel-collector:latest
-    container_name: otel-collector
+    container_name: signoz-otel-collector
+    volumes:
+      - ./signoz-config.yaml:/etc/otel/config.yaml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
     ports:
       - "4318:4318" # HTTP
     environment:
       - SIGNOZ_LOGS_BACKEND=clickhouse
     depends_on:
       - signoz
+    networks:
+      - backend
 
   fluent-bit:
     image: fluent/fluent-bit:2.1
@@ -152,6 +162,8 @@ services:
       - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
     depends_on:
       - otel-collector
+    networks:
+      - backend
 
 volumes:
   postgres_data:

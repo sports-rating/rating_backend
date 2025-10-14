@@ -1,0 +1,42 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+  filelog:
+    include: [/var/lib/docker/containers/*/*-json.log]
+    poll_interval: 200ms
+    start_at: end
+    include_file_name: false
+    include_file_path: false
+    operators:
+      - id: container-parser
+        type: container
+        format: docker
+
+exporters:
+  clickhousetraces:
+    endpoint: tcp://clickhouse:9000
+  clickhousemetrics:
+    endpoint: tcp://clickhouse:9000
+  clickhouselogs:
+    endpoint: tcp://clickhouse:9000
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [clickhousetraces]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [clickhousemetrics]
+    logs:
+      receivers: [otlp, filelog]
+      processors: [batch]
+      exporters: [clickhouselogs]
