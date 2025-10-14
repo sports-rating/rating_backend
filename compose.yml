@@ -113,16 +113,45 @@ services:
       tail -f /dev/null
       "
 
-  # ffmpeg:
-  #   image: jrottenberg/ffmpeg:6.0-ubuntu
-  #   container_name: ffmpeg
-  #   restart: unless-stopped
-  #   volumes:
-  #     - /var/www/media:/app/media
-  #   networks:
-  #     - backend
-  #   working_dir: /app/media
-  #   entrypoint: ["tail", "-f", "/dev/null"]
+  signoz:
+    image: signoz/signoz:latest
+    container_name: signoz
+    ports:
+      - "3301:3301"
+    depends_on:
+      - clickhouse
+    environment:
+      - STORAGE=clickhouse
+      - CLICKHOUSE_HOST=clickhouse
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    volumes:
+      - ./clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  otel-collector:
+    image: signoz/signoz-otel-collector:latest
+    container_name: otel-collector
+    ports:
+      - "4318:4318" # HTTP
+    environment:
+      - SIGNOZ_LOGS_BACKEND=clickhouse
+    depends_on:
+      - signoz
+
+  fluent-bit:
+    image: fluent/fluent-bit:2.1
+    container_name: fluent-bit
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+    depends_on:
+      - otel-collector
 
 volumes:
   postgres_data:
