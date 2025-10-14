@@ -164,6 +164,7 @@ services:
       - "4318:4318" # HTTP
     environment:
       - SIGNOZ_LOGS_BACKEND=${SIGNOZ_LOGS_BACKEND}
+      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}
     depends_on:
       - signoz
     networks:
