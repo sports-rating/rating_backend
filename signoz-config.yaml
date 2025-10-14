@@ -20,10 +20,15 @@ processors:
   batch:
 
 exporters:
-  otlp:
-    endpoint: "http://signoz-otel-collector:4317"
-    tls:
-      insecure: true
+  clickhousetraces:
+    datasource: ${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}/signoz_traces
+    use_new_schema: true
+  signozclickhousemetrics:
+    dsn: ${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}/signoz_metrics
+  clickhouselogsexporter:
+    dsn: ${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}/signoz_logs
+    timeout: 10s
+    use_new_schema: true
   debug:
     verbosity: normal
 
@@ -38,12 +43,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [clickhousetraces]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [signozclickhousemetrics]
     logs:
       receivers: [otlp, filelog]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [clickhouselogsexporter]
