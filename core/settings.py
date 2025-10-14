@@ -25,7 +25,9 @@ if not IS_LOCAL:
         dsn=SENTRY_DSN,
         environment=os.getenv("SENTRY_ENVIRONMENT", default="development"),
         traces_sample_rate=1.0,
-        send_default_pii=True
+        send_default_pii=True,
+        # Enable logs to be sent to Sentry
+        enable_logs=True,
     )
 
 
