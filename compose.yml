@@ -113,84 +113,9 @@ services:
       tail -f /dev/null
       "
 
-  signoz:
-    image: signoz/signoz:latest
-    container_name: signoz
-    ports:
-      - "8080:8080"
-    depends_on:
-      - clickhouse
-    environment:
-      - SIGNOZ_TELEMETRYSTORE_PROVIDER=${SIGNOZ_TELEMETRYSTORE_PROVIDER}
-      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_CLUSTER=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_CLUSTER}
-      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_PORT=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_PORT}
-      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_HOST=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_HOST}
-      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}
-      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_USER=${CLICKHOUSE_USER}
-      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
-      - SIGNOZ_SAMPLE_RETENTION_DAYS=${SIGNOZ_SAMPLE_RETENTION_DAYS}
-      - SIGNOZ_LOGS_RETENTION_DAYS=${SIGNOZ_LOGS_RETENTION_DAYS}
-      - SIGNOZ_TRACES_RETENTION_DAYS=${SIGNOZ_TRACES_RETENTION_DAYS}
-      - SIGNOZ_JWT_SECRET=${SIGNOZ_JWT_SECRET}
-    volumes:
-      - sqlite:/var/lib/signoz
-    networks:
-      - backend
-
-  clickhouse:
-    image: clickhouse/clickhouse-server:latest
-    container_name: clickhouse
-    expose:
-      - 9000
-    environment:
-      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
-      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-      - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/cluster.xml
-    ulimits:
-      nofile:
-        soft: 262144
-        hard: 262144
-    networks:
-      - backend
-
-  signoz-otel-collector:
-    image: signoz/signoz-otel-collector:latest
-    container_name: signoz-otel-collector
-    volumes:
-      - ./signoz-config.yaml:/etc/otel/config.yaml
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    ports:
-      - "4317:4317" # gRPC
-      - "4318:4318" # HTTP
-    environment:
-      - SIGNOZ_LOGS_BACKEND=${SIGNOZ_LOGS_BACKEND}
-      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
-      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
-    depends_on:
-      - signoz
-    networks:
-      - backend
-
-  fluent-bit:
-    image: fluent/fluent-bit:2.1
-    container_name: fluent-bit
-    volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
-    depends_on:
-      - signoz-otel-collector
-    networks:
-      - backend
-
 volumes:
   postgres_data:
   redis-data:
-  clickhouse_data:
-    driver: local
-  sqlite:
-    name: signoz-sqlite
 
 networks:
   backend:
