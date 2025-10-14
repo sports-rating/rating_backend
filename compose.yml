@@ -161,7 +161,7 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
     depends_on:
-      - otel-collector
+      - signoz-otel-collector
     networks:
       - backend
 
