@@ -11,32 +11,55 @@ receivers:
     include_file_name: false
     include_file_path: false
     operators:
-      - id: container-parser
-        type: container
-        format: docker
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+
+# exporters:
+#   clickhouse:
+#     dsn: tcp://clickhouse:9000?database=signoz_traces
+#   signozclickhousemetrics:
+#     dsn: tcp://clickhouse:9000?database=signoz_metrics
+#   clickhouselogs:
+#     dsn: tcp://clickhouse:9000?database=signoz_logs
 
 exporters:
-  clickhousetraces:
-    dsn: tcp://clickhouse:9000?database=signoz_traces
-  signozclickhousemetrics:
-    dsn: tcp://clickhouse:9000?database=signoz_metrics
-  clickhouselogs:
-    dsn: tcp://clickhouse:9000?database=signoz_logs
+  clickhouse/traces:
+    endpoint: tcp://clickhouse:9000
+    database: signoz_traces
+    traces_table_name: signoz_traces
+
+  clickhouse/metrics:
+    endpoint: tcp://clickhouse:9000
+    database: signoz_metrics
+
+  clickhouse/logs:
+    endpoint: tcp://clickhouse:9000
+    database: signoz_logs
+    logs_table_name: signoz_logs
 
 processors:
   batch:
+
+extensions:
+  health_check:
+  pprof:
+  zpages:
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [clickhousetraces]
+      exporters: [clickhouse/traces]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [signozclickhousemetrics]
+      exporters: [clickhouse/metrics]
     logs:
       receivers: [otlp, filelog]
       processors: [batch]
-      exporters: [clickhouselogs]
+      exporters: [clickhouse/logs]
+
+  extensions: [health_check, pprof, zpages]
