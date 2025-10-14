@@ -120,7 +120,6 @@ services:
       - "3301:3301"
     depends_on:
       - clickhouse
-      - signoz-otel-collector
     environment:
       - STORAGE=${STORAGE}
       - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_CLUSTER=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_CLUSTER}
