@@ -121,7 +121,7 @@ services:
     depends_on:
       - clickhouse
     environment:
-      - STORAGE=${STORAGE}
+      - SIGNOZ_TELEMETRYSTORE_PROVIDER=${SIGNOZ_TELEMETRYSTORE_PROVIDER}
       - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_CLUSTER=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_CLUSTER}
       - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_PORT=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_PORT}
       - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_HOST=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_HOST}
@@ -137,6 +137,9 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
+    ports:
+    - "9000:9000"
+    - "8123:8123"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     ulimits:
