@@ -131,7 +131,7 @@ services:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
     volumes:
-      - ./clickhouse_data:/var/lib/clickhouse
+      - clickhouse_data:/var/lib/clickhouse
     ulimits:
       nofile:
         soft: 262144
@@ -168,7 +168,8 @@ services:
 volumes:
   postgres_data:
   redis-data:
-  minio-data:
+  clickhouse_data:
+    driver: local
 
 networks:
   backend:
