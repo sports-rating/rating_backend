@@ -132,6 +132,8 @@ services:
       - SIGNOZ_LOGS_RETENTION_DAYS=${SIGNOZ_LOGS_RETENTION_DAYS}
       - SIGNOZ_TRACES_RETENTION_DAYS=${SIGNOZ_TRACES_RETENTION_DAYS}
       - SIGNOZ_JWT_SECRET=${SIGNOZ_JWT_SECRET}
+    volumes:
+      - sqlite:/var/lib/signoz
     networks:
       - backend
 
@@ -183,6 +185,8 @@ volumes:
   redis-data:
   clickhouse_data:
     driver: local
+  sqlite:
+    name: signoz-sqlite
 
 networks:
   backend:
