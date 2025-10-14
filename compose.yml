@@ -161,10 +161,12 @@ services:
       - ./signoz-config.yaml:/etc/otel/config.yaml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     ports:
+      - "4317:4317" # gRPC
       - "4318:4318" # HTTP
     environment:
       - SIGNOZ_LOGS_BACKEND=${SIGNOZ_LOGS_BACKEND}
-      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
     depends_on:
       - signoz
     networks:

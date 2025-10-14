@@ -21,12 +21,18 @@ processors:
 
 exporters:
   clickhousetraces:
-    datasource: ${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}/signoz_traces
+    datasource: tcp://clickhouse:9000/signoz_traces
     use_new_schema: true
+    username: ${CLICKHOUSE_USER}
+    password: ${CLICKHOUSE_PASSWORD}
   signozclickhousemetrics:
-    dsn: ${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}/signoz_metrics
+    dsn: tcp://clickhouse:9000/signoz_metrics
+    username: ${CLICKHOUSE_USER}
+    password: ${CLICKHOUSE_PASSWORD}
   clickhouselogsexporter:
-    dsn: ${SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN}/signoz_logs
+    dsn: tcp://clickhouse:9000/signoz_logs
+    username: ${CLICKHOUSE_USER}
+    password: ${CLICKHOUSE_PASSWORD}
     timeout: 10s
     use_new_schema: true
   debug:
