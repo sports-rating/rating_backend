@@ -21,7 +21,7 @@ processors:
 
 exporters:
   otlp:
-    endpoint: "http://signoz:8080"
+    endpoint: "http://signoz:4317"
     tls:
       insecure: true
   debug:
