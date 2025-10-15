@@ -372,7 +372,7 @@ class SportInstitutionRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPI
         serializer: serializers.SportInstitutionSerializer = self.get_serializer(instance)
         return success_response(
             data=serializer.data,
-            message=_("School retrieved successfully"),
+            message=_("Sport institution retrieved successfully"),
             code=status.HTTP_200_OK,
         )
 

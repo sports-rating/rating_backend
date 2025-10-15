@@ -67,13 +67,6 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
             "status": {"required": False}
         }
 
-    def validate(self, attrs: dict) -> dict:
-        request_type = attrs.get("request_type")
-        sender = t.cast(User, self.request.user)
-        if request_type == "sportsman_trainer_request" and sender.user_role == "trainer":
-            raise_validation_error(message=_("Trainers cannot send trainer requests!"))
-        return super().validate(attrs)
-
     def to_representation(self, instance: UserRequest) -> dict:
         data = super().to_representation(instance)
         receiver: User = instance.receivers.first()  # type: ignore

@@ -327,7 +327,7 @@ class TeamCreateSerializer(serializers.ModelSerializer):
         name = attrs.get("name", None)
         team = Team.objects.filter(name=name).first()
         if team:
-            raise_validation_error(message=_("Team with name already created"))
+            raise_validation_error(message=_("Team with this name already exists"))
 
         current_year = datetime.now().year
         if founded_year and founded_year > current_year:

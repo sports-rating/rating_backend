@@ -81,7 +81,7 @@ class UserListView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
-            message=_("Users list"),
+            message=_("Users list retrieved successfully"),
             code=200,
         )
 
@@ -151,7 +151,7 @@ class PrivacyPolicyAddListView(generics.ListCreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
-            message=_("List of PrivacyPolicies")
+            message=_("PrivacyPolicy list retrieved successfully")
         )
 
     def create(self, request):
@@ -218,7 +218,7 @@ class TermsOfConditionAddListView(generics.ListCreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return success_response(
             data=serializer.data,
-            message=_("List of Terms of conditions")
+            message=_("Terms of condition list retrieved successfully")
         )
 
     def create(self, request):
@@ -283,7 +283,7 @@ class MainStatsAPIView(APIView):
 
         return success_response(
             data=serializer.data,
-            message=_("Dashboard general stats retrieved successfully"),
+            message=_("Dashboard general statistics retrieved successfully"),
             code=status.HTTP_200_OK
         )
 
@@ -297,7 +297,7 @@ class PaymentStatsAPIView(APIView):
 
         return success_response(
             data=serializer.data,
-            message=_("Dashboard payment stats retrieved successfully"),
+            message=_("Dashboard payment statistics retrieved successfully"),
             code=status.HTTP_200_OK
         )
 
@@ -311,7 +311,7 @@ class RequestStatsAPIView(APIView):
 
         return success_response(
             data=serializer.data,
-            message=_("Dashboard request stats retrieved successfully"),
+            message=_("Dashboard request statistics retrieved successfully"),
             code=status.HTTP_200_OK
         )
 
@@ -347,7 +347,7 @@ class UserRequestListAPIView(generics.ListAPIView):
         response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
-            message=_("User request statistics retrieved successfully"),
+            message=_("User request list retrieved successfully"),
             code=status.HTTP_200_OK
         )
 

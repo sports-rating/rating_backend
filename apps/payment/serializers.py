@@ -33,7 +33,7 @@ class CheckoutSerializer(RequestContextMixin, serializers.Serializer):
         logger.debug(f"Validating payment method: {value}")
         logger.info(f"Available payment methods: {enums.ProviderTypes.values()}")
         if value not in enums.ProviderTypes.values():
-            raise_validation_error(message=_("Invalid payment method"))
+            raise_validation_error(message=_("Invalid payment method selected!"))
         return value
 
     def validate(self, attrs):

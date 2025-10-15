@@ -290,7 +290,7 @@ class TermsOfConditionSerializer(serializers.ModelSerializer):
                 queryset.exclude(id=instance.id)
 
                 if queryset.exists():
-                    raise_validation_error(_("Terms of Conditions with language already exists"))
+                    raise_validation_error(_("Terms of Conditions with this language already exists"))
         else:
             if language:
                 if TermsOfCondition.objects.filter(language=language).exists():

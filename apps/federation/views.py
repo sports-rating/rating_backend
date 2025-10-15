@@ -221,7 +221,7 @@ class FederationUserListAPIView(generics.ListAPIView):
         response: Response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
-            message=_("Users list"),
+            message=_("Federation users list retrieved successfully"),
             code=200,
         )
 
@@ -317,7 +317,7 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
         response: Response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
-            message=_("Federation User Request list retrieved successfully"),
+            message=_("Federation's User Requests list retrieved successfully"),
             code=status.HTTP_200_OK
         )
 
@@ -345,7 +345,7 @@ class FederationTournamentListAPIView(generics.ListAPIView):
         response: Response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
-            message=_("Federation Tournament list retrieved successfully"),
+            message=_("Federation's Tournament list retrieved successfully"),
             code=status.HTTP_200_OK
         )
 

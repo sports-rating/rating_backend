@@ -636,7 +636,7 @@ class SportsmanResultListCreateAPIView(generics.ListCreateAPIView):
         response =  super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
-            message=_("Sportsman Results retrieved successfully"),
+            message=_("Sportsman Result list retrieved successfully"),
             code=status.HTTP_200_OK
         )
 
@@ -950,7 +950,7 @@ class UserNotificationMarkAsReadView(generics.UpdateAPIView):
     def get_object(self):
         notification = UserNotification.objects.filter(id=self.kwargs.get("notification_id"), user=self.request.user).first()
         if not notification:
-            return raise_validation_error(message=_("Bildirishnoma topilmadi"), code=status.HTTP_404_NOT_FOUND)
+            return raise_validation_error(message=_("Notification is not found"), code=status.HTTP_404_NOT_FOUND)
         return notification
 
     def update(self, request, *args, **kwargs):
@@ -959,7 +959,7 @@ class UserNotificationMarkAsReadView(generics.UpdateAPIView):
         instance.save(update_fields=["is_read"])
         return success_response(
             data=self.get_serializer(instance).data,
-            message=_("Bildirishnoma muvaffaqiyatli yangilandi"),
+            message=_("Notification updated successfully"),
             code=status.HTTP_200_OK
         )
 
