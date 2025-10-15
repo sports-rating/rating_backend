@@ -26,7 +26,8 @@ from apps.shared.utils.utils import (
 from apps.user.models import (
     User,
     Sportsman,
-    Trainer
+    Trainer,
+    UserRequest
 )
 
 from apps.dashboard.models import (
@@ -42,6 +43,7 @@ import apps.dashboard.serializers as serializers
 
 from apps.dashboard.filters import (
     UserFilter,
+    UserRequestFilter
 )
 
 
@@ -310,5 +312,64 @@ class RequestStatsAPIView(APIView):
         return success_response(
             data=serializer.data,
             message=_("Dashboard request stats retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class UserRequestListAPIView(generics.ListAPIView):
+    queryset = UserRequest.objects.all()
+    permission_classes = [IsAdminOrSuperAdmin,]
+    serializer_class = serializers.UserRequestSerializer
+    filter_backends = [DjangoFilterBackend, rest_framework_filters.OrderingFilter, SearchFilter]
+    filterset_class = UserRequestFilter
+    ordering_fields = ['created_at', 'updated_at']
+    search_fields = ['user__first_name', 'user__last_name', 'user__phone_number', 'status']
+    pagination_class = CustomPagination
+
+    def get_queryset(self) -> QuerySet[UserRequest]:
+        return UserRequest.objects.select_related(
+            "sender",
+            "federation",
+            "processed_by",
+        ).prefetch_related(
+            "receivers",
+        )
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("User request statistics retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class UserRequestDetailAPIView(generics.RetrieveAPIView):
+    queryset = UserRequest.objects.all()
+    permission_classes = [IsAdminOrSuperAdmin,]
+    serializer_class = serializers.UserRequestSerializer
+
+    def get_queryset(self) -> QuerySet[UserRequest]:
+        return UserRequest.objects.select_related(
+            "sender",
+            "federation",
+            "processed_by",
+        ).prefetch_related(
+            "receivers",
+        )
+
+    def get_object(self) -> UserRequest:
+        request_id = self.kwargs.get("pk")
+        user_request = self.get_queryset().filter(id=request_id).first()
+        if not user_request:
+            raise_validation_error(message=_("User request not found"), code=404)
+        return user_request
+
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message=_("User request detail retrieved successfully"),
             code=status.HTTP_200_OK
         )

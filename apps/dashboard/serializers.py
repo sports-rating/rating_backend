@@ -22,6 +22,7 @@ from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
+from apps.shared.utils.mixins import RequestContextMixin
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -402,3 +403,70 @@ class RequestStatsSerializer(serializers.Serializer):
             "result_verification_request": data.get(enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value, {}),
             "workplace_verification_request": data.get(enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value, {}),
         }
+
+
+class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
+    class Meta:
+        model = UserRequest
+        fields = [
+            "id",
+            "sender",
+            "receivers",
+            "request_type",
+            "status",
+            "message_from_sender",
+            "message_from_receiver",
+            "old_data",
+            "new_data",
+            "processed_by",
+            "processed_time",
+            "created_time",
+        ]
+        read_only_fields = ["id", "sender", "created_time"]
+        extra_kwargs = {
+            "status": {"required": False}
+        }
+
+    def to_representation(self, instance: UserRequest) -> dict:
+        data = super().to_representation(instance)
+        receiver: User = instance.receivers.first()  # type: ignore
+        data["sender"] = {
+            "id": instance.sender.id,
+            "full_name": instance.sender.full_name,
+            "user_role": instance.sender.user_role,
+            "phone_number": instance.sender.phone_number,
+        }
+        if instance.federation:
+            federation: Federation = instance.federation
+            logger.info(f"Federation: {federation}")
+            data["receiver"] = {
+                "federation": {
+                    "id": federation.id,
+                    "name": federation.name,
+                    "phone_number": federation.phone_number,
+                    "is_national": federation.is_national,
+                } if federation else None
+            }
+            data["processed_by"] = {
+                "federation": {
+                    "id": federation.id,
+                    "name": federation.name,
+                    "phone_number": federation.phone_number,
+                    "is_national": federation.is_national,
+                } if federation else None
+            }
+        else:
+            data["receiver"] = {
+                "id": receiver.id,
+                "full_name": receiver.full_name,
+                "user_role": receiver.user_role,
+                "phone_number": receiver.phone_number,
+            }
+            data["processed_by"] = {
+                "id": instance.processed_by.id,
+                "full_name": instance.processed_by.full_name,
+                "phone_number": instance.processed_by.phone_number,
+            } if instance.processed_by else None
+        data["processed_time"] = instance.processed_time
+        data.pop("receivers")
+        return data
