@@ -376,13 +376,17 @@ class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
         return context
 
     def get_queryset(self) -> QuerySet[FederationAgeGroup]:
+        user: User = self.request.user  # type: ignore
         federation_id: UUID = self.kwargs.get('pk')
-        return FederationAgeGroup.objects.select_related(
-            "age_group__sport",
-            "federation"
-        ).filter(
-            federation_id=federation_id
-        ).select_related('age_group__sport')
+        queryset = FederationAgeGroup.objects.select_related(
+                "age_group__sport",
+                "federation"
+            ).filter(
+                federation_id=federation_id
+            ).select_related('age_group__sport')
+        if user.user_role in ['sportsman', 'trainer']:
+            return queryset.filter(age_group__gender=user.gender)
+        return queryset
 
     def list(self, request: Request, *args, **kwargs) -> Response:
         response: Response = super().list(request, *args, **kwargs)
