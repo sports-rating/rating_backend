@@ -51,10 +51,13 @@ def send_verification_code(phone_number: str) -> tuple[int, str, t.Optional[str]
         verification_code = STATIC_CODE
     else:
         verification_code = generate_verification_code()
-        print(f"Generated verification code: {verification_code}")
+        message_template = settings.VERIFICATION_CODE_MESSAGE_TEMPLATE
+
+        if not settings.PRODUCTION:
+            message_template += f"dpJYS3UCWKY" # dev signature
         response = send_sms_message(
             phone_number,
-            settings.VERIFICATION_CODE_MESSAGE_TEMPLATE.format(
+            message_template.format(
                 verification_code=verification_code
             ),
         )

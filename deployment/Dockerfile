@@ -7,7 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc
+    apt-get install -y --no-install-recommends gcc libmagic-dev file ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
 
 # RUN apt-get update && \
 #     apt-get install -y --no-install-recommends gcc && \
@@ -24,7 +25,8 @@ FROM python:3.11-slim-bookworm AS final
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libmagic1 file ffmpeg
 
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .

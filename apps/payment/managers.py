@@ -1,0 +1,249 @@
+import typing as t
+from datetime import timedelta
+
+from django.db import models
+from django.db.models import Count, Q, Sum, Value, Model, QuerySet, Case, When, F
+from django.db.models.functions import Coalesce, TruncMonth
+from django.conf import settings
+from django.utils import timezone
+
+from apps.shared.utils import enums
+
+if t.TYPE_CHECKING:
+    from apps.user.models import User
+    from apps.payment.models import Transaction
+
+
+class TransactionManager(models.Manager):
+    def get_monthly_revenue(self):
+        """
+        Get the monthly revenue for successful transactions.
+        """
+        from apps.payment.models import Transaction
+        now = timezone.now()
+        return (
+            Transaction.objects.filter(
+                status=enums.TransactionStatus.COMMITTED.value,  # or payme_state=Transaction.SUCCESSFULLY
+                performed_time__year=now.year,
+                performed_time__month=now.month,
+            )
+            .aggregate(total_revenue=Sum("amount"))["total_revenue"]
+            or 0
+        )
+
+    def get_last_6_months_revenue(self):
+        """
+        Get the revenue for the last 6 months.
+        """
+        from apps.payment.models import Transaction
+        now = timezone.now()
+        six_months_ago = now - timedelta(days=30 * 6)
+
+        qs = (
+            Transaction.objects.filter(
+                status=enums.TransactionStatus.COMMITTED.value,
+                performed_time__gte=six_months_ago,
+            )
+            .annotate(month=TruncMonth("performed_time"))
+            .values("month")
+            .annotate(total_revenue=Sum("amount"))
+            .order_by("month")
+        )
+
+        # Format output for charts
+        result = [
+            {
+                "month": month_data["month"].strftime("%b"),  # e.g. "Jan", "Feb"
+                "total_revenue": float(month_data["total_revenue"] or 0)
+            }
+            for month_data in qs
+        ]
+        return result
+
+    def get_yearly_revenue(self):
+        """
+        Get the yearly revenue for successful transactions.
+        """
+        from apps.payment.models import Transaction
+        now = timezone.now()
+
+        qs = (
+            Transaction.objects.filter(
+                status=enums.TransactionStatus.COMMITTED.value,
+                performed_time__year=now.year,
+            )
+            .annotate(month=TruncMonth("performed_time"))
+            .values("month")
+            .annotate(total_revenue=Sum("amount"))
+            .order_by("month")
+        )
+
+        result = [
+            {
+                "month": month_data["month"].strftime("%b"),
+                "total_revenue": float(month_data["total_revenue"] or 0)
+            }
+            for month_data in qs
+        ]
+        return result
+
+    def get_detailed_statistics(self) -> dict[str, t.Any]:
+        """
+        Get detailed statistics for transactions.
+        """
+        from apps.payment.models import Transaction
+        from apps.federation.models import Federation
+        from collections import defaultdict
+
+        now = timezone.now()
+
+        # Overall summary
+        summary = Transaction.objects.filter(
+            status=enums.TransactionStatus.COMMITTED.value,  # or payme_state=Transaction.SUCCESSFULLY
+            performed_time__year=now.year,
+        ).aggregate(
+            total_revenue=Coalesce(
+                Sum("amount"),
+                Value(0, output_field=models.DecimalField()),
+                output_field=models.DecimalField()
+            ),
+            total_transactions=Count("id"),
+            total_revenue_month=Coalesce(
+                Sum(
+                    Case(
+                        When(performed_time__month=now.month, then="amount"),
+                        default=Value(0, output_field=models.DecimalField()),
+                        output_field=models.DecimalField(),
+                    ),
+                    output_field=models.DecimalField(),
+                ),
+                Value(0, output_field=models.DecimalField()),
+            ),
+            total_transactions_month=Count(
+                Case(When(performed_time__month=now.month, then=1))
+            ),
+        )
+
+        data = {
+            "total_revenue": float(summary["total_revenue"] or 0),
+            "total_transactions": summary["total_transactions"],
+            "total_revenue_month": float(summary["total_revenue_month"] or 0),
+            "total_transactions_month": summary["total_transactions_month"],
+            "yearly_revenue": self.get_yearly_revenue(),
+        }
+
+        # Breakdown by user role
+        role_stats = (
+            Transaction.objects.filter(
+                status=enums.TransactionStatus.COMMITTED.value,
+                performed_time__year=now.year,
+            ).values('user__user_role').annotate(
+                revenue=Coalesce(
+                    Sum("amount"),
+                    Value(0, output_field=models.DecimalField()),
+                    output_field=models.DecimalField()
+                ),
+                transactions=Count("id")
+            )
+        )
+
+        user_roles = [
+            enums.UserRoles.SPORTSMAN.value,
+            enums.UserRoles.TRAINER.value,
+            enums.UserRoles.SPORT_INSTITUTION_ADMIN.value,
+            enums.UserRoles.FEDERATION.value,
+        ]
+
+        role_stats_dict = {
+            user_role: {
+                "revenue": next((r["revenue"] for r in role_stats if r["user__user_role"] == user_role), 0),
+                "transactions": next((r["transactions"] for r in role_stats if r["user__user_role"] == user_role), 0),
+            }
+            for user_role in user_roles
+        }
+        data["by_user_role"] = role_stats_dict
+
+        # Breakdown by payment method
+        base_qs = Transaction.objects.filter(
+            status=enums.TransactionStatus.COMMITTED.value,
+            performed_time__year=now.year,
+        )
+
+        total_transactions = base_qs.count() or 1  # prevent division by zero
+
+        payment_methods_stats = (
+            base_qs.values("payment_method")
+            .annotate(
+                revenue=Coalesce(
+                    Sum("amount"),
+                    Value(0, output_field=models.DecimalField()),
+                    output_field=models.DecimalField(),
+                ),
+                transactions=Count("id"),
+            )
+            .annotate(
+                percentage=Coalesce(
+                    (100.0 * F("transactions") / total_transactions),
+                    Value(0, output_field=models.DecimalField()),
+                    output_field=models.DecimalField(),
+                )
+            )
+            .order_by("-percentage")
+        )
+
+        payment_methods_dict = {
+            pm["payment_method"]: {
+                "revenue": pm["revenue"],
+                "transactions": pm["transactions"],
+                "percentage": round(float(pm["percentage"] or 0), 1)
+            }
+            for pm in payment_methods_stats
+        }
+        data["by_payment_method"] = payment_methods_dict
+
+        # Breakdown by federations
+        # Sportsmen-related transactions
+        sportsmen_stats = (
+            base_qs.filter(user__sportsman_profile__trainer__federation__isnull=False)
+            .values("user__sportsman_profile__trainer__federation__id", "user__sportsman_profile__trainer__federation__name")
+            .annotate(
+                revenue=Coalesce(Sum("amount"), Value(0, output_field=models.DecimalField())),
+                transactions=Count("id"),
+            )
+        )
+
+        # Trainer-related transactions
+        trainer_stats = (
+            base_qs.filter(user__trainer_profile__federation__isnull=False)
+            .values("user__trainer_profile__federation__id", "user__trainer_profile__federation__name")
+            .annotate(
+                revenue=Coalesce(Sum("amount"), Value(0, output_field=models.DecimalField())),
+                transactions=Count("id"),
+            )
+        )
+
+        federation_data = defaultdict(lambda: {"revenue": 0, "transactions": 0})
+
+        for row in sportsmen_stats:
+            fid = row["user__sportsman_profile__trainer__federation__id"]
+            federation_data[fid]["name"] = row["user__sportsman_profile__trainer__federation__name"]
+            federation_data[fid]["revenue"] += row["revenue"]
+            federation_data[fid]["transactions"] += row["transactions"]
+
+        for row in trainer_stats:
+            fid = row["user__trainer_profile__federation__id"]
+            federation_data[fid]["name"] = row["user__trainer_profile__federation__name"]
+            federation_data[fid]["revenue"] += row["revenue"]
+            federation_data[fid]["transactions"] += row["transactions"]
+
+        data["by_federation"] = {}
+
+        for federation in Federation.objects.all():
+            f_id = federation.id
+            stat = federation_data.get(f_id, {"name": federation.name, "revenue": 0, "transactions": 0})
+            data["by_federation"][stat["name"]] = {
+                "revenue": stat["revenue"],
+                "transactions": stat["transactions"],
+            }
+
+        return data

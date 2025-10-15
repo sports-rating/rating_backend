@@ -1,6 +1,7 @@
-from decimal import Decimal, InvalidOperation
 import typing as t
+import os
 
+from decimal import Decimal, InvalidOperation
 from datetime import date
 from typing import Any, Dict, List
 
@@ -44,6 +45,7 @@ from apps.user.utils import (
 from apps.shared.services.user_request import UserRequestService
 from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.services.scoring_service import ScoringService
+from apps.shared.serializers import BaseMediaSerializer
 from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.payloads import (
     SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
@@ -86,8 +88,12 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
     code = serializers.CharField()
     phone_number = serializers.CharField()
     action = serializers.ChoiceField(choices=SEND_VERIFICATION_ACTION, required=False)
+    tokens = serializers.DictField(read_only=True)
+    user_role = serializers.CharField(read_only=True)
     fcm_token = serializers.CharField(required=False)
     device_type = serializers.ChoiceField(choices=DeviceType.choices, required=False)
+    is_sportsman_verified = serializers.BooleanField(read_only=True)
+    is_trainer_verified = serializers.BooleanField(read_only=True)
 
     def get_tokens(self):  # noqa
         action = self.validated_data.get("action", None)
@@ -99,6 +105,18 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
             user = User.objects.filter(phone_number=phone_number).first()
             if not user:
                 raise_validation_error(message=_("User not found"))
+
+            data = {
+                'tokens': user.tokens(),
+                'user_role': user.user_role,
+            }
+            if user.user_role == enums.UserRoles.SPORTSMAN.value:
+                if getattr(user, "sportsman_profile", None):
+                    data["is_sportsman_verified"] = user.sportsman_profile.is_sportsman_verified
+            elif user.user_role == enums.UserRoles.TRAINER.value:
+                if getattr(user, "trainer_profile", None):
+                    data["is_trainer_verified"] = user.trainer_profile.is_trainer_verified
+
             if fcm_token:
                 FCMDevice.objects.update_or_create(
                     registration_id=fcm_token,
@@ -108,10 +126,7 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
                         'active': True,
                     }
                 )
-            return {
-                'tokens': user.tokens(),
-                'user_role': user.user_role
-            }
+            return data
         return None
 
     def to_representation(self, instance):
@@ -120,10 +135,14 @@ class VerifyCodeSerializer(serializers.Serializer):  # noqa
             user_data = self.get_tokens()
             data["tokens"] = user_data.get('tokens')
             data["user_role"] = user_data.get('user_role')
+            if 'is_sportsman_verified' in user_data:
+                data['is_sportsman_verified'] = user_data.get('is_sportsman_verified')
+            elif 'is_trainer_verified' in user_data:
+                data['is_trainer_verified'] = user_data.get('is_trainer_verified')
         return data
 
 
-class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
+class UserMediaSerializer(BaseMediaSerializer):
     class Meta:
         model = UserMedia
         fields = (
@@ -138,19 +157,8 @@ class UserMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
         )
         read_only_fields = ("id", "user", "media_type", "size", "extension", "created_time")
 
-    def validate(self, data):
-        """
-        Validate the file size for PDFs
-        """
-        file = data.get("file")
-        if file:
-            if file.name.lower().endswith(".pdf"):
-                if file.size > settings.MAX_PDF_SIZE_BYTES:
-                    size_in_mb = file.size / (1024 * 1024)
-                    raise_validation_error(
-                        message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
-                    )
-        return data
+    def validate(self, data) -> dict:
+        return super().validate(data)
 
 
 class BaseUserSerializer(serializers.ModelSerializer):
@@ -167,6 +175,44 @@ class BaseUserSerializer(serializers.ModelSerializer):
             "pinfl",
             "phone_number",
             "email",
+            "gender",
+            "region",
+            "district",
+            "birth_date",
+            "media",
+            "results",
+            "user_role",
+            "is_verified",
+            "created_time",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        return data
+
+
+class PublicBaseUserSerializer(serializers.ModelSerializer):
+    profile_photo = serializers.CharField(read_only=True)
+    media = UserMediaSerializer(many=True)
+    results = ResultCreateSerializer(many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
             "gender",
             "region",
             "district",
@@ -251,7 +297,7 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
         return data
 
 
-class SportsmanListSerializer(serializers.ModelSerializer):
+class PublicSportsmanListSerializer(RequestContextMixin, serializers.ModelSerializer):
     statistics = serializers.SerializerMethodField()
 
     class Meta:
@@ -278,6 +324,47 @@ class SportsmanListSerializer(serializers.ModelSerializer):
             data["points"] = instance.sportsman_profile.points
         if instance.profile_photo:
             data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        return data
+
+    def get_statistics(self, obj) -> Dict[str, Any]:
+        return {
+            "total_gold": getattr(obj, "total_gold", 0),
+            "total_silver": getattr(obj, "total_silver", 0),
+            "total_bronze": getattr(obj, "total_bronze", 0),
+            "total_competitions": getattr(obj, "total_competitions", 0),
+        }
+
+
+class SportsmanListSerializer(RequestContextMixin, serializers.ModelSerializer):
+    statistics = serializers.SerializerMethodField()
+    profile_photo = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "user_role",
+            "statistics",
+            "profile_photo"
+        ]
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
+        if instance.sportsman_profile.sport:
+            data["sport"] = instance.sportsman_profile.sport.name
+            if instance.sportsman_profile.sport.logo:
+                data["logo"] = get_file_full_url(instance.sportsman_profile.sport.logo.url) if instance.sportsman_profile.sport.logo else None
+        if instance.sportsman_profile.trainer:
+            data["trainer_id"] = instance.sportsman_profile.trainer.user_id
+            data["trainer_name"] = f'{instance.sportsman_profile.trainer.user}'
+        if getattr(instance, "sportsman_profile", None):
+            data["points"] = instance.sportsman_profile.points
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        data["is_result_paid"] = instance.sportsman_profile.is_result_paid
         return data
 
     def get_statistics(self, obj) -> Dict[str, Any]:
@@ -465,6 +552,103 @@ class SportsmanUserSerializer(BaseUserSerializer):
 
     class Meta(BaseUserSerializer.Meta):
         fields = BaseUserSerializer.Meta.fields + ["sportsman_profile"]
+
+
+class PublicSportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerializer):
+    sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
+    trainer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source="trainer", write_only=True, required=False)
+    statistics = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Sportsman
+        fields = [
+            "sport_id",
+            "trainer_id",
+            "bio",
+            "division",
+            "sport_rank",
+            "points",
+            "user_metrics",
+            "height",
+            "weight",
+            "address",
+            "is_sportsman_verified",
+            "statistics",
+        ]
+        read_only_fields = ["is_sportsman_verified", "statistics"]
+
+    def get_statistics(self, obj: Sportsman) -> Dict[str, Any]:
+        return User.stats.get_sportsman_statistics(user=obj.user)
+
+    def to_representation(self, instance: Sportsman) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        data["trainer"] = {
+            "name": f'{instance.trainer.user}',
+            "sport": instance.trainer.sport.name if instance.trainer.sport else None,
+            "full_name": instance.trainer.user.full_name,
+        } if instance.trainer else None
+        data["sport_rank"] = _(instance.sport_rank) if instance.sport_rank else None
+        return data
+
+
+class PublicSportsmanUserSerializer(PublicBaseUserSerializer):
+    sportsman_profile = PublicSportsmanProfileSerializer()
+
+    class Meta(PublicBaseUserSerializer.Meta):
+        fields = PublicBaseUserSerializer.Meta.fields + ["sportsman_profile"]
+
+
+class PublicTrainerListSerializer(serializers.ModelSerializer):
+    statistics = serializers.SerializerMethodField()
+    # logo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "user_role",
+            "statistics",
+            # "logo",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.trainer_profile.sport:
+            data["sport"] = instance.trainer_profile.sport.name
+            if instance.trainer_profile.sport.logo:
+                data["logo"] = get_file_full_url(instance.trainer_profile.sport.logo.url) if instance.trainer_profile.sport.logo else None
+        if getattr(instance, "trainer_profile", None):
+            data["points"] = instance.trainer_profile.points
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        return data
+
+    def get_statistics(self, obj) ->  List[Dict[str, Any]]:
+        stats = {
+            "own_statistics": {
+                "gold": obj.own_total_gold,
+                "silver": obj.own_total_silver,
+                "bronze": obj.own_total_bronze,
+            },
+            "students_statistics": {
+                "gold": obj.students_total_gold,
+                "silver": obj.students_total_silver,
+                "bronze": obj.students_total_bronze,
+            },
+            "total_statistics": {
+                "gold": obj.own_total_gold + obj.students_total_gold,
+                "silver": obj.own_total_silver + obj.students_total_silver,
+                "bronze": obj.own_total_bronze + obj.students_total_bronze,
+            },
+        }
+        return stats
 
 
 class TrainerListSerializer(serializers.ModelSerializer):
@@ -682,6 +866,52 @@ class TrainerUserSerializer(BaseUserSerializer):
 
     class Meta(BaseUserSerializer.Meta):
         fields = BaseUserSerializer.Meta.fields + ["trainer_profile"]
+
+
+class PublicTrainerProfileSerializer(serializers.ModelSerializer):
+    sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
+    statistics = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Trainer
+        fields = [
+            "sport_id",
+            "federation",
+            "skill_level",
+            "bio",
+            "division",
+            "user_metrics",
+            "height",
+            "weight",
+            "points",
+            "address",
+            "social_media",
+            "is_trainer_verified",
+            "statistics",
+        ]
+        read_only_fields = ["is_trainer_verified", "statistics"]
+
+    def to_representation(self, instance: Trainer) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        data["federation"] = {
+            "name": instance.federation.name,
+            "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
+        } if instance.federation else None
+        return data
+
+    def get_statistics(self, obj: Trainer) ->  List[Dict[str, Any]]:
+        return User.stats.get_trainer_statistics(user=obj.user)
+
+
+class PublicTrainerUserSerializer(PublicBaseUserSerializer):
+    trainer_profile = PublicTrainerProfileSerializer()
+
+    class Meta(PublicBaseUserSerializer.Meta):
+        fields = PublicBaseUserSerializer.Meta.fields + ["trainer_profile"]
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -1405,7 +1635,9 @@ class RegionSerializer(serializers.ModelSerializer):
         model = Region
         fields = [
             "id",
-            "name"
+            "name",
+            "latitude",
+            "longitude"
         ]
 
 

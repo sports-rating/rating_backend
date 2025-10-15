@@ -18,14 +18,19 @@ urlpatterns = [
     path("profile/results/<uuid:pk>/", views.SportsmanResultRetrieveUpdateDeleteAPIView.as_view(), name='result-retrieve-update-delete'),
     path("profile/media/", views.UserMediaListView.as_view(), name='user-media-list'),
 
-    path("profile/sportsman/", views.SportsmanListCreateView.as_view(), name='sportsman-register-list'),
-    path("profile/sportsman/<uuid:pk>/", views.SportsmanRetrieveUpdateDeleteView.as_view(), name='sportsman-retrieve-update-delete'),
+    path("profile/sportsman/", views.SportsmanListCreateView.as_view(), name='sportsman-register-public-list'),
+    path("profile/sportsman/<uuid:pk>/", views.SportsmanRetrieveUpdateDeleteView.as_view(), name='sportsman-public-retrieve-update-delete'),
 
-    path("profile/trainer/", views.TrainerListCreateView.as_view(), name='trainer-register-list'),
-    path("profile/trainer/<uuid:pk>/", views.TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-retrieve"),
+    path("profile/trainer/", views.TrainerListCreateView.as_view(), name='trainer-register-public-list'),
+    path("profile/trainer/<uuid:pk>/", views.TrainerRetrieveUpdateDeleteView.as_view(), name="trainer-public-retrieve-update-delete"),
 
     path("profile/archived-trainer/", views.ArchivedTrainerCreateListView.as_view(), name='archived-trainer-register-list'),
     path("profile/archived-trainer/<uuid:pk>/", views.ArchivedTrainerRetrieveUpdateDeleteView.as_view(), name='archived-trainer-retrieve-update-delete'),
+
+    path("sportsmen/", views.SportsmanListAPIView.as_view(), name='internal-sportsman-list'),
+    # path("sportsmen/<uuid:pk>/", views.SportsmanRetrieveAPIView.as_view(), name='internal-sportsman-retrieve'),
+    path("trainers/", views.TrainerListAPIView.as_view(), name='internal-trainer-list'),
+    # path("trainers/<uuid:pk>/", views.TrainerRetrieveAPIView.as_view(), name='internal-trainer-retrieve'),
 
     path("media-upload/", views.MediaUploadView.as_view(), name='media-upload'),
     path("media/<uuid:pk>/", views.MediaDeleteView.as_view(), name='media-delete'),

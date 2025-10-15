@@ -1,22 +1,38 @@
 import os
 import sys
 import redis
+import sentry_sdk
+
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 from decouple import config
+from firebase_admin import initialize_app, credentials
 
 from django.utils.translation import gettext_lazy as _
 
-from firebase_admin import initialize_app, credentials
-
+load_dotenv()
 
 IS_LOCAL: bool = os.getenv("IS_LOCAL", "true").lower() == "true"
 
+if not IS_LOCAL:
+    SENTRY_DSN = os.getenv(
+        "SENTRY_DSN",
+        default="https://021b8769467f3571f152007e3aa870ac@o924416.ingest.us.sentry.io/4509486310883328",
+    )
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=os.getenv("SENTRY_ENVIRONMENT", default="development"),
+        traces_sample_rate=1.0,
+        send_default_pii=True,
+        # Enable logs to be sent to Sentry
+        enable_logs=True,
+    )
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(os.path.join(BASE_DIR, "apps"))
-
-load_dotenv()
 
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=True, cast=bool)
@@ -65,6 +81,7 @@ INTERNAL_APPS = [
 INSTALLED_APPS = PACKAGES + BACKEND_APPS + INTERNAL_APPS
 
 MIDDLEWARE = [
+    'core.middleware.AdminBasicAuthMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     'corsheaders.middleware.CorsMiddleware',
@@ -253,8 +270,8 @@ REST_FRAMEWORK = {
     #     "rest_framework.permissions.IsAuthenticated",
     # ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.BasicAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
@@ -300,45 +317,45 @@ CELERY_TASK_DEFAULT_RATE_LIMIT = "10/m"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 
-if not IS_LOCAL:
-    S3_MEDIA_BUCKET = os.getenv("S3_MEDIA_BUCKET")
-    S3_STATIC_BUCKET = os.getenv("S3_STATIC_BUCKET")
-    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
-    S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
-    S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
-    S3_MEDIA_LOCATION = "media"
-    S3_STATIC_LOCATION = "static"
+# if not IS_LOCAL:
+#     S3_MEDIA_BUCKET = os.getenv("S3_MEDIA_BUCKET")
+#     S3_STATIC_BUCKET = os.getenv("S3_STATIC_BUCKET")
+#     S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+#     S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
+#     S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
+#     S3_MEDIA_LOCATION = "media"
+#     S3_STATIC_LOCATION = "static"
 
-    STORAGES = {
-        "default": {
-            "BACKEND": "apps.shared.utils.storage_backends.CustomMediaStorage",
-            "OPTIONS": {
-                "bucket_name": S3_MEDIA_BUCKET,
-                "location": S3_MEDIA_LOCATION,
-                "endpoint_url": S3_ENDPOINT_URL,
-                "access_key": S3_ACCESS_KEY,
-                "secret_key": S3_SECRET_KEY,
-                "addressing_style": "path", # virtual",
-                "default_acl": None,
-            },
-        },
-        "staticfiles": {
-            "BACKEND": "apps.shared.utils.storage_backends.CustomStaticStorage",
-            "OPTIONS": {
-                "bucket_name": S3_STATIC_BUCKET,
-                "location": S3_STATIC_LOCATION,
-                "endpoint_url": S3_ENDPOINT_URL,
-                "access_key": S3_ACCESS_KEY,
-                "secret_key": S3_SECRET_KEY,
-                "addressing_style": "path", # "virtual",
-                "default_acl": None,
-            },
-        },
-    }
-else:
-    # Media files (user-uploaded content)
-    MEDIA_URL = "/media/"  # URL for serving media files
-    MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Directory for storing media files
+#     STORAGES = {
+#         "default": {
+#             "BACKEND": "apps.shared.utils.storage_backends.CustomMediaStorage",
+#             "OPTIONS": {
+#                 "bucket_name": S3_MEDIA_BUCKET,
+#                 "location": S3_MEDIA_LOCATION,
+#                 "endpoint_url": S3_ENDPOINT_URL,
+#                 "access_key": S3_ACCESS_KEY,
+#                 "secret_key": S3_SECRET_KEY,
+#                 "addressing_style": "path", # virtual",
+#                 "default_acl": None,
+#             },
+#         },
+#         "staticfiles": {
+#             "BACKEND": "apps.shared.utils.storage_backends.CustomStaticStorage",
+#             "OPTIONS": {
+#                 "bucket_name": S3_STATIC_BUCKET,
+#                 "location": S3_STATIC_LOCATION,
+#                 "endpoint_url": S3_ENDPOINT_URL,
+#                 "access_key": S3_ACCESS_KEY,
+#                 "secret_key": S3_SECRET_KEY,
+#                 "addressing_style": "path", # "virtual",
+#                 "default_acl": None,
+#             },
+#         },
+#     }
+# else:
+# Media files (user-uploaded content)
+MEDIA_URL = "/media/"  # URL for serving media files
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Directory for storing media files
 
 
 # Jazzmin settings for Django Admin
@@ -448,18 +465,24 @@ VERIFICATION_CODE_EXPIRE = 1 * 60  # 2 minute
 SMS_ID_PREFIX = os.getenv("SMS_ID_PREFIX", default="PulseEv")
 PLAY_MOBILE_ORIGINATOR = os.getenv("PLAY_MOBILE_ORIGINATOR", default=3700)
 VERIFICATION_CODE_MESSAGE_TEMPLATE = (
-    "7srating.uz! \n" "Sizning tasdiqlash kodingiz - {verification_code}"
+    "7srating.uz! \n" "Sizning tasdiqlash kodingiz - {verification_code} \n"
 )
 VERIFICATION_CODE_LENGTH: int = 6
 
 
 # IMAGE configuration
 IMAGE_DIMENSION = (500, 500)
-IMAGE_TYPES = ["heic", "heif", "jpeg", "jpg", "png"]
+IMAGE_TYPES = [".heic", ".heif", ".jpeg", ".jpg", ".png"]
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
 
-MAX_IMAGE_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
+# Video configuration
+VIDEO_TYPES = [".mp4", ".mov", ".avi", ".wmv"]
+MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB
 
-MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024 # 10 MB
+# Document configuration
+DOCUMENT_TYPES = [".pdf", ".doc", ".docx", ".txt"]
+MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024 # 10 MB
+
 
 # Logging
 LOGGING = {

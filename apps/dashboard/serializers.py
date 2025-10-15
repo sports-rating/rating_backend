@@ -10,14 +10,19 @@ from apps.user.models import (
     User,
     Sportsman,
     Trainer,
+    UserRequest
 )
+
 from apps.dashboard.models import PrivacyPolicy, TermsOfCondition
 from apps.federation.models import Federation
+from apps.sport.models import Sport, SportInstitution
+from apps.payment.models import Transaction
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
+from apps.shared.utils.mixins import RequestContextMixin
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -285,10 +290,184 @@ class TermsOfConditionSerializer(serializers.ModelSerializer):
                 queryset.exclude(id=instance.id)
 
                 if queryset.exists():
-                    raise_validation_error(_("Terms of Conditions with language already exists"))
+                    raise_validation_error(_("Terms of Conditions with this language already exists"))
         else:
             if language:
                 if TermsOfCondition.objects.filter(language=language).exists():
                     raise_validation_error(message=_("Terms of Conditions with this language already exists"))
 
         return attrs
+
+
+class UsersCountSerializer(serializers.Serializer):
+    total_users = serializers.IntegerField()
+    total_sportsmen = serializers.IntegerField()
+    total_trainers = serializers.IntegerField()
+    total_sport_institution_admins = serializers.IntegerField()
+    total_federation_admins = serializers.IntegerField()
+    total_admins = serializers.IntegerField()
+
+    def to_representation(self, instance) -> dict:
+        users_count = User.stats.get_total_users()
+        data = {
+            "total_users": users_count['total_users'],
+            "total_sportsmen": users_count['total_sportsmen'],
+            "total_trainers": users_count['total_trainers'],
+            "total_sport_institution_admins": users_count['total_sport_institution_admins'],
+            "total_federation_admins": users_count['total_federation_admins'],
+            "total_admins": users_count['total_admins'],
+        }
+        return data
+
+
+class GeneralCountSerializer(serializers.Serializer):
+    users = UsersCountSerializer()
+    total_federations = serializers.IntegerField()
+    total_sport_institutions = serializers.IntegerField()
+    total_sports = serializers.IntegerField()
+    total_pending_requests = serializers.IntegerField()
+    total_monthly_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    def to_representation(self, instance) -> dict:
+        data = {
+            "users": UsersCountSerializer(instance={}).data,
+            "total_federations": Federation.stats.get_total_federations(),
+            "total_sport_institutions": SportInstitution.stats.get_total_sport_institutions(),
+            "total_sports": Sport.stats.get_total_sports(),
+            "total_pending_requests": self.get_total_pending_requests(),
+            "total_monthly_revenue": Transaction.stats.get_monthly_revenue(),
+        }
+        return data
+
+    def get_total_pending_requests(self) -> int:
+        return UserRequest.objects.filter(status=enums.UserRequestStatus.PENDING.value).count()
+
+
+class MainStatsSerializer(serializers.Serializer):
+    general_counts = GeneralCountSerializer()
+    revenue_stats = serializers.ListField()
+    user_growth_stats = serializers.ListField()
+
+    def to_representation(self, instance) -> dict:
+        data = {
+            "general_counts": GeneralCountSerializer(instance={}).data,
+            "revenue_stats": Transaction.stats.get_last_6_months_revenue(),
+            "user_growth_stats": User.stats.get_last_6_months_user_growth()
+        }
+        return data
+
+
+class PaymentStatsSerializer(serializers.Serializer):
+    total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_transactions = serializers.IntegerField()
+    total_revenue_month = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_transactions_month = serializers.IntegerField()
+    yearly_revenue = serializers.ListField()
+    by_user_role = serializers.DictField()
+    by_payment_method = serializers.DictField()
+
+    def to_representation(self, instance) -> dict:
+        data = Transaction.stats.get_detailed_statistics()
+        data["total_revenue"] = float(data["total_revenue"])
+        data["total_transactions"] = int(data["total_transactions"])
+        data["total_revenue_month"] = float(data["total_revenue_month"])
+        data["total_transactions_month"] = int(data["total_transactions_month"])
+        data["yearly_revenue"] = [
+            {
+                "month": item["month"],
+                "total_revenue": float(item["total_revenue"])
+            }
+            for item in data["yearly_revenue"]
+        ]
+        return data
+
+
+class RequestStatusStatsSerializer(serializers.Serializer):
+    pending = serializers.IntegerField()
+    approved = serializers.IntegerField()
+    rejected = serializers.IntegerField()
+    cancelled = serializers.IntegerField()
+    total = serializers.IntegerField()
+
+
+class RequestStatsSerializer(serializers.Serializer):
+    sportsman_trainer_request = RequestStatusStatsSerializer()
+    trainer_federation_request = RequestStatusStatsSerializer()
+    result_verification_request = RequestStatusStatsSerializer()
+    workplace_verification_request = RequestStatusStatsSerializer()
+
+    def to_representation(self, instance) -> dict:
+        data = UserRequest.stats.get_request_statistics()
+        return {
+            "sportsman_trainer_request": data.get(enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value, {}),
+            "trainer_federation_request": data.get(enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value, {}),
+            "result_verification_request": data.get(enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value, {}),
+            "workplace_verification_request": data.get(enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value, {}),
+        }
+
+
+class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
+    class Meta:
+        model = UserRequest
+        fields = [
+            "id",
+            "sender",
+            "receivers",
+            "request_type",
+            "status",
+            "message_from_sender",
+            "message_from_receiver",
+            "old_data",
+            "new_data",
+            "processed_by",
+            "processed_time",
+            "created_time",
+        ]
+        read_only_fields = ["id", "sender", "created_time"]
+        extra_kwargs = {
+            "status": {"required": False}
+        }
+
+    def to_representation(self, instance: UserRequest) -> dict:
+        data = super().to_representation(instance)
+        receiver: User = instance.receivers.first()  # type: ignore
+        data["sender"] = {
+            "id": instance.sender.id,
+            "full_name": instance.sender.full_name,
+            "user_role": instance.sender.user_role,
+            "phone_number": instance.sender.phone_number,
+        }
+        if instance.federation:
+            federation: Federation = instance.federation
+            logger.info(f"Federation: {federation}")
+            data["receiver"] = {
+                "federation": {
+                    "id": federation.id,
+                    "name": federation.name,
+                    "phone_number": federation.phone_number,
+                    "is_national": federation.is_national,
+                } if federation else None
+            }
+            data["processed_by"] = {
+                "federation": {
+                    "id": federation.id,
+                    "name": federation.name,
+                    "phone_number": federation.phone_number,
+                    "is_national": federation.is_national,
+                } if federation else None
+            }
+        else:
+            data["receiver"] = {
+                "id": receiver.id,
+                "full_name": receiver.full_name,
+                "user_role": receiver.user_role,
+                "phone_number": receiver.phone_number,
+            }
+            data["processed_by"] = {
+                "id": instance.processed_by.id,
+                "full_name": instance.processed_by.full_name,
+                "phone_number": instance.processed_by.phone_number,
+            } if instance.processed_by else None
+        data["processed_time"] = instance.processed_time
+        data.pop("receivers")
+        return data

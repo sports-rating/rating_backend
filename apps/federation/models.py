@@ -13,6 +13,7 @@ from apps.shared.utils.utils import handle_file_update, handle_file_delete, Corr
 from apps.shared.utils.exceptions import raise_validation_error
 
 from apps.sport.models import Sport
+from apps.federation.managers import FederationManager
 
 
 class Federation(BaseModel):
@@ -56,6 +57,9 @@ class Federation(BaseModel):
         blank=True
     )
     social_media = models.JSONField(blank=True, null=True)
+
+    objects = models.Manager()
+    stats = FederationManager()
 
     class Meta:
         db_table = "federation"

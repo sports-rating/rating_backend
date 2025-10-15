@@ -11,6 +11,7 @@ from rest_framework.exceptions import ValidationError
 from apps import payment
 from apps.shared.models import BaseModel
 from apps.shared.utils import enums
+from apps.payment.managers import TransactionManager
 
 
 class Transaction(BaseModel):
@@ -65,6 +66,9 @@ class Transaction(BaseModel):
     )
     performed_time = models.DateTimeField(null=True, blank=True, db_index=True)
     cancelled_time = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    objects = models.Manager()
+    stats = TransactionManager()
 
     class Meta:
         db_table = "transaction"

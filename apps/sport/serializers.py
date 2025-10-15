@@ -50,6 +50,7 @@ from apps.dashboard.serializers import (
 # from apps.user.tasks import recalculate_user_points_task
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.utils import enums
+from apps.shared.serializers import BaseMediaSerializer
 
 
 class SportSerializer(serializers.ModelSerializer):
@@ -76,7 +77,7 @@ class SportSerializer(serializers.ModelSerializer):
         return data
 
 
-class SportInstitutionMediaSerializer(serializers.ModelSerializer):
+class SportInstitutionMediaSerializer(BaseMediaSerializer):
     class Meta:
         model = SportInstitutionMedia
         fields = [
@@ -90,19 +91,8 @@ class SportInstitutionMediaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "size", "extension", "media_type", "created_time"]
 
-    def validate(self, data):
-        """
-        Validate the file size for PDFs
-        """
-        file = data.get("file")
-        if file:
-            if file.name.lower().endswith(".pdf"):
-                if file.size > settings.MAX_PDF_SIZE_BYTES:
-                    size_in_mb = file.size / (1024 * 1024)
-                    raise_validation_error(
-                        message=_(f"PDF files must be less than 10 MB. Current one is {size_in_mb:.2f}")
-                    )
-        return data
+    def validate(self, data) -> dict:
+        return super().validate(data)
 
 
 class SportInstitutionSerializer(serializers.ModelSerializer):
@@ -337,7 +327,7 @@ class TeamCreateSerializer(serializers.ModelSerializer):
         name = attrs.get("name", None)
         team = Team.objects.filter(name=name).first()
         if team:
-            raise_validation_error(message=_("Team with name already created"))
+            raise_validation_error(message=_("Team with this name already exists"))
 
         current_year = datetime.now().year
         if founded_year and founded_year > current_year:
@@ -445,7 +435,8 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
 
     def validate(self, attrs: dict) -> dict:
         phone_number: str = attrs.get("manager_phone_number")
-        if User.objects.filter(phone_number=phone_number).exists():
+        status: str = attrs.get("status")
+        if User.objects.filter(phone_number=phone_number).exists() and status == enums.SportInstitutionRequestStatus.APPROVED.value:
             logger.error(f"Sport Institution Request: creation | User with phone number {phone_number} already exists.")
             raise_validation_error(message=_(f"User with phone number {phone_number} already exists."))
 

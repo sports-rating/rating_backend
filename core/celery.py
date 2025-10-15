@@ -16,4 +16,4 @@ app.autodiscover_tasks()
 #         "schedule": timedelta(seconds=15),  # every 5 minutes # for testing 15s
 #     }
 # }
-app.conf["timezone"] = "UTC"
+app.conf.timezone = "Asia/Tashkent"

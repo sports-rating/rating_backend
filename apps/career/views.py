@@ -27,40 +27,6 @@ from apps.career.models import (
 import apps.career.serializers as serializers
 
 
-class EducationRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.AllowAny, )
-    queryset = Education.objects.all()
-    serializer_class = serializers.EducationSerializer
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return success_response(
-            data=serializer.data,
-            message=_("Education retrieved successfully"),
-            code=status.HTTP_200_OK,
-        )
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return success_response(
-            data=serializer.data,
-            message=_("Education updated successfully"),
-            code=status.HTTP_200_OK,
-        )
-
-    def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.delete()
-        return success_response(
-            message=_("Education deleted successfully"),
-            code=status.HTTP_204_NO_CONTENT
-        )
-
-
 class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     queryset = WorkPlace.objects.all()
@@ -98,7 +64,7 @@ class TrainerWorkPlaceListCreateView(generics.ListCreateAPIView):
         response = super().list(request, *args, **kwargs)
         return success_response(
             data=response.data,
-            message=_("Trainer WorkPlace retrieved successfully"),
+            message=_("Trainer WorkPlaces retrieved successfully"),
             code=status.HTTP_200_OK
         )
 

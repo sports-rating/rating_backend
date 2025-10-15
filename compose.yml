@@ -67,6 +67,8 @@ services:
     env_file: .env
     command: celery -A core worker --loglevel=info
     restart: unless-stopped
+    volumes:
+      - /var/www/media:/app/media
     networks:
       - backend
     depends_on:
@@ -114,7 +116,6 @@ services:
 volumes:
   postgres_data:
   redis-data:
-  minio-data:
 
 networks:
   backend:

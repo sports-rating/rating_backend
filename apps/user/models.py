@@ -31,7 +31,11 @@ from apps.sport.models import (
 from apps.federation.models import (
     Federation
 )
-from apps.user.managers import UserManager, UserStatisticsManager
+from apps.user.managers import (
+    UserManager,
+    UserStatisticsManager,
+    UserRequestStatisticsManager
+)
 
 fake = Faker()
 
@@ -297,6 +301,8 @@ class UserRequest(BaseModel):
 
     metadata = models.JSONField(null=True, blank=True, help_text="Additional context or request-specific data")
 
+    objects = models.Manager()
+    stats = UserRequestStatisticsManager()
 
     class Meta:
         db_table = "user_request"

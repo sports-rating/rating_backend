@@ -10,8 +10,11 @@ from apps.shared.utils.logging import logger
 from apps.user.models import (
     Sportsman,
     Trainer,
-    User
+    User,
+    UserRequest
 )
+from apps.shared.utils.filters import BaseFilterSet
+from apps.shared.utils import enums
 
 
 class UserFilter(filters.FilterSet):
@@ -63,4 +66,31 @@ class UserFilter(filters.FilterSet):
             elif user_role == "trainer":
                 queryset = queryset.filter(trainer_profile__sport__name=sport)
 
+        return queryset
+
+
+class UserRequestFilter(BaseFilterSet):
+    REQUEST_ROLE_MAPPING = {
+        "sportsman_trainer": enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value,
+        "trainer_federation": enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value,
+        "sportsman_result": enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+        "trainer_workplace": enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value
+    }
+
+    status = filters.ChoiceFilter(choices=enums.UserRequestStatus.choices())
+    date = filters.DateFilter(field_name="created_time", lookup_expr="date")
+    request_type = filters.CharFilter(method='filter_request_type')
+
+    class Meta:
+        model = UserRequest
+        fields = [
+            "status",
+            "date",
+            "request_type"
+        ]
+
+    def filter_request_type(self, queryset, name, value):
+        mapped_value = self.REQUEST_ROLE_MAPPING.get(value)
+        if mapped_value:
+            return queryset.filter(request_type=mapped_value)
         return queryset

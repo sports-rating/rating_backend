@@ -3,8 +3,10 @@ import typing as t
 from django.contrib.auth.models import BaseUserManager
 from django.db import models
 from django.db.models import Count, Q, Sum, Value, Model, QuerySet
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, TruncMonth
 from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
 
 
 if t.TYPE_CHECKING:
@@ -42,6 +44,69 @@ class UserManager(BaseUserManager):
 
 
 class UserStatisticsManager(models.Manager):
+
+    def get_total_users(self) -> int:
+        """
+        Get the total number of users by role.
+        """
+        return self.get_queryset().aggregate(
+            total_users=Count('id'),
+            total_sportsmen=Count('id', filter=Q(user_role='sportsman')),
+            total_trainers=Count('id', filter=Q(user_role='trainer')),
+            total_sport_institution_admins=Count('id', filter=Q(user_role='sport_institution_admin')),
+            total_federation_admins=Count('id', filter=Q(user_role='federation')),
+            total_admins=Count('id', filter=Q(user_role='admin')),
+        )
+
+    def get_last_6_months_user_growth(self) -> t.List[dict[str, t.Any]]:
+        """
+        Get the user growth for the last 6 months.
+        """
+        from apps.user.models import User
+        now = timezone.now()
+        six_months_ago = now - timedelta(days=30 * 6)
+
+        qs = (
+            User.objects.filter(created_time__gte=six_months_ago)
+            .annotate(month=TruncMonth("created_time"))
+            .values("month")
+            .annotate(total_users=Count("id"))
+            .order_by("month")
+        )
+
+        result = [
+            {
+                "month": month_data["month"].strftime("%b"),  # e.g. Jan, Feb
+                "total_users": month_data["total_users"],
+            }
+            for month_data in qs
+        ]
+        return result
+
+    def get_yearly_user_growth(self) -> t.List[dict[str, t.Any]]:
+        """
+        Get the user growth for the current year.
+        """
+        from apps.user.models import User
+        now = timezone.now()
+
+        qs = (
+            User.objects.filter(created_time__year=now.year)
+            .annotate(month=TruncMonth("created_time"))
+            .values("month")
+            .annotate(total_users=Count("id"))
+            .order_by("month")
+        )
+
+        result = [
+            {
+                "month": month_data["month"].strftime("%b"),
+                "total_users": month_data["total_users"],
+            }
+            for month_data in qs
+        ]
+        return result
+
 
     def get_sportsman_statistics(self, user: "User") -> dict[str, int]:
         """
@@ -137,3 +202,42 @@ class UserStatisticsManager(models.Manager):
             },
             "total_statistics": total_statistics,
         }
+
+
+class UserRequestStatisticsManager(models.Manager):
+
+    def get_request_statistics(self) -> dict[str, t.Any]:
+        from apps.user.models import UserRequest
+        from apps.shared.utils import enums
+
+        qs = (
+            UserRequest.objects.values("request_type")
+            .annotate(
+                pending=Count("id", filter=Q(status=enums.UserRequestStatus.PENDING.value)),
+                approved=Count("id", filter=Q(status=enums.UserRequestStatus.ACCEPTED.value)),
+                rejected=Count("id", filter=Q(status=enums.UserRequestStatus.REJECTED.value)),
+                cancelled=Count("id", filter=Q(status=enums.UserRequestStatus.CANCELLED.value)),
+                total=Count("id"),
+            )
+        )
+
+        stats = {}
+        for request_type in enums.UserRequestTypes.choices():
+            stats[request_type[0]] = {
+                "pending": 0,
+                "approved": 0,
+                "rejected": 0,
+                "cancelled": 0,
+                "total": 0,
+            }
+
+        for row in qs:
+            stats[row["request_type"]] = {
+                "pending": row["pending"],
+                "approved": row["approved"],
+                "rejected": row["rejected"],
+                "cancelled": row["cancelled"],
+                "total": row["total"],
+            }
+
+        return stats

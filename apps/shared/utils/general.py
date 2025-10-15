@@ -1,5 +1,6 @@
 from attrs import field
 import openpyxl
+import typing as t
 
 import logging
 import os
@@ -12,9 +13,12 @@ import tempfile
 import phonenumbers
 from dateutil import relativedelta
 from phonenumbers.phonenumberutil import NumberParseException
+from PIL import Image
+from io import BytesIO
 
 from django.conf import settings
 from django.utils.translation import gettext as _
+from django.core.files.base import ContentFile
 
 from apps.shared.utils.logging import logger
 from apps.shared.utils.exceptions import raise_validation_error
@@ -24,7 +28,7 @@ from apps.shared.utils.enums import (
 from apps.shared.utils.utils import send_sms_message
 
 
-def get_file_full_url(url):
+def get_file_full_url(url: str) -> str:
     """
     Get the full URL of a file.
     """
@@ -35,7 +39,34 @@ def get_file_full_url(url):
     return f"{settings.BACKEND_URL.rstrip('/')}/{url}"
 
 
-def calculate_file_size(size):
+def get_file_relative_path(file) -> str:
+    """
+    Get relative path from media root (media/filename.mp4)
+    This works everywhere because it's relative
+    """
+    if not file:
+        return None
+    return file.name
+
+
+def get_container_path(relative_path: str) -> str:
+    """
+    Convert relative path to absolute path in current container
+    """
+
+    if relative_path.startswith('media/'):
+        relative_path = relative_path[6:]
+
+    if os.path.exists('/app/media'):
+        return f"/app/media/{relative_path}"
+    elif os.path.exists('/media'):
+        return f"/media/{relative_path}"
+    else:
+        # Fallback to Django's MEDIA_ROOT
+        return os.path.join(settings.MEDIA_ROOT, relative_path)
+
+
+def calculate_file_size(size) -> str:
     """
     Calculate the file size in a human-readable format.
     """
@@ -122,3 +153,32 @@ def send_sport_institution_message(school_name: str, phone_number: str, status: 
             "school_name": school_name
         }
     return send_sms_message(phone_number, text)
+
+
+def compress_image(image):
+    """
+    Compress the image to reduce its size.
+    """
+    try:
+        img = Image.open(image)
+
+        # convert to RGB
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGB")
+
+        max_size = settings.IMAGE_DIMENSION
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        temp_img = BytesIO()
+        img.save(temp_img, format='JPEG', quality=85, optimize=True)
+        temp_img.seek(0)
+
+        # Change image extension to .jpg
+        base_name = os.path.basename(image.name)
+        if '.' in base_name:
+            base_name = base_name.rsplit('.', 1)[0]
+        new_filename = f"{base_name}.jpg"
+        return ContentFile(temp_img.getvalue(), name=new_filename)
+
+    except Exception as e:
+        raise ValueError(f"Image compression failed: {e}")
