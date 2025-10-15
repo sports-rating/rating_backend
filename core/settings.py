@@ -465,7 +465,7 @@ VERIFICATION_CODE_EXPIRE = 1 * 60  # 2 minute
 SMS_ID_PREFIX = os.getenv("SMS_ID_PREFIX", default="PulseEv")
 PLAY_MOBILE_ORIGINATOR = os.getenv("PLAY_MOBILE_ORIGINATOR", default=3700)
 VERIFICATION_CODE_MESSAGE_TEMPLATE = (
-    "7srating.uz! \n" "Sizning tasdiqlash kodingiz - {verification_code}"
+    "7srating.uz! \n" "Sizning tasdiqlash kodingiz - {verification_code} \n"
 )
 VERIFICATION_CODE_LENGTH: int = 6
 
