@@ -323,7 +323,15 @@ class UserRequestListAPIView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, rest_framework_filters.OrderingFilter, SearchFilter]
     filterset_class = UserRequestFilter
     ordering_fields = ['created_at', 'updated_at']
-    search_fields = ['user__first_name', 'user__last_name', 'user__phone_number', 'status']
+    search_fields = [
+        "sender__first_name",
+        "sender__last_name",
+        "sender__phone_number",
+        "receivers__first_name",
+        "receivers__last_name",
+        "receivers__phone_number",
+        "request_type",
+    ]
     pagination_class = CustomPagination
 
     def get_queryset(self) -> QuerySet[UserRequest]:
