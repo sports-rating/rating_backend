@@ -45,7 +45,7 @@ def send_verification_code(phone_number: str) -> tuple[int, str, t.Optional[str]
     )
 
     if error_status:
-        return error_status, error_text
+        return error_status, error_text, None
 
     if phone_number in PHONE_NUMBER_WHITELIST:
         verification_code = STATIC_CODE
@@ -62,7 +62,7 @@ def send_verification_code(phone_number: str) -> tuple[int, str, t.Optional[str]
             ),
         )
         if response != 200:
-            return 400, "Something went wrong with sending sms"
+            return 400, "Something went wrong with sending sms", verification_code
 
     # If sms sent successfuly, then we put it on redis
     redis_connection.set(
