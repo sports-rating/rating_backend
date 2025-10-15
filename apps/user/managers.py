@@ -221,6 +221,14 @@ class UserRequestStatisticsManager(models.Manager):
         )
 
         stats = {}
+        for request_type in enums.UserRequestTypes.choices():
+            stats[request_type[0]] = {
+                "pending": 0,
+                "approved": 0,
+                "rejected": 0,
+                "total": 0,
+            }
+
         for row in qs:
             stats[row["request_type"]] = {
                 "pending": row["pending"],
