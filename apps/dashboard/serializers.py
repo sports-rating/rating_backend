@@ -379,3 +379,26 @@ class PaymentStatsSerializer(serializers.Serializer):
             for item in data["yearly_revenue"]
         ]
         return data
+
+
+class RequestStatusStatsSerializer(serializers.Serializer):
+    pending = serializers.IntegerField()
+    approved = serializers.IntegerField()
+    rejected = serializers.IntegerField()
+    total = serializers.IntegerField()
+
+
+class RequestStatsSerializer(serializers.Serializer):
+    sportsman_trainer_request = RequestStatusStatsSerializer()
+    trainer_federation_request = RequestStatusStatsSerializer()
+    result_verification_request = RequestStatusStatsSerializer()
+    workplace_verification_request = RequestStatusStatsSerializer()
+
+    def to_representation(self, instance) -> dict:
+        data = UserRequest.stats.get_request_statistics()
+        return {
+            "sportsman_trainer_request": data.get(enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value, {}),
+            "trainer_federation_request": data.get(enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value, {}),
+            "result_verification_request": data.get(enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value, {}),
+            "workplace_verification_request": data.get(enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value, {}),
+        }

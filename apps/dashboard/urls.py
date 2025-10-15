@@ -18,4 +18,5 @@ urlpatterns = [
 
     path("stats/main/", views.MainStatsAPIView.as_view(), name="main-stats"),
     path("stats/payments/", views.PaymentStatsAPIView.as_view(), name="payment-stats"),
+    path("stats/requests/", views.RequestStatsAPIView.as_view(), name="request-stats"),
 ]

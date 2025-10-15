@@ -202,3 +202,31 @@ class UserStatisticsManager(models.Manager):
             },
             "total_statistics": total_statistics,
         }
+
+
+class UserRequestStatisticsManager(models.Manager):
+
+    def get_request_statistics(self) -> dict[str, t.Any]:
+        from apps.user.models import UserRequest
+        from apps.shared.utils import enums
+
+        qs = (
+            UserRequest.objects.values("request_type")
+            .annotate(
+                pending=Count("id", filter=Q(status=enums.UserRequestStatus.PENDING.value)),
+                approved=Count("id", filter=Q(status=enums.UserRequestStatus.ACCEPTED.value)),
+                rejected=Count("id", filter=Q(status=enums.UserRequestStatus.REJECTED.value)),
+                total=Count("id"),
+            )
+        )
+
+        stats = {}
+        for row in qs:
+            stats[row["request_type"]] = {
+                "pending": row["pending"],
+                "approved": row["approved"],
+                "rejected": row["rejected"],
+                "total": row["total"],
+            }
+
+        return stats
