@@ -216,6 +216,7 @@ class UserRequestStatisticsManager(models.Manager):
                 pending=Count("id", filter=Q(status=enums.UserRequestStatus.PENDING.value)),
                 approved=Count("id", filter=Q(status=enums.UserRequestStatus.ACCEPTED.value)),
                 rejected=Count("id", filter=Q(status=enums.UserRequestStatus.REJECTED.value)),
+                cancelled=Count("id", filter=Q(status=enums.UserRequestStatus.CANCELLED.value)),
                 total=Count("id"),
             )
         )

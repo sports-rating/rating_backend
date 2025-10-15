@@ -386,6 +386,7 @@ class RequestStatusStatsSerializer(serializers.Serializer):
     pending = serializers.IntegerField()
     approved = serializers.IntegerField()
     rejected = serializers.IntegerField()
+    cancelled = serializers.IntegerField()
     total = serializers.IntegerField()
 
 
