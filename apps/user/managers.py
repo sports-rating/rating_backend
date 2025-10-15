@@ -227,6 +227,7 @@ class UserRequestStatisticsManager(models.Manager):
                 "pending": 0,
                 "approved": 0,
                 "rejected": 0,
+                "cancelled": 0,
                 "total": 0,
             }
 
@@ -235,6 +236,7 @@ class UserRequestStatisticsManager(models.Manager):
                 "pending": row["pending"],
                 "approved": row["approved"],
                 "rejected": row["rejected"],
+                "cancelled": row["cancelled"],
                 "total": row["total"],
             }
 
