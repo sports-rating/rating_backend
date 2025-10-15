@@ -317,45 +317,45 @@ CELERY_TASK_DEFAULT_RATE_LIMIT = "10/m"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 
-if not IS_LOCAL:
-    S3_MEDIA_BUCKET = os.getenv("S3_MEDIA_BUCKET")
-    S3_STATIC_BUCKET = os.getenv("S3_STATIC_BUCKET")
-    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
-    S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
-    S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
-    S3_MEDIA_LOCATION = "media"
-    S3_STATIC_LOCATION = "static"
+# if not IS_LOCAL:
+#     S3_MEDIA_BUCKET = os.getenv("S3_MEDIA_BUCKET")
+#     S3_STATIC_BUCKET = os.getenv("S3_STATIC_BUCKET")
+#     S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+#     S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
+#     S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
+#     S3_MEDIA_LOCATION = "media"
+#     S3_STATIC_LOCATION = "static"
 
-    STORAGES = {
-        "default": {
-            "BACKEND": "apps.shared.utils.storage_backends.CustomMediaStorage",
-            "OPTIONS": {
-                "bucket_name": S3_MEDIA_BUCKET,
-                "location": S3_MEDIA_LOCATION,
-                "endpoint_url": S3_ENDPOINT_URL,
-                "access_key": S3_ACCESS_KEY,
-                "secret_key": S3_SECRET_KEY,
-                "addressing_style": "path", # virtual",
-                "default_acl": None,
-            },
-        },
-        "staticfiles": {
-            "BACKEND": "apps.shared.utils.storage_backends.CustomStaticStorage",
-            "OPTIONS": {
-                "bucket_name": S3_STATIC_BUCKET,
-                "location": S3_STATIC_LOCATION,
-                "endpoint_url": S3_ENDPOINT_URL,
-                "access_key": S3_ACCESS_KEY,
-                "secret_key": S3_SECRET_KEY,
-                "addressing_style": "path", # "virtual",
-                "default_acl": None,
-            },
-        },
-    }
-else:
-    # Media files (user-uploaded content)
-    MEDIA_URL = "/media/"  # URL for serving media files
-    MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Directory for storing media files
+#     STORAGES = {
+#         "default": {
+#             "BACKEND": "apps.shared.utils.storage_backends.CustomMediaStorage",
+#             "OPTIONS": {
+#                 "bucket_name": S3_MEDIA_BUCKET,
+#                 "location": S3_MEDIA_LOCATION,
+#                 "endpoint_url": S3_ENDPOINT_URL,
+#                 "access_key": S3_ACCESS_KEY,
+#                 "secret_key": S3_SECRET_KEY,
+#                 "addressing_style": "path", # virtual",
+#                 "default_acl": None,
+#             },
+#         },
+#         "staticfiles": {
+#             "BACKEND": "apps.shared.utils.storage_backends.CustomStaticStorage",
+#             "OPTIONS": {
+#                 "bucket_name": S3_STATIC_BUCKET,
+#                 "location": S3_STATIC_LOCATION,
+#                 "endpoint_url": S3_ENDPOINT_URL,
+#                 "access_key": S3_ACCESS_KEY,
+#                 "secret_key": S3_SECRET_KEY,
+#                 "addressing_style": "path", # "virtual",
+#                 "default_acl": None,
+#             },
+#         },
+#     }
+# else:
+# Media files (user-uploaded content)
+MEDIA_URL = "/media/"  # URL for serving media files
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Directory for storing media files
 
 
 # Jazzmin settings for Django Admin
