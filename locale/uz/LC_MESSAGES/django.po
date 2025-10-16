@@ -1,0 +1,892 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-10-16 10:37+0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+#: apps/career/serializers.py:121 apps/career/serializers.py:349
+msgid "Start year must be less than end year"
+msgstr "Boshlanish yili tugash yilidan kichik bo‘lishi kerak"
+
+#: apps/career/serializers.py:173
+msgid "Start date must be before end date."
+msgstr "Boshlanish sanasi tugash sanasidan oldin bo‘lishi kerak."
+
+#: apps/career/serializers.py:182
+msgid "You already have a workplace entry for this period."
+msgstr "Sizda bu davr uchun ish joyi yozuvi allaqachon mavjud."
+
+#: apps/career/serializers.py:185 apps/career/serializers.py:344
+msgid "This sport is not offered by the selected sport institution."
+msgstr "Tanlangan sport muassasasida bu sport turi mavjud emas."
+
+#: apps/career/serializers.py:192
+msgid "You already have a pending workplace verification request."
+msgstr "Sizda tasdiqlanishi kutilayotgan ish joyi so‘rovi allaqachon mavjud."
+
+#: apps/career/views.py:59
+msgid "Trainer WorkPlace sent for verification successfully"
+msgstr "Murabbiy ish joyi muvaffaqiyatli tasdiqlashga yuborildi"
+
+#: apps/career/views.py:67
+msgid "Trainer WorkPlaces retrieved successfully"
+msgstr "Murabbiy ish joylari muvaffaqiyatli olindi"
+
+#: apps/career/views.py:90
+msgid "Trainer WorkPlace not found"
+msgstr "Murabbiy ish joyi topilmadi"
+
+#: apps/career/views.py:98
+msgid "Trainer WorkPlace retrieved successfully"
+msgstr "Murabbiy ish joyi muvaffaqiyatli olindi"
+
+#: apps/career/views.py:109
+msgid "Trainer WorkPlace updated successfully"
+msgstr "Murabbiy ish joyi muvaffaqiyatli yangilandi"
+
+#: apps/career/views.py:117
+msgid "Trainer WorkPlace deleted successfully"
+msgstr "Murabbiy ish joyi muvaffaqiyatli o‘chirildi"
+
+#: apps/career/views.py:144
+msgid "Education sent for verification successfully"
+msgstr "Ta’lim ma’lumoti muvaffaqiyatli tasdiqlashga yuborildi"
+
+#: apps/career/views.py:152
+msgid "Educations retrieved successfully"
+msgstr "Ta’lim ma’lumotlari muvaffaqiyatli olindi"
+
+#: apps/career/views.py:175
+msgid "Education not found"
+msgstr "Ta’lim ma’lumoti topilmadi"
+
+#: apps/career/views.py:183
+msgid "Education retrieved successfully"
+msgstr "Ta’lim ma’lumoti muvaffaqiyatli olindi"
+
+#: apps/career/views.py:194
+msgid "Education updated successfully"
+msgstr "Ta’lim ma’lumoti muvaffaqiyatli yangilandi"
+
+#: apps/career/views.py:202
+msgid "Education deleted successfully"
+msgstr "Ta’lim ma’lumoti muvaffaqiyatli o‘chirildi"
+
+#: apps/dashboard/serializers.py:93
+msgid "User with this phone number already exists."
+msgstr "Ushbu telefon raqam bilan foydalanuvchi allaqachon mavjud."
+
+#: apps/dashboard/serializers.py:95
+msgid "User with this email already exists."
+msgstr "Ushbu elektron pochta bilan foydalanuvchi allaqachon mavjud."
+
+#: apps/dashboard/serializers.py:97
+msgid "Wrong user role has been provided."
+msgstr "Noto‘g‘ri foydalanuvchi roli kiritilgan."
+
+#: apps/dashboard/serializers.py:266 apps/dashboard/serializers.py:270
+msgid "Privacy Policy with this language already exists"
+msgstr "Ushbu tilda Maxfiylik siyosati allaqachon mavjud"
+
+#: apps/dashboard/serializers.py:293 apps/dashboard/serializers.py:297
+msgid "Terms of Conditions with this language already exists"
+msgstr "Ushbu tilda Foydalanish shartlari allaqachon mavjud"
+
+#: apps/dashboard/views.py:84
+msgid "Users list retrieved successfully"
+msgstr "Foydalanuvchilar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:106
+msgid "User created successfully"
+msgstr "Foydalanuvchi muvaffaqiyatli yaratildi"
+
+#: apps/dashboard/views.py:154
+msgid "PrivacyPolicy list retrieved successfully"
+msgstr "Maxfiylik siyosati ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:163
+msgid "PrivacyPolicy created successfully"
+msgstr "Maxfiylik siyosati muvaffaqiyatli yaratildi"
+
+#: apps/dashboard/views.py:183
+msgid "PrivacyPolicy instance retrieved successfully"
+msgstr "Maxfiylik siyosati nusxasi muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:193
+msgid "PrivacyPolicy is updated successfully"
+msgstr "Maxfiylik siyosati muvaffaqiyatli yangilandi"
+
+#: apps/dashboard/views.py:201
+msgid "PrivacyPolicy is deleted successfully"
+msgstr "Maxfiylik siyosati muvaffaqiyatli o‘chirildi"
+
+#: apps/dashboard/views.py:207
+msgid "Privacy policy not found"
+msgstr "Maxfiylik siyosati topilmadi"
+
+#: apps/dashboard/views.py:221
+msgid "Terms of condition list retrieved successfully"
+msgstr "Foydalanish shartlari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:229
+msgid "Terms of condition created successfully"
+msgstr "Foydalanish shartlari muvaffaqiyatli yaratildi"
+
+#: apps/dashboard/views.py:249
+msgid "Terms of condition instance retrieved successfully"
+msgstr "Foydalanish shartlari nusxasi muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:259
+msgid "Terms of condition is updated successfully"
+msgstr "Foydalanish shartlari muvaffaqiyatli yangilandi"
+
+#: apps/dashboard/views.py:267
+msgid "Terms of condition is deleted successfully"
+msgstr "Foydalanish shartlari muvaffaqiyatli o‘chirildi"
+
+#: apps/dashboard/views.py:273
+msgid "Terms of condition not found"
+msgstr "Foydalanish shartlari topilmadi"
+
+#: apps/dashboard/views.py:286
+msgid "Dashboard general statistics retrieved successfully"
+msgstr "Boshqaruv panelining umumiy statistikasi muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:300
+msgid "Dashboard payment statistics retrieved successfully"
+msgstr "Boshqaruv panelining to‘lov statistikasi muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:314
+msgid "Dashboard request statistics retrieved successfully"
+msgstr "Boshqaruv panelining so‘rov statistikasi muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:350
+msgid "User request list retrieved successfully"
+msgstr "Foydalanuvchi so‘rovlari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/dashboard/views.py:373
+msgid "User request not found"
+msgstr "Foydalanuvchi so‘rovi topilmadi"
+
+#: apps/dashboard/views.py:381
+msgid "User request detail retrieved successfully"
+msgstr "Foydalanuvchi so‘rovi tafsilotlari muvaffaqiyatli olindi"
+
+#: apps/federation/serializers.py:171
+msgid "National federations cannot have a region."
+msgstr "Milliy federatsiyalarning hududi bo‘lishi mumkin emas."
+
+#: apps/federation/serializers.py:173
+msgid "Documents must be a list of files."
+msgstr "Hujjatlar fayllar ro‘yxati ko‘rinishida bo‘lishi kerak."
+
+#: apps/federation/views.py:99
+msgid "Federation created successfully"
+msgstr "Federatsiya muvaffaqiyatli yaratildi"
+
+#: apps/federation/views.py:107
+msgid "Federation list retrieved successfully"
+msgstr "Federatsiyalar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/federation/views.py:138
+msgid "Federation not found"
+msgstr "Federatsiya topilmadi"
+
+#: apps/federation/views.py:151
+msgid "Federation retrieved successfully"
+msgstr "Federatsiya muvaffaqiyatli olindi"
+
+#: apps/federation/views.py:162
+msgid "Federation updated successfully"
+msgstr "Federatsiya muvaffaqiyatli yangilandi"
+
+#: apps/federation/views.py:175
+msgid "Federation deleted successfully"
+msgstr "Federatsiya muvaffaqiyatli o‘chirildi"
+
+#: apps/federation/views.py:224
+msgid "Federation users list retrieved successfully"
+msgstr "Federatsiya foydalanuvchilari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/federation/views.py:256
+msgid "Regional federations list retrieved successfully"
+msgstr "Hududiy federatsiyalar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/federation/views.py:266
+msgid "Regional federation created successfully"
+msgstr "Hududiy federatsiya muvaffaqiyatli yaratildi"
+
+#: apps/federation/views.py:320
+msgid "Federation's User Requests list retrieved successfully"
+msgstr "Federatsiya foydalanuvchi so‘rovlari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/federation/views.py:348
+msgid "Federation's Tournament list retrieved successfully"
+msgstr "Federatsiya musobaqalari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/federation/views.py:395
+msgid "Federation Age Group list retrieved successfully"
+msgstr "Federatsiya yosh toifalari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/federation/views.py:415
+msgid "Age Group not found"
+msgstr "Yosh toifasi topilmadi"
+
+#: apps/federation/views.py:428
+msgid "Age Group retrieved successfully"
+msgstr "Yosh toifasi muvaffaqiyatli olindi"
+
+#: apps/payment/serializers.py:36
+msgid "Invalid payment method selected!"
+msgstr "Noto‘g‘ri to‘lov usuli tanlandi!"
+
+#: apps/payment/serializers.py:42
+msgid "User does not have a sportsman profile!"
+msgstr "Foydalanuvchida sportchi profili mavjud emas!"
+
+#: apps/payment/serializers.py:45
+msgid "Sportsman is not verified!"
+msgstr "Sportchi tasdiqlanmagan!"
+
+#: apps/payment/views.py:97
+msgid "Section fee not found! Please contact support."
+msgstr "Bo‘lim to‘lovi topilmadi! Iltimos, qo‘llab-quvvatlash xizmatiga murojaat qiling."
+
+#: apps/payment/views.py:122
+msgid "Successfully created payment link"
+msgstr "To‘lov havolasi muvaffaqiyatli yaratildi"
+
+#: apps/review/serializers.py:55
+msgid "Rating must be between 1 and 5."
+msgstr "Reyting 1 dan 5 gacha bo‘lishi kerak."
+
+#: apps/review/serializers.py:62
+msgid "You have already commented on this sport institution."
+msgstr "Siz bu sport muassasasi haqida allaqachon izoh qoldirgansiz."
+
+#: apps/review/views.py:71
+msgid "Comment created successfully."
+msgstr "Izoh muvaffaqiyatli yaratildi."
+
+#: apps/review/views.py:79
+msgid "Comments retrieved successfully."
+msgstr "Izohlar muvaffaqiyatli olindi."
+
+#: apps/review/views.py:106
+msgid "Comment not found."
+msgstr "Izoh topilmadi."
+
+#: apps/review/views.py:114
+msgid "Comment retrieved successfully."
+msgstr "Izoh muvaffaqiyatli olindi."
+
+#: apps/review/views.py:125
+msgid "Comment updated successfully."
+msgstr "Izoh muvaffaqiyatli yangilandi."
+
+#: apps/review/views.py:134
+msgid "Comment deleted successfully."
+msgstr "Izoh muvaffaqiyatli o‘chirildi."
+
+#: apps/shared/services/user_request.py:58
+msgid "You already have a pending request!"
+msgstr "Sizda kutilayotgan so‘rov allaqachon mavjud!"
+
+#: apps/shared/services/user_request.py:78
+msgid "New Request"
+msgstr "Yangi so‘rov"
+
+#: apps/shared/services/user_request.py:83
+msgid "Request created successfully."
+msgstr "So‘rov muvaffaqiyatli yaratildi."
+
+#: apps/shared/services/user_request.py:100
+msgid "Request Accepted"
+msgstr "So‘rov qabul qilindi"
+
+#: apps/shared/services/user_request.py:117
+msgid "Request Cancelled"
+msgstr "So‘rov bekor qilindi"
+
+#: apps/shared/services/user_request.py:137
+msgid "Request Rejected"
+msgstr "So‘rov rad etildi"
+
+#: apps/shared/services/user_request.py:161
+msgid "Invalid request type!"
+msgstr "Noto‘g‘ri so‘rov turi!"
+
+#: apps/shared/services/user_request.py:194
+msgid "Receiver must be a valid trainer!"
+msgstr "Qabul qiluvchi haqiqiy murabbiy bo‘lishi kerak!"
+
+#: apps/shared/services/user_request.py:202
+#: apps/shared/services/user_request.py:247
+#: apps/shared/services/user_request.py:289
+#: apps/shared/services/user_request.py:352
+#: apps/shared/services/user_request.py:391
+#: apps/shared/services/user_request.py:433
+msgid "Request handled successfully."
+msgstr "So‘rov muvaffaqiyatli qayta ishlendi."
+
+#: apps/shared/services/user_request.py:239
+#: apps/shared/services/user_request.py:273
+msgid "Receiver must be a valid federation!"
+msgstr "Qabul qiluvchi haqiqiy federatsiya bo‘lishi kerak!"
+
+#: apps/shared/utils/exceptions.py:21
+msgid "Invalid input."
+msgstr "Noto‘g‘ri kiritish."
+
+#: apps/shared/utils/general.py:127 apps/shared/utils/general.py:129
+msgid "Please enter a valid phone number."
+msgstr "Iltimos, haqiqiy telefon raqamini kiriting."
+
+#: apps/shared/utils/general.py:146
+#, python-format
+msgid ""
+"Your request to register the sport institution '%(school_name)s' has been "
+"approved. You can now log in and start using our services."
+msgstr ""
+"Sizning '%(school_name)s' sport muassasasini ro‘yxatdan o‘tkazish bo‘yicha "
+"so‘rovingiz tasdiqlandi. Endi tizimga kirishingiz va xizmatlarimizdan "
+"foydalanishingiz mumkin."
+
+#: apps/shared/utils/general.py:151
+#, python-format
+msgid ""
+"Your request to register the sport institution '%(school_name)s' has been "
+"rejected. For more information, please contact support."
+msgstr ""
+"Sizning '%(school_name)s' sport muassasasini ro‘yxatdan o‘tkazish bo‘yicha "
+"so‘rovingiz rad etildi. Qo‘shimcha ma’lumot uchun iltimos, qo‘llab-quvvatlash "
+"xizmatiga murojaat qiling."
+
+#: apps/shared/utils/permissions.py:13
+msgid "You don't have super admin permissions!"
+msgstr "Sizda super admin huquqlari yo‘q!"
+
+#: apps/shared/utils/permissions.py:23
+msgid "You don't have admin permissions!"
+msgstr "Sizda admin huquqlari yo‘q!"
+
+#: apps/shared/utils/permissions.py:33
+msgid "You don't have admin or super admin permissions!"
+msgstr "Sizda admin yoki super admin huquqlari yo‘q!"
+
+#: apps/shared/utils/permissions.py:46
+msgid "You must be federation admin!"
+msgstr "Siz federatsiya admini bo‘lishingiz kerak!"
+
+#: apps/shared/utils/permissions.py:60
+msgid "You must be sport institution admin!"
+msgstr "Siz sport muassasasi admini bo‘lishingiz kerak!"
+
+#: apps/sport/serializers.py:232
+msgid "Selected sport does not belong to the given federation!"
+msgstr "Tanlangan sport berilgan federatsiyaga tegishli emas!"
+
+#: apps/sport/serializers.py:234
+msgid "Federation and sport must be provided."
+msgstr "Federatsiya va sport ko‘rsatilishi kerak."
+
+#: apps/sport/serializers.py:237
+msgid ""
+"Tournament with this name already exists for the selected sport and "
+"federation!"
+msgstr "Tanlangan sport va federatsiya uchun ushbu nomdagi musobaqa allaqachon mavjud!"
+
+#: apps/sport/serializers.py:330
+msgid "Team with this name already exists"
+msgstr "Ushbu nomdagi jamoa allaqachon mavjud"
+
+#: apps/sport/serializers.py:334
+msgid "Founded year must be less than current year"
+msgstr "Tuzilgan yil joriy yildan kichik bo‘lishi kerak"
+
+#: apps/sport/serializers.py:465
+msgid "Processed by must be set when approving or rejecting a request."
+msgstr "So‘rovni tasdiqlash yoki rad etishda 'Processed by' maydoni belgilanishi kerak."
+
+#: apps/sport/serializers.py:489
+msgid "Failed to send SMS notification. Please try again later."
+msgstr "SMS bildirishnomasi yuborilmadi. Iltimos, keyinroq urinib ko‘ring."
+
+#: apps/sport/views.py:85
+msgid "Tournament created successfully"
+msgstr "Musobaqa muvaffaqiyatli yaratildi"
+
+#: apps/sport/views.py:94
+msgid "Tournament list retrieved successfully"
+msgstr "Musobaqalar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:122
+msgid "Tournament not found"
+msgstr "Musobaqa topilmadi"
+
+#: apps/sport/views.py:130
+msgid "Tournament retrieved successfully"
+msgstr "Musobaqa muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:140
+msgid "Tournament is updated successfully"
+msgstr "Musobaqa muvaffaqiyatli yangilandi"
+
+#: apps/sport/views.py:149
+msgid "Tournament is deleted successfully"
+msgstr "Musobaqa muvaffaqiyatli o‘chirildi"
+
+#: apps/sport/views.py:170
+msgid "Sport created successfully"
+msgstr "Sport turi muvaffaqiyatli yaratildi"
+
+#: apps/sport/views.py:178
+msgid "Sport list retrieved successfully"
+msgstr "Sport turlari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:197
+msgid "Sport not found"
+msgstr "Sport turi topilmadi"
+
+#: apps/sport/views.py:205
+msgid "Sport retrieved successfully"
+msgstr "Sport turi muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:216
+msgid "Sport is updated successfully"
+msgstr "Sport turi muvaffaqiyatli yangilandi"
+
+#: apps/sport/views.py:224
+msgid "Sport is deleted successfully"
+msgstr "Sport turi muvaffaqiyatli o‘chirildi"
+
+#: apps/sport/views.py:248
+msgid "Team created successfully"
+msgstr "Jamoa muvaffaqiyatli yaratildi"
+
+#: apps/sport/views.py:257
+msgid "Team list retrieved successfully"
+msgstr "Jamoalar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:276
+msgid "Team not found"
+msgstr "Jamoa topilmadi"
+
+#: apps/sport/views.py:284
+msgid "Team retrieved successfully"
+msgstr "Jamoa muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:294
+msgid "Team updated successfully"
+msgstr "Jamoa muvaffaqiyatli yangilandi"
+
+#: apps/sport/views.py:303
+msgid "Team deleted successfully"
+msgstr "Jamoa muvaffaqiyatli o‘chirildi"
+
+#: apps/sport/views.py:337
+msgid "Sport institution created successfully"
+msgstr "Sport muassasasi muvaffaqiyatli yaratildi"
+
+#: apps/sport/views.py:345
+msgid "Sport institution list retrieved successfully"
+msgstr "Sport muassasalari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:367
+msgid "Sport institution not found"
+msgstr "Sport muassasasi topilmadi"
+
+#: apps/sport/views.py:375
+msgid "Sport institution retrieved successfully"
+msgstr "Sport muassasasi muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:386
+msgid "Sport institution updated successfully"
+msgstr "Sport muassasasi muvaffaqiyatli yangilandi"
+
+#: apps/sport/views.py:394
+msgid "Sport institution deleted successfully"
+msgstr "Sport muassasasi muvaffaqiyatli o‘chirildi"
+
+#: apps/sport/views.py:428
+msgid "Sport institution request created successfully"
+msgstr "Sport muassasasi so‘rovi muvaffaqiyatli yaratildi"
+
+#: apps/sport/views.py:436
+msgid "Sport institution request list retrieved successfully"
+msgstr "Sport muassasasi so‘rovlari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:450
+msgid "Sport institution request not found"
+msgstr "Sport muassasasi so‘rovi topilmadi"
+
+#: apps/sport/views.py:458
+msgid "Sport institution request retrieved successfully"
+msgstr "Sport muassasasi so‘rovi muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:469
+msgid "Sport institution request updated successfully"
+msgstr "Sport muassasasi so‘rovi muvaffaqiyatli yangilandi"
+
+#: apps/sport/views.py:477
+msgid "Sport institution request deleted successfully"
+msgstr "Sport muassasasi so‘rovi muvaffaqiyatli o‘chirildi"
+
+#: apps/sport/views.py:523
+msgid "Sport institution users retrieved successfully"
+msgstr "Sport muassasasi foydalanuvchilari muvaffaqiyatli olindi"
+
+#: apps/sport/views.py:543
+msgid "Sport institution media list retrieved successfully"
+msgstr "Sport muassasasi media ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/serializers.py:79 apps/user/serializers.py:963
+#: apps/user/serializers.py:1096 apps/user/serializers.py:1203
+#: apps/user/serializers.py:1286
+msgid "Phone number is already registered"
+msgstr "Telefon raqam allaqachon ro‘yxatdan o‘tgan"
+
+#: apps/user/serializers.py:82
+msgid "Your phone number is not registered"
+msgstr "Sizning telefon raqamingiz ro‘yxatdan o‘tmagan"
+
+#: apps/user/serializers.py:107 apps/user/views.py:203
+msgid "User not found"
+msgstr "Foydalanuvchi topilmadi"
+
+#: apps/user/serializers.py:414
+msgid "Sport is required"
+msgstr "Sport turi majburiy"
+
+#: apps/user/serializers.py:416
+msgid "Trainer's sport must be equal to sportsman's sport"
+msgstr "Murabbiy sport turi sportchi sport turiga teng bo‘lishi kerak"
+
+#: apps/user/serializers.py:735
+msgid "Sport is required."
+msgstr "Sport turi majburiy."
+
+#: apps/user/serializers.py:737
+msgid "Federation is required to send request."
+msgstr "So‘rov yuborish uchun federatsiya majburiy."
+
+#: apps/user/serializers.py:739
+msgid "Sport must be part of the federation sports."
+msgstr "Sport federatsiya sport turlaridan biri bo‘lishi kerak."
+
+#: apps/user/serializers.py:968 apps/user/serializers.py:1292
+msgid "PINFL is already registered"
+msgstr "PINFL allaqachon ro‘yxatdan o‘tgan"
+
+#: apps/user/serializers.py:970 apps/user/serializers.py:1294
+msgid "PINFL must contain only numbers."
+msgstr "PINFL faqat raqamlardan iborat bo‘lishi kerak."
+
+#: apps/user/serializers.py:972 apps/user/serializers.py:1296
+msgid "PINFL must be exactly 14 digits."
+msgstr "PINFL aniq 14 raqamdan iborat bo‘lishi kerak."
+
+#: apps/user/serializers.py:974
+msgid "PINFL is required"
+msgstr "PINFL majburiy"
+
+#: apps/user/serializers.py:998 apps/user/serializers.py:1318
+msgid "At least one media must be uploaded"
+msgstr "Kamida bitta media fayl yuklanishi kerak"
+
+#: apps/user/serializers.py:1101
+msgid "User with this name and phone number already exists"
+msgstr "Ushbu ism va telefon raqam bilan foydalanuvchi allaqachon mavjud"
+
+#: apps/user/serializers.py:1170
+msgid "New password don't match"
+msgstr "Yangi parol mos kelmaydi"
+
+#: apps/user/serializers.py:1197
+msgid "All required fields must be present"
+msgstr "Barcha majburiy maydonlar to‘ldirilishi kerak"
+
+#: apps/user/serializers.py:1200
+msgid "You entered your current phone number!"
+msgstr "Siz o‘zingizning joriy telefon raqamingizni kiritdingiz!"
+
+#: apps/user/serializers.py:1207
+msgid "Passwords do not match"
+msgstr "Parollar mos kelmaydi"
+
+#: apps/user/serializers.py:1212
+msgid "Invalid password"
+msgstr "Noto‘g‘ri parol"
+
+#: apps/user/serializers.py:1401
+msgid "Archived Trainer with this name already exists"
+msgstr "Ushbu ismli arxivlangan murabbiy allaqachon mavjud"
+
+#: apps/user/serializers.py:1447
+msgid "Trainers cannot send trainer requests!"
+msgstr "Murabbiylar murabbiy so‘rovlarini yubora olmaydi!"
+
+#: apps/user/serializers.py:1561 apps/user/serializers.py:1573
+msgid "You have already submitted a result for this tournament and year."
+msgstr "Siz ushbu musobaqa va yil uchun natijani allaqachon yuborgansiz."
+
+#: apps/user/serializers.py:1563
+msgid "You must specify a trainer to submit results."
+msgstr "Natijalarni yuborish uchun murabbiyni ko‘rsatishingiz kerak."
+
+#: apps/user/serializers.py:1565
+msgid "You must be part of a federation to submit results."
+msgstr "Natijalarni yuborish uchun siz federatsiya a’zosi bo‘lishingiz kerak."
+
+#: apps/user/serializers.py:1567
+msgid "You are not allowed to submit results for this tournament."
+msgstr "Sizga ushbu musobaqa uchun natijalarni yuborishga ruxsat berilmagan."
+
+#: apps/user/serializers.py:1569
+msgid "You are not allowed to submit results for this trainer."
+msgstr "Sizga ushbu murabbiy uchun natijalarni yuborishga ruxsat berilmagan."
+
+#: apps/user/serializers.py:1571
+msgid "Invalid rating for this tournament."
+msgstr "Ushbu musobaqa uchun noto‘g‘ri reyting"
+
+#: apps/user/views.py:122
+msgid "Confirmation code is incorrect"
+msgstr "Tasdiqlash kodi noto‘g‘ri"
+
+#: apps/user/views.py:142
+msgid "User registration successful!"
+msgstr "Foydalanuvchi muvaffaqiyatli ro‘yxatdan o‘tdi!"
+
+#: apps/user/views.py:153
+msgid "Token refreshed successfully"
+msgstr "Token muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:173
+msgid "You are logged out"
+msgstr "Siz tizimdan chiqdingiz"
+
+#: apps/user/views.py:179 apps/user/views.py:184
+msgid "Invalid refresh token"
+msgstr "Noto‘g‘ri refresh token"
+
+#: apps/user/views.py:208
+msgid "You do not have permission to delete this user"
+msgstr "Sizda ushbu foydalanuvchini o‘chirish huquqi yo‘q"
+
+#: apps/user/views.py:217
+msgid "User deleted successfully"
+msgstr "Foydalanuvchi muvaffaqiyatli o‘chirildi"
+
+#: apps/user/views.py:262
+msgid "User retrieved successfully"
+msgstr "Foydalanuvchi muvaffaqiyatli olindi"
+
+#: apps/user/views.py:271
+msgid "User updated successfully"
+msgstr "Foydalanuvchi muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:289
+msgid "Password changed successfully."
+msgstr "Parol muvaffaqiyatli o‘zgartirildi."
+
+#: apps/user/views.py:334
+msgid "User phone number is updated successfully"
+msgstr "Foydalanuvchi telefon raqami muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:388
+msgid "Sportsman created successfully"
+msgstr "Sportchi muvaffaqiyatli yaratildi"
+
+#: apps/user/views.py:396
+msgid "Sportsman list retrieved successfully"
+msgstr "Sportchilar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/views.py:442
+msgid "Sportsman Profile not found"
+msgstr "Sportchi profili topilmadi"
+
+#: apps/user/views.py:455
+msgid "Sportsman retrieved successfully"
+msgstr "Sportchi muvaffaqiyatli olindi"
+
+#: apps/user/views.py:466
+msgid "Sportsman profile updated successfully"
+msgstr "Sportchi profili muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:474
+msgid "Sportsman deleted successfully"
+msgstr "Sportchi muvaffaqiyatli o‘chirildi"
+
+#: apps/user/views.py:525
+msgid "Trainer created successfully"
+msgstr "Murabbiy muvaffaqiyatli yaratildi"
+
+#: apps/user/views.py:533
+msgid "Trainer list retrieved successfully"
+msgstr "Murabbiylar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/views.py:568 apps/user/views.py:894
+msgid "Trainer Profile not found"
+msgstr "Murabbiy profili topilmadi"
+
+#: apps/user/views.py:586
+msgid "Trainer retrieved successfully"
+msgstr "Murabbiy muvaffaqiyatli olindi"
+
+#: apps/user/views.py:597
+msgid "Trainer profile updated successfully"
+msgstr "Murabbiy profili muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:605
+msgid "Trainer deleted successfully"
+msgstr "Murabbiy muvaffaqiyatli o‘chirildi"
+
+#: apps/user/views.py:631
+msgid "Sportsman Result sent for verification successfully"
+msgstr "Sportchi natijasi muvaffaqiyatli tasdiqlashga yuborildi"
+
+#: apps/user/views.py:639
+msgid "Sportsman Result list retrieved successfully"
+msgstr "Sportchi natijalari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/views.py:652
+msgid "Sportsman Result not found"
+msgstr "Sportchi natijasi topilmadi"
+
+#: apps/user/views.py:660
+msgid "Sportsman Result retrieved successfully"
+msgstr "Sportchi natijasi muvaffaqiyatli olindi"
+
+#: apps/user/views.py:671
+msgid "Sportsman Result updated successfully"
+msgstr "Sportchi natijasi muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:688
+msgid "Sportsman Result deleted successfully"
+msgstr "Sportchi natijasi muvaffaqiyatli o‘chirildi"
+
+#: apps/user/views.py:840
+msgid "Media not found"
+msgstr "Media topilmadi"
+
+#: apps/user/views.py:847
+msgid "Media deleted successfully"
+msgstr "Media muvaffaqiyatli o‘chirildi"
+
+#: apps/user/views.py:873
+msgid "Archived Trainer created successfully"
+msgstr "Arxivlangan murabbiy muvaffaqiyatli yaratildi"
+
+#: apps/user/views.py:881
+msgid "Archived Trainer list"
+msgstr "Arxivlangan murabbiylar ro‘yxati"
+
+#: apps/user/views.py:902
+msgid "Archived Trainer retrieved successfully"
+msgstr "Arxivlangan murabbiy muvaffaqiyatli olindi"
+
+#: apps/user/views.py:913
+msgid "Archived Trainer profile updated successfully"
+msgstr "Arxivlangan murabbiy profili muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:921
+msgid "Archived Trainer deleted successfully"
+msgstr "Arxivlangan murabbiy muvaffaqiyatli o‘chirildi"
+
+#: apps/user/views.py:942
+msgid "Bildirishnomalar ro'yxati"
+msgstr "Bildirishnomalar ro‘yxati"
+
+#: apps/user/views.py:953
+msgid "Notification is not found"
+msgstr "Bildirishnoma topilmadi"
+
+#: apps/user/views.py:962
+msgid "Notification updated successfully"
+msgstr "Bildirishnoma muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:990
+msgid ""
+"You cannot create a new request while you have a pending trainer request."
+msgstr "Sizda kutayotgan murabbiy so‘rovi mavjud bo‘lsa, yangi so‘rov yaratishingiz mumkin emas."
+
+#: apps/user/views.py:992
+msgid ""
+"You cannot create a new request while you have a pending federation request."
+msgstr "Sizda kutayotgan federatsiya so‘rovi mavjud bo‘lsa, yangi so‘rov yaratishingiz mumkin emas."
+
+#: apps/user/views.py:994
+msgid ""
+"You cannot create a new request while you have a pending federation admin "
+"request."
+msgstr "Sizda kutayotgan federatsiya admin so‘rovi mavjud bo‘lsa, yangi so‘rov yaratishingiz mumkin emas."
+
+#: apps/user/views.py:1020
+msgid "User Request successfully created"
+msgstr "Foydalanuvchi so‘rovi muvaffaqiyatli yaratildi"
+
+#: apps/user/views.py:1028
+msgid "User Request list retrieved successfully"
+msgstr "Foydalanuvchi so‘rovlari ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/views.py:1050
+msgid "User Request not found"
+msgstr "Foydalanuvchi so‘rovi topilmadi"
+
+#: apps/user/views.py:1058
+msgid "User Request retrieved successfully"
+msgstr "Foydalanuvchi so‘rovi muvaffaqiyatli olindi"
+
+#: apps/user/views.py:1069
+msgid "User Request updated successfully"
+msgstr "Foydalanuvchi so‘rovi muvaffaqiyatli yangilandi"
+
+#: apps/user/views.py:1077
+msgid "User Request deleted successfully"
+msgstr "Foydalanuvchi so‘rovi muvaffaqiyatli o‘chirildi"
+
+#: apps/user/views.py:1092
+msgid "Region list retrieved successfully"
+msgstr "Hududlar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/views.py:1109
+msgid "District list retrieved successfully"
+msgstr "Tumanlar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/views.py:1126
+msgid "Neighborhood list retrieved successfully"
+msgstr "Mahallalar ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/views.py:1162
+msgid "User media list retrieved successfully"
+msgstr "Foydalanuvchi media ro‘yxati muvaffaqiyatli olindi"
+
+#: apps/user/views.py:1174
+msgid "Points recalculation has been initiated."
+msgstr "Ballarni qayta hisoblash boshlandi."
+
+#: core/settings.py:254
+msgid "English"
+msgstr ""
+
+#: core/settings.py:255
+msgid "Uzbek"
+msgstr ""
+
+#: core/settings.py:256
+msgid "Russian"
+msgstr ""
