@@ -158,6 +158,7 @@ class SportsmanAdmin(admin.ModelAdmin):
 
     )
     list_filter = ["sport_rank",]
+    search_fields = ["user__username", "user__first_name", "user__last_name", "user__id"]
 
 
 @admin.register(Trainer)
@@ -185,6 +186,7 @@ class TrainerAdmin(admin.ModelAdmin):
 
     )
     list_filter = ["skill_level",]
+    search_fields = ["user__username", "user__first_name", "user__last_name", "user__id"]
 
 
 @admin.register(UserMedia)

@@ -88,7 +88,7 @@ class WorkPlaceAdmin(admin.ModelAdmin):
 class ResultAdmin(admin.ModelAdmin):
     list_display = ["id", "tournament", "year", "currently_participating"]
     list_filter = ["currently_participating",]
-    search_fields = ["tournament__name", "trainer__user__first_name", "trainer__user__last_name"]
+    search_fields = ["tournament__name", "user__id", "user__first_name", "user__last_name", "trainer__user__first_name", "trainer__user__last_name"]
     list_per_page = 10
     ordering = ['-created_time']
     readonly_fields = ['trainer_obj', 'sportsman_obj', 'tournament_obj', 'request_obj']
