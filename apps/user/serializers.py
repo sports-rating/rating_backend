@@ -434,7 +434,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         Update the Sportsman profile.
         Sends a request for approval if critical fields are changed.
         """
-        logger.info("Sportsman Profile update initiated.")
+        logger.info(f"Sportsman Profile Update | Updating profile -> {instance.user_id}")
         sender: User = self.request.user  # type: ignore
         new_trainer: User | None = validated_data.get("trainer")
         old_trainer: User | None = instance.trainer.user if instance.trainer else None
@@ -443,7 +443,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         validated_data["trainer"] = new_trainer.trainer_profile if new_trainer else None
         send_request: bool = self._check_critical_fields(instance=instance, data=validated_data)
 
-        logger.info(f"Sportsman Profile update | Send request: {send_request}")
+        logger.info(f"Sportsman Profile Update | Send request: {send_request}")
         if send_request and new_trainer:
             old_snapshot: dict = SportsmanSnapshotSerializer().to_old_snapshot(instance)
             new_snapshot: dict = SportsmanSnapshotSerializer().to_new_snapshot(validated_data)
@@ -466,7 +466,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             instance.trainer = new_trainer.trainer_profile
 
         sportsman_data = self._extract_non_critical_data(validated_data)
-        logger.info(f"Sportsman Profile update | Non-critical data: {sportsman_data}")
+        logger.info(f"Sportsman Profile Update | Non-critical data: {sportsman_data}")
 
         # Update other fields
         for attr, value in sportsman_data.items():
@@ -511,7 +511,10 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         ).order_by('-created_time').first()
 
     def _extract_non_critical_data(self, data: dict) -> dict:
-        fields = SportsmanSnapshotSerializer.get_fields()
+        """
+        Extracts non-critical data from the provided data to be updated directly.
+        """
+        fields = SportsmanSnapshotSerializer._get_approval_fields()
         extracted_data = {k: v for k, v in data.items() if k not in fields}
         return extracted_data
 
@@ -520,7 +523,7 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         Determines whether critical fields of a Sportsman were changed
         and whether a request should be sent for approval.
         """
-        critical_fields = SportsmanSnapshotSerializer.get_fields()
+        critical_fields = SportsmanSnapshotSerializer._get_approval_fields()
         sender: User = self.context["request"].user  # type: ignore
 
         # Skip checks for admin/super_admin
@@ -1456,10 +1459,10 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
         return user_request
 
     def update(self, instance: UserRequest, validated_data: dict) -> UserRequest:
+        logger.info(f"User Request Update | Updating Request -> {instance.id}")  # LOGGING
         sender: User = instance.sender
-        logger.info(f"Sender: {sender}")  # LOGGING
         receiver: User = self.request.user  # type: ignore
-        logger.info(f"New data: {instance.new_data}")  # LOGGING
+        logger.info(f"User Request Update | Sender: {sender.id} | Receiver: {receiver.id}")  # LOGGING
         message, success = UserRequestService.handle_request(instance, validated_data, receiver)
         if success:
             logger.info(f"{message}")
@@ -1467,7 +1470,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                 setattr(instance, attr, value)
             instance.save()
         else:
-            logger.error(f"Failed to handle request: {message}")
+            logger.error(f"User Request Update | Failed to handle request: {message}")
             raise_validation_error(message=message)
         return instance
 

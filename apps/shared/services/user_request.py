@@ -160,6 +160,7 @@ class UserRequestService:
             return UserRequestService._handle_education_verification_request(user_request, validated_data, receiver)
         return _("Invalid request type!"), False
 
+    @transaction.atomic
     @staticmethod
     def _handle_sportsman_trainer_request(
         user_request: UserRequest,
@@ -168,38 +169,71 @@ class UserRequestService:
     ) -> tuple[t.Union[Promise, str], bool]:
         status: t.Union[str, None] = validated_data.get("status")
         sender: User = user_request.sender
-        logger.info(f"Receiver (trainer): {receiver}")  # LOGGING
+        logger.info(f"Sportsman Trainer Request | Processing request -> {user_request.id}")
+        message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
 
-        if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-            # If the request is accepted, update the trainer for the sender
-            if receiver and hasattr(receiver, "trainer_profile"):
+        if status == enums.UserRequestStatus.REJECTED.value:
+            notification_body = "Your trainer request has been rejected."
+            notification_data = {
+                "request_type": "sportsman_trainer_request",
+                "trainer_id": str(receiver.id),
+                "message_from_receiver": message_from_receiver,
+            }
+            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
 
-                # --- APPLY SNAPSHOT FIELDS ---
-                new_snapshot = user_request.new_data or {}
-                if new_snapshot:
-                    new_snapshot.pop("trainer", None)  # Trainer is set separately below
-                    SnapshotService.apply_snapshot(sender.sportsman_profile, new_snapshot)
+        elif user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+            new_data: dict = copy.deepcopy(user_request.new_data)
 
-                sender.sportsman_profile.trainer = receiver.trainer_profile
-                sender.sportsman_profile.is_sportsman_verified = True
-                sender.sportsman_profile.save()
+            serializer = SportsmanSnapshotSerializer(data=new_data)
+            serializer.is_valid(raise_exception=True)
+            sportsman_data = serializer.validated_data
 
-                notification_body = f"{receiver.full_name} has accepted your request."
-                notification_data = {
-                    "request_type": "sportsman_trainer_request",
-                    "trainer_id": str(receiver.id),
-                }
-                UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
-            else:
-                return _("Receiver must be a valid trainer!"), False
-        else:
-            notification_body = f"{receiver.full_name} has declined your request."
+            sender.sportsman_profile.height = sportsman_data.get("height")
+            sender.sportsman_profile.weight = sportsman_data.get("weight")
+            sender.sportsman_profile.sport_rank = sportsman_data.get("sport_rank")
+            sender.sportsman_profile.sport = sportsman_data.get("sport")
+            sender.sportsman_profile.trainer = receiver.trainer_profile
+            sender.sportsman_profile.is_sportsman_verified = True
+            sender.sportsman_profile.save()
+
+            notification_body = f"{receiver.full_name} has accepted your request."
             notification_data = {
                 "request_type": "sportsman_trainer_request",
                 "trainer_id": str(receiver.id),
             }
-            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
+            UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
+
+        logger.info(f"Sportsman Trainer Request | Processed Request -> {user_request.id}")
         return _("Request handled successfully."), True
+        #     # If the request is accepted, update the trainer for the sender
+        #     if receiver and hasattr(receiver, "trainer_profile"):
+
+        #         # --- APPLY SNAPSHOT FIELDS ---
+        #         new_snapshot = user_request.new_data or {}
+        #         if new_snapshot:
+        #             new_snapshot.pop("trainer", None)  # Trainer is set separately below
+        #             SnapshotService.apply_snapshot(sender.sportsman_profile, new_snapshot)
+
+        #         sender.sportsman_profile.trainer = receiver.trainer_profile
+        #         sender.sportsman_profile.is_sportsman_verified = True
+        #         sender.sportsman_profile.save()
+
+        #         notification_body = f"{receiver.full_name} has accepted your request."
+        #         notification_data = {
+        #             "request_type": "sportsman_trainer_request",
+        #             "trainer_id": str(receiver.id),
+        #         }
+        #         UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
+        #     else:
+        #         return _("Receiver must be a valid trainer!"), False
+        # else:
+        #     notification_body = f"{receiver.full_name} has declined your request."
+        #     notification_data = {
+        #         "request_type": "sportsman_trainer_request",
+        #         "trainer_id": str(receiver.id),
+        #     }
+        #     UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
+        # return _("Request handled successfully."), True
 
     @staticmethod
     def _handle_trainer_federation_request(

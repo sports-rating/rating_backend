@@ -269,7 +269,7 @@ class SportsmanSnapshotSerializer(serializers.Serializer):
             data["sport"] = data["sport"].get("id")
         if isinstance(data.get("trainer"), dict):
             data["trainer"] = data["trainer"].get("id")
-        logger.debug(f"Deserialized Internal data: {data}")
+        # logger.debug(f"Deserialized Internal data: {data}")
         return super().to_internal_value(data)
 
     def to_new_snapshot(self, validated_data: dict) -> dict:
@@ -313,7 +313,7 @@ class SportsmanSnapshotSerializer(serializers.Serializer):
         }
 
     @classmethod
-    def get_fields(cls) -> list[str]:
+    def _get_approval_fields(cls) -> list[str]:
         """
         Approval required fields for Sportsman
         """
