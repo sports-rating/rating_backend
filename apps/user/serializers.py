@@ -48,12 +48,12 @@ from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import BaseMediaSerializer
 from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.payloads import (
-    SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
     TRAINER_APPROVAL_REQUIRED_FIELDS,
     SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
 )
 from apps.shared.serializers import (
-    SportsmanResultSnapshotSerializer
+    SportsmanResultSnapshotSerializer,
+    SportsmanSnapshotSerializer,
 )
 
 
@@ -430,18 +430,31 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
     @transaction.atomic
     def update(self, instance: Sportsman, validated_data: dict) -> Sportsman:
-        sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type, send_request = \
-        self._extract_update_data(instance, validated_data)
+        """
+        Update the Sportsman profile.
+        Sends a request for approval if critical fields are changed.
+        """
+        logger.info("Sportsman Profile update initiated.")
+        sender: User = self.request.user  # type: ignore
+        new_trainer: User | None = validated_data.get("trainer")
+        old_trainer: User | None = instance.trainer.user if instance.trainer else None
+        validated_data.pop("send_request", None)
+        message_from_sender: str | None = validated_data.pop("message", None)
+        validated_data["trainer"] = new_trainer.trainer_profile if new_trainer else None
+        send_request: bool = self._check_critical_fields(instance=instance, data=validated_data)
 
+        logger.info(f"Sportsman Profile update | Send request: {send_request}")
         if send_request and new_trainer:
-            old_snapshot, new_snapshot, sportsman_data = self._handle_snapshot(instance, validated_data)
+            old_snapshot: dict = SportsmanSnapshotSerializer().to_old_snapshot(instance)
+            new_snapshot: dict = SportsmanSnapshotSerializer().to_new_snapshot(validated_data)
+
             if old_trainer != new_trainer:
                 old_snapshot = None  # Reset old snapshot if trainer is changing
 
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=User.objects.filter(id=new_trainer.id),
-                request_type=request_type,
+                request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value,
                 old_data=old_snapshot,
                 new_data=new_snapshot,
                 message_from_sender=message_from_sender
@@ -451,6 +464,9 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
         elif new_trainer:
             instance.trainer = new_trainer.trainer_profile
+
+        sportsman_data = self._extract_non_critical_data(validated_data)
+        logger.info(f"Sportsman Profile update | Non-critical data: {sportsman_data}")
 
         # Update other fields
         for attr, value in sportsman_data.items():
@@ -494,64 +510,34 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
         ).order_by('-created_time').first()
 
-    def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
-        filtered = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                # Recursively filter nested dictionaries
-                filtered[k] = self._filter_critical_fields(v, critical_fields)
-            elif k not in critical_fields:
-                filtered[k] = v
-        return filtered
+    def _extract_non_critical_data(self, data: dict) -> dict:
+        fields = SportsmanSnapshotSerializer.get_fields()
+        extracted_data = {k: v for k, v in data.items() if k not in fields}
+        return extracted_data
 
     def _check_critical_fields(self, instance: Sportsman, data: dict) -> bool:
-        critical_fields: list[str] = SPORTSMAN_APPROVAL_REQUIRED_FIELDS
-        changed: bool = False
-        sender: User = self.context.get("request").user  # type: ignore
+        """
+        Determines whether critical fields of a Sportsman were changed
+        and whether a request should be sent for approval.
+        """
+        critical_fields = SportsmanSnapshotSerializer.get_fields()
+        sender: User = self.context["request"].user  # type: ignore
 
-        changed = any(
-            field in data and getattr(instance, field) != data[field]
-            for field in critical_fields
-        )
-
-        # If the sender is admin/super_admin, always return False
-        if sender.user_role in ["admin", "super_admin"]:
+        # Skip checks for admin/super_admin
+        if sender.user_role in {"admin", "super_admin"}:
             return False
-        # If the sender is sportsman and fields have changed, return True
-        elif changed and sender.user_role == "sportsman":
-            return True
+
+        # Detect if any critical field has changed
+        changed_fields = [
+            field for field in critical_fields
+            if field in data and getattr(instance, field) != data[field]
+        ]
+        logger.info(f"Critical fields changed: {changed_fields}")
+
+        if changed_fields:
+            return sender.user_role == "sportsman"
+
         return False
-
-    def _handle_snapshot(
-        self,
-        instance: Sportsman,
-        sportsman_data: dict,
-    ) -> tuple[dict | None, dict | None, dict | None]:
-        critical_fields = SPORTSMAN_APPROVAL_REQUIRED_FIELDS
-
-        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-            model=instance,
-            data=sportsman_data,
-            request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
-        )
-        sportsman_data = self._filter_critical_fields(sportsman_data, critical_fields)
-
-        return old_snapshot, new_snapshot, sportsman_data
-
-    def _extract_update_data(self, instance: Sportsman, validated_data: dict) -> tuple:
-        """
-        Extracts and prepares the necessary fields from validated_data.
-        Returns: (sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type)
-        """
-        sender: User = self.request.user  # type: ignore
-        new_trainer: User | None = validated_data.get("trainer")
-        old_trainer: User | None = instance.trainer.user if instance.trainer else None
-        validated_data.pop("send_request", None)
-        message_from_sender: str | None = validated_data.pop("message", None)
-        sportsman_data: dict = validated_data
-        request_type = enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
-        send_request: bool = self._check_critical_fields(instance=instance, data=sportsman_data)
-        return sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type, send_request
 
 
 class SportsmanUserSerializer(BaseUserSerializer):

@@ -148,11 +148,11 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
 
 
 # -- Sportsman Approval Snapshot Serializers --
-class SportsmanSnapshotSerializer(serializers.Serializer):
-    height = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-    weight = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-    sport_rank = serializers.ChoiceField(choices=SportRankEnum.choices(), required=False, allow_null=True)
-    sport = ChildSportSnapshotSerializer(required=False, allow_null=True)
+# class SportsmanSnapshotSerializer(serializers.Serializer):
+#     height = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+#     weight = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+#     sport_rank = serializers.ChoiceField(choices=SportRankEnum.choices(), required=False, allow_null=True)
+#     sport = ChildSportSnapshotSerializer(required=False, allow_null=True)
 
 
 # -- Trainer Approval Snapshot Serializers --
@@ -246,3 +246,75 @@ class EducationSnapshotSerializer(serializers.Serializer):
             "end_year": validated_data.get("end_year"),
             "currently_studying": validated_data.get("currently_studying"),
         }
+
+
+# -- Sportsman Approval Snapshot Serializers --
+class SportsmanSnapshotSerializer(serializers.Serializer):
+    """
+    Snapshot serializer for Sportsman for approval requests.
+    """
+    height = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    weight = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    sport_rank = serializers.ChoiceField(choices=SportRankEnum.choices(), required=False, allow_null=True)
+    sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=False, allow_null=True)
+    trainer = serializers.PrimaryKeyRelatedField(queryset=Trainer.objects.all(), required=False, allow_null=True)
+
+    def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
+        """
+        Allow deserialization from both:
+        - {"sport": "uuid", "trainer": "uuid", ...}
+        - {"sport": {"id": "uuid", ...}, "trainer": {"id": "uuid", ...}, ...}
+        """
+        if isinstance(data.get("sport"), dict):
+            data["sport"] = data["sport"].get("id")
+        if isinstance(data.get("trainer"), dict):
+            data["trainer"] = data["trainer"].get("id")
+        logger.debug(f"Deserialized Internal data: {data}")
+        return super().to_internal_value(data)
+
+    def to_new_snapshot(self, validated_data: dict) -> dict:
+        """
+        Creates a snapshot of the new Sportsman data.
+        """
+        sport: Sport = validated_data.get("sport")
+        trainer: Trainer = validated_data.get("trainer")
+        return {
+            "trainer": {
+                "id": str(trainer.user_id),
+                "full_name": trainer.user.full_name,
+            } if trainer else None,
+            "sport": {
+                "id": str(sport.id),
+                "name": sport.name
+            },
+            "height": str(validated_data.get("height")),
+            "weight": str(validated_data.get("weight")),
+            "sport_rank": validated_data.get("sport_rank"),
+        }
+
+    def to_old_snapshot(self, instance: Sportsman) -> dict:
+        """
+        Creates a snapshot of the old Sportsman data.
+        """
+        sport: Sport = instance.sport
+        trainer: Trainer = instance.trainer
+        return {
+            "trainer": {
+                "id": str(trainer.user_id),
+                "full_name": trainer.user.full_name,
+            } if trainer else None,
+            "sport": {
+                "id": str(sport.id),
+                "name": sport.name
+            } if sport else None,
+            "height": str(instance.height) if instance.height else None,
+            "weight": str(instance.weight) if instance.weight else None,
+            "sport_rank": instance.sport_rank,
+        }
+
+    @classmethod
+    def get_fields(cls) -> list[str]:
+        """
+        Approval required fields for Sportsman
+        """
+        return ["sport", "height", "weight", "sport_rank", "trainer"]
