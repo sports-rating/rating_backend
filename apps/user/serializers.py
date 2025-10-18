@@ -54,6 +54,7 @@ from apps.shared.utils.payloads import (
 from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
     SportsmanSnapshotSerializer,
+    TrainerSnapshotSerializer
 )
 
 
@@ -696,7 +697,7 @@ class TrainerListSerializer(serializers.ModelSerializer):
         return stats
 
 
-class TrainerProfileSerializer(serializers.ModelSerializer):
+class TrainerProfileSerializer(RequestContextMixin, serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     statistics = serializers.SerializerMethodField()
     send_request = serializers.BooleanField(required=True, write_only=True)
@@ -745,19 +746,27 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance: Trainer, validated_data: dict) -> Trainer:
-        sender, trainer_data, new_federation, old_federation, send_request, message_from_sender, request_type, receivers = \
-        self._extract_update_data(instance, validated_data)
+        logger.info(f"Trainer Profile Update | Updating profile -> {instance.user_id}")
+        sender: User = self.request.user  # type: ignore
+        new_federation: Federation = validated_data.get("federation")
+        old_federation: Federation = instance.federation
+        validated_data.pop("send_request", None)
+        message_from_sender: str | None = validated_data.pop("message", None)
+        validated_data["federation"] = new_federation
+        send_request: bool = self._check_critical_fields(instance=instance, data=validated_data)
 
+        logger.info(f"Trainer Profile Update | Send request: {send_request}")
         if send_request and new_federation:
-            # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
-            old_snapshot, new_snapshot, trainer_data = self._handle_snapshot(instance, validated_data)
+            old_snapshot: dict = TrainerSnapshotSerializer().to_old_snapshot(instance)
+            new_snapshot: dict = TrainerSnapshotSerializer().to_new_snapshot(validated_data)
+
             if old_federation != new_federation:
-                old_snapshot = None # Reset old snapshot if federation is changing
+                old_snapshot = None  # Reset old snapshot if federation is changing
 
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
-                receivers=receivers,
-                request_type=request_type,
+                receivers=new_federation.users.filter(user_role="federation"),
+                request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value,
                 federation=new_federation,
                 old_data=old_snapshot,
                 new_data=new_snapshot,
@@ -769,12 +778,14 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         elif new_federation:
             instance.federation = new_federation
 
+        trainer_data = self._extract_non_critical_data(validated_data)
+        logger.info(f"Trainer Profile Update | Non-critical data: {trainer_data}")
+
         # Update other fields
         for attr, value in trainer_data.items():
             setattr(instance, attr, value)
 
         instance.save()
-
         return instance
 
     def get_statistics(self, obj: Trainer) ->  List[Dict[str, Any]]:
@@ -804,64 +815,37 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
         ).order_by('-created_time').first()
 
-    def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
-        filtered = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                # Recursively filter nested dictionaries
-                filtered[k] = self._filter_critical_fields(v, critical_fields)
-            elif k not in critical_fields:
-                filtered[k] = v
-        return filtered
+    def _extract_non_critical_data(self, data: dict) -> dict:
+        """
+        Extracts non-critical data from the provided data to be updated directly.
+        """
+        critical_fields: list[str] = TrainerSnapshotSerializer._get_approval_fields()
+        extracted_data = {k: v for k, v in data.items() if k not in critical_fields}
+        return extracted_data
 
     def _check_critical_fields(self, instance: Trainer, data: dict) -> bool:
-        critical_fields: list[str] = TRAINER_APPROVAL_REQUIRED_FIELDS
-        changed: bool = False
-        sender: User = self.context.get("request").user  # type: ignore
+        """
+        Determines whether critical fields of a Trainer were changed
+        and whether a request should be sent for approval.
+        """
+        critical_fields: list[str] = TrainerSnapshotSerializer._get_approval_fields()
+        sender: User = self.context["request"].user  # type: ignore
 
-        changed = any(
-            field in data and getattr(instance, field) != data[field]
-            for field in critical_fields
-        )
-        # If sender is admin/super_admin, always return False
-        if sender.user_role in ["admin", "super_admin"]:
+        # Skip checks for admin/super_admin
+        if sender.user_role in {"admin", "super_admin"}:
             return False
-        # If sender is trainer and fields have changed, return True
-        elif changed and sender.user_role == "trainer":
-            return True
+
+        # Detect if any critical field has changed
+        changed_fields = [
+            field for field in critical_fields
+            if field in data and getattr(instance, field) != data[field]
+        ]
+        logger.info(f"Critical fields changed: {changed_fields}")
+
+        if changed_fields:
+            return sender.user_role == "trainer"
+
         return False
-
-    def _handle_snapshot(
-        self,
-        instance: Trainer,
-        trainer_data: dict,
-    ) -> tuple[dict | None, dict | None, dict | None]:
-        critical_fields: list[str] = TRAINER_APPROVAL_REQUIRED_FIELDS
-
-        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-            model=instance,
-            data=trainer_data,
-            request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
-        )
-        trainer_data = self._filter_critical_fields(trainer_data, critical_fields)
-
-        return old_snapshot, new_snapshot, trainer_data
-
-    def _extract_update_data(self, instance: Trainer, validated_data: dict) -> tuple[dict, Federation | None, bool, str | None]:
-        """
-        Extracts and prepares trainer update-related data for the update method.
-        Returns: (trainer_data, new_federation, send_request, message_from_sender)
-        """
-        sender: User = self.context.get("request").user  # type: ignore
-        new_federation: Federation = validated_data.get("federation")
-        old_federation = instance.federation
-        validated_data.pop("send_request", None)
-        message_from_sender: str | None = validated_data.pop("message", None)
-        trainer_data: dict = validated_data
-        send_request: bool = self._check_critical_fields(instance=instance, data=trainer_data)
-        request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
-        receivers: QuerySet[User] = new_federation.users.filter(user_role="federation")
-        return sender, trainer_data, new_federation, old_federation, send_request, message_from_sender, request_type, receivers
 
 
 class TrainerUserSerializer(BaseUserSerializer):

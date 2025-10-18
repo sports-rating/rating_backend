@@ -147,14 +147,6 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
         }
 
 
-# -- Trainer Approval Snapshot Serializers --
-class TrainerSnapshotSerializer(serializers.Serializer):
-    height = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-    weight = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-    skill_level = serializers.CharField(required=False, allow_null=True, max_length=100)
-    sport = ChildSportSnapshotSerializer(required=False, allow_null=True)
-
-
 # -- Trainer WorkPlace Snapshot Serializers --
 class TrainerWorkPlaceSnapshotSerializer(serializers.Serializer):
     sport_institution = serializers.PrimaryKeyRelatedField(queryset=SportInstitution.objects.all(), required=True)
@@ -310,3 +302,66 @@ class SportsmanSnapshotSerializer(serializers.Serializer):
         Approval required fields for Sportsman
         """
         return ["sport", "height", "weight", "sport_rank", "trainer"]
+
+
+# -- Trainer Approval Snapshot Serializers --
+class TrainerSnapshotSerializer(serializers.Serializer):
+    height = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    weight = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    skill_level = serializers.CharField(required=False, allow_null=True, max_length=100)
+    sport = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), required=False, allow_null=True)
+    federation = serializers.PrimaryKeyRelatedField(queryset=Federation.objects.all(), required=False, allow_null=True)
+
+    def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
+        """
+        Allow deserialization from both:
+        - {"sport": "uuid", "federation": "uuid", ...}
+        - {"sport": {"id": "uuid", ...}, "federation": {"id": "uuid", ...}, ...}
+        """
+        if isinstance(data.get("sport"), dict):
+            data["sport"] = data["sport"].get("id")
+        if isinstance(data.get("federation"), dict):
+            data["federation"] = data["federation"].get("id")
+        logger.debug(f"Deserialized Internal data: {data}")
+        return super().to_internal_value(data)
+
+    def to_new_snapshot(self, validated_data: dict) -> dict:
+        sport: Sport = validated_data.get("sport")
+        federation: Federation = validated_data.get("federation")
+        return {
+            "federation": {
+                "id": str(federation.id),
+                "name": federation.name
+            } if federation else None,
+            "sport": {
+                "id": str(sport.id),
+                "name": sport.name
+            } if sport else None,
+            "height": str(validated_data.get("height")),
+            "weight": str(validated_data.get("weight")),
+            "skill_level": validated_data.get("skill_level"),
+        }
+
+    def to_old_snapshot(self, instance: Trainer) -> dict:
+        sport: Sport = instance.sport
+        federation: Federation = instance.federation
+        return {
+            "federation": {
+                "id": str(federation.id),
+                "name": federation.name
+            } if federation else None,
+            "sport": {
+                "id": str(sport.id),
+                "name": sport.name
+            } if sport else None,
+            "height": str(instance.height) if instance.height else None,
+            "weight": str(instance.weight) if instance.weight else None,
+            "skill_level": instance.skill_level,
+        }
+
+    @classmethod
+    def _get_approval_fields(cls) -> list[str]:
+        """
+        Approval required fields for Trainer
+        """
+        return ["federation", "sport", "height", "weight", "skill_level"]
