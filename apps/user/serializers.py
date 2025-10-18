@@ -43,7 +43,6 @@ from apps.user.utils import (
     calculate_trainer_statistics
 )
 from apps.shared.services.user_request import UserRequestService
-from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import BaseMediaSerializer
 from apps.shared.utils.mixins import RequestContextMixin

@@ -15,7 +15,6 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.logging import logger
 import apps.shared.utils.enums as enums
 from apps.shared.services.scoring_service import ScoringService
-from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
     SportsmanSnapshotSerializer,
