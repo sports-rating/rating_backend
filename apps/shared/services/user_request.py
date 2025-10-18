@@ -22,6 +22,7 @@ from apps.shared.serializers import (
     TrainerSnapshotSerializer,
     TrainerWorkPlaceSnapshotSerializer,
     EducationSnapshotSerializer,
+    FederationAdminApprovalSnapshotSerializer
 )
 from apps.shared.entities import (
     User,
@@ -169,7 +170,7 @@ class UserRequestService:
     ) -> tuple[t.Union[Promise, str], bool]:
         status: t.Union[str, None] = validated_data.get("status")
         sender: User = user_request.sender
-        logger.info(f"Sportsman Trainer Request | Processing request -> {user_request.id}")
+        logger.info(f"Sportsman Trainer Request | Processing request -> {user_request.id}")  # LOGGING
         message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
 
         if status == enums.UserRequestStatus.REJECTED.value:
@@ -267,23 +268,35 @@ class UserRequestService:
         ) -> tuple[t.Union[Promise, str], bool]:
         status: t.Union[str, None] = validated_data.get("status")
         sender: User = user_request.sender
-        logger.info(f"Receiver (federation admin): {receiver}")  # LOGGING
+        message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
         federation: Federation = t.cast(Federation, user_request.federation)
-        if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-            # If the request is accepted, update the federation for the sender
-            if receiver:
-                logger.info(f"Receiver federation: {federation}")  # LOGGING
-                sender.federations.add(federation)
-                sender.save()
-                notification_body = f"{federation.name} has accepted your request."
-                notification_data = {
-                    "request_type": "federation_admin_request",
-                    "message_from_receiver": validated_data.get("message_from_receiver"),
-                    "federation_id": str(federation.id),
-                }
-                UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
-            else:
-                return _("Receiver must be a valid federation!"), False
+        logger.info(f"Federation Admin Request | Processing request -> {user_request.id}")  # LOGGING
+
+        if status == enums.UserRequestStatus.REJECTED.value:
+            notification_body = f"Your federation admin request has been rejected."
+            notification_data = {
+                "request_type": "federation_admin_request",
+                "message_from_receiver": message_from_receiver,
+                "federation_id": str(federation.id),
+            }
+            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
+        elif user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+            new_data: dict = copy.deepcopy(user_request.new_data)
+
+            serializer = FederationAdminApprovalSnapshotSerializer(data=new_data)
+            serializer.is_valid(raise_exception=True)
+
+            sender.federations.add(federation)
+            sender.save()
+
+            notification_body = f"Your federation admin request has been accepted."
+            notification_data = {
+                "request_type": "federation_admin_request",
+                "federation_id": str(federation.id),
+                "request_id": str(user_request.id),
+                "message_from_receiver": message_from_receiver,
+            }
+            UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
         elif status == enums.UserRequestStatus.CANCELLED.value:
             notification_body = f"Successfully cancelled the request."
             notification_data = {
@@ -291,14 +304,8 @@ class UserRequestService:
                 "federation_id": str(federation.id),
             }
             UserRequestService.cancel_request(user_request, notification_body, notification_data)
-        else:
-            logger.info("hello")
-            notification_body = f"{federation.name} has declined your request."
-            notification_data = {
-                "request_type": "federation_admin_request",
-                "federation_id": str(federation.id),
-            }
-            UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
+
+        logger.info(f"Federation Admin Request | Processed Request -> {user_request.id}")  # LOGGING
         return _("Request handled successfully."), True
 
     @transaction.atomic

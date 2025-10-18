@@ -1452,20 +1452,32 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
         #TODO(CoderB7): implement logic of sending request if needed in some cases
         return user_request
 
+    def _get_federation_required_requests(self) -> list[str]:
+        return [
+            enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
+            enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value,
+            enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
+        ]
+
     def update(self, instance: UserRequest, validated_data: dict) -> UserRequest:
         logger.info(f"User Request Update | Updating Request -> {instance.id}")  # LOGGING
         sender: User = instance.sender
         receiver: User = self.request.user  # type: ignore
-        logger.info(f"User Request Update | Sender: {sender.id} | Receiver: {receiver.id}")  # LOGGING
+
+        if instance.request_type in self._get_federation_required_requests():
+            logger.info(f"User Request Update | Sender: {sender.id} | Receiver(Federation): {instance.federation.id}")  # LOGGING
+        else:
+            logger.info(f"User Request Update | Sender: {sender.id} | Receiver(User): {receiver.id}")  # LOGGING
+
         message, success = UserRequestService.handle_request(instance, validated_data, receiver)
         if success:
-            logger.info(f"{message}")
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.save()
         else:
             logger.error(f"User Request Update | Failed to handle request: {message}")
             raise_validation_error(message=message)
+
         return instance
 
     def to_representation(self, instance: UserRequest) -> dict:
@@ -1479,7 +1491,6 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
         }
         if instance.federation:
             federation: Federation = instance.federation
-            logger.info(f"Federation: {federation}")
             data["receiver"] = {
                 "federation": {
                     "id": federation.id,
@@ -1488,14 +1499,15 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                     "is_national": federation.is_national,
                 } if federation else None
             }
-            data["processed_by"] = {
-                "federation": {
-                    "id": federation.id,
-                    "name": federation.name,
-                    "phone_number": federation.phone_number,
-                    "is_national": federation.is_national,
-                } if federation else None
-            }
+            if instance.status in [enums.UserRequestStatus.ACCEPTED.value, enums.UserRequestStatus.REJECTED.value]:
+                data["processed_by"] = {
+                    "federation": {
+                        "id": federation.id,
+                        "name": federation.name,
+                        "phone_number": federation.phone_number,
+                        "is_national": federation.is_national,
+                    } if federation else None
+                }
         else:
             data["receiver"] = {
                 "id": receiver.id,
