@@ -205,35 +205,6 @@ class UserRequestService:
 
         logger.info(f"Sportsman Trainer Request | Processed Request -> {user_request.id}")
         return _("Request handled successfully."), True
-        #     # If the request is accepted, update the trainer for the sender
-        #     if receiver and hasattr(receiver, "trainer_profile"):
-
-        #         # --- APPLY SNAPSHOT FIELDS ---
-        #         new_snapshot = user_request.new_data or {}
-        #         if new_snapshot:
-        #             new_snapshot.pop("trainer", None)  # Trainer is set separately below
-        #             SnapshotService.apply_snapshot(sender.sportsman_profile, new_snapshot)
-
-        #         sender.sportsman_profile.trainer = receiver.trainer_profile
-        #         sender.sportsman_profile.is_sportsman_verified = True
-        #         sender.sportsman_profile.save()
-
-        #         notification_body = f"{receiver.full_name} has accepted your request."
-        #         notification_data = {
-        #             "request_type": "sportsman_trainer_request",
-        #             "trainer_id": str(receiver.id),
-        #         }
-        #         UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
-        #     else:
-        #         return _("Receiver must be a valid trainer!"), False
-        # else:
-        #     notification_body = f"{receiver.full_name} has declined your request."
-        #     notification_data = {
-        #         "request_type": "sportsman_trainer_request",
-        #         "trainer_id": str(receiver.id),
-        #     }
-        #     UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
-        # return _("Request handled successfully."), True
 
     @staticmethod
     def _handle_trainer_federation_request(

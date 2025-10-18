@@ -147,14 +147,6 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
         }
 
 
-# -- Sportsman Approval Snapshot Serializers --
-# class SportsmanSnapshotSerializer(serializers.Serializer):
-#     height = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-#     weight = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-#     sport_rank = serializers.ChoiceField(choices=SportRankEnum.choices(), required=False, allow_null=True)
-#     sport = ChildSportSnapshotSerializer(required=False, allow_null=True)
-
-
 # -- Trainer Approval Snapshot Serializers --
 class TrainerSnapshotSerializer(serializers.Serializer):
     height = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
