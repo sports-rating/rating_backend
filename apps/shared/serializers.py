@@ -84,16 +84,6 @@ class BaseMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
         return data
 
 
-class ChildTournamentSnapshotSerializer(serializers.Serializer):
-    id = serializers.UUIDField(required=False, allow_null=True)
-    name = serializers.CharField(required=False, allow_null=True)
-
-
-class ChildSportSnapshotSerializer(serializers.Serializer):
-    id = serializers.UUIDField(required=False, allow_null=True)
-    name = serializers.CharField(required=False, allow_null=True)
-
-
 # -- Sportsman Result Approval Snapshot Serializers --
 class SportsmanResultSnapshotSerializer(serializers.Serializer):
     country = serializers.CharField(required=False, allow_null=True)
@@ -365,3 +355,18 @@ class TrainerSnapshotSerializer(serializers.Serializer):
         Approval required fields for Trainer
         """
         return ["federation", "sport", "height", "weight", "skill_level"]
+
+
+class FederationAdminApprovalSnapshotSerializer(serializers.Serializer):
+    full_name = serializers.CharField(required=False, allow_null=True, max_length=255)
+    phone_number = serializers.CharField(required=False, allow_null=True)
+    email = serializers.EmailField(required=False, allow_null=True)
+    birth_date = serializers.DateField(required=False, allow_null=True)
+
+    def to_new_snapshot(self, instance: User) -> dict:
+        return {
+            "full_name": instance.get_full_name(),
+            "phone_number": instance.phone_number,
+            "email": instance.email,
+            "birth_date": instance.birth_date.isoformat() if instance.birth_date else None,
+        }

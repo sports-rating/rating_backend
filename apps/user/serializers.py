@@ -54,7 +54,8 @@ from apps.shared.utils.payloads import (
 from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
     SportsmanSnapshotSerializer,
-    TrainerSnapshotSerializer
+    TrainerSnapshotSerializer,
+    FederationAdminApprovalSnapshotSerializer
 )
 
 
@@ -1089,55 +1090,64 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data: dict) -> User:
         fcm_token = validated_data.pop("fcm_token", None)
         device_type = validated_data.pop("device_type", None)
-        federation = validated_data.pop("federation", None)
+        federation: Federation | None = validated_data.pop("federation", None)
         message_from_sender: str | None = validated_data.pop("message", None)
-        with transaction.atomic():
-            user: User = super().create(validated_data)
-            user_role = validated_data.get("user_role")
-            if fcm_token:
-                FCMDevice.objects.update_or_create(
-                    registration_id=fcm_token,
-                    defaults={
-                        'user': user,
-                        'type': device_type,
-                        'active': True,
-                    }
-                )
-            if user_role == "sportsman":
-                Sportsman.objects.create(user=user)
-            elif user_role == "trainer":
-                Trainer.objects.create(user=user)
-            elif user_role == "federation":
-                if federation:
-                    logger.info(f"Federation '{federation.name}' selected for user {user.first_name} {user.last_name}")
-                    request_type: str = enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value
-                    receivers: QuerySet[User] = federation.users.all()
-                    old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-                        model=user,
-                        request_type=request_type
-                    )
-                    logger.info(new_snapshot)
-                    user_request, message, success = UserRequestService.create_request(
-                        sender=user,
-                        receivers=receivers,
-                        request_type=request_type,
-                        federation=federation,
-                        old_data={},
-                        new_data=new_snapshot,
-                        message_from_sender=message_from_sender
-                    )
-                    if not success:
-                        raise_validation_error(message=message)
-            logger.info(f"User created -> {user}")
-            return user
+        user: User = super().create(validated_data)
+        user_role = validated_data.get("user_role")
 
-    def get_tokens(self, user): # noqa
+        if fcm_token:
+            FCMDevice.objects.update_or_create(
+                registration_id=fcm_token,
+                defaults={
+                    'user': user,
+                    'type': device_type,
+                    'active': True,
+                }
+            )
+
+        if user_role == "sportsman":
+            Sportsman.objects.create(user=user)
+        elif user_role == "trainer":
+            Trainer.objects.create(user=user)
+        elif user_role == "federation":
+            if federation:
+                logger.info(f"Federation Admin Request | Federation -> {federation.id} | User -> {user.id}")  # LOGGING
+                new_snapshot: dict = FederationAdminApprovalSnapshotSerializer().to_new_snapshot(user)
+                receivers: QuerySet[User] = federation.users.all()
+                user_request, message, success = UserRequestService.create_request(
+                    sender=user,
+                    receivers=receivers,
+                    request_type=enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
+                    federation=federation,
+                    old_data={},
+                    new_data=new_snapshot,
+                    message_from_sender=message_from_sender
+                )
+                if not success:
+                    raise_validation_error(message=message)
+        logger.info(f"Self Registration | User created -> {user.id}")  # LOGGING
+        return user
+
+    def get_tokens(self, user: User) -> t.Optional[dict[str, str]]:
         if not user:
             return None
         return user.tokens()
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
+        if instance.user_role == "federation":
+            data["request_id"] = self._get_last_request(instance).id if self._get_last_request(instance) else None
+        return data
+
+    def _get_last_request(self, instance: User) -> UserRequest | None:
+        return UserRequest.objects.filter(
+            sender=instance,
+            request_type=enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value
+        ).order_by('-created_time').first()
 
 
 class LogoutSerializer(serializers.Serializer):  # noqa
