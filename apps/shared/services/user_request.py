@@ -90,7 +90,7 @@ class UserRequestService:
         notification_data: dict
     ) -> None:
         user_request.processed_by = receiver
-        user_request.processed_time = timezone.now().replace(microsecond=0)
+        user_request.processed_time = timezone.localtime(timezone.now()).replace(microsecond=0)
         user_request.status = enums.UserRequestStatus.ACCEPTED.value
         user_request.save()
 
@@ -127,7 +127,7 @@ class UserRequestService:
         notification_data: dict
     ) -> None:
         user_request.processed_by = receiver
-        user_request.processed_time = timezone.now().replace(microsecond=0)
+        user_request.processed_time = timezone.localtime(timezone.now()).replace(microsecond=0)
         user_request.status = enums.UserRequestStatus.REJECTED.value
         user_request.save()
 
@@ -177,6 +177,7 @@ class UserRequestService:
             notification_data = {
                 "request_type": "sportsman_trainer_request",
                 "trainer_id": str(receiver.id),
+                "request_id": str(user_request.id),
                 "message_from_receiver": message_from_receiver,
             }
             UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
@@ -200,12 +201,15 @@ class UserRequestService:
             notification_data = {
                 "request_type": "sportsman_trainer_request",
                 "trainer_id": str(receiver.id),
+                "request_id": str(user_request.id),
+                "message_from_receiver": message_from_receiver,
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
         logger.info(f"Sportsman Trainer Request | Processed Request -> {user_request.id}")
         return _("Request handled successfully."), True
 
+    @transaction.atomic
     @staticmethod
     def _handle_trainer_federation_request(
         user_request: UserRequest,
@@ -214,41 +218,45 @@ class UserRequestService:
     ) -> tuple[t.Union[Promise, str], bool]:
         status: t.Union[str, None] = validated_data.get("status")
         sender: User = user_request.sender
-        logger.info(f"Receiver (federation): {receiver}")  # LOGGING
-        federation: Federation = t.cast(Federation, user_request.federation)
+        message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
+        logger.info(f"Trainer Federation Request | Processing request -> {user_request.id}")
+        logger.info(f"Trainer Federation Request | Receiver (federation): {receiver}")  # LOGGING
 
-        if user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
-            # If the request is accepted, update the federation for the sender
-            if receiver:
-                old_federation = sender.trainer_profile.federation
-                new_federation = federation
-                if old_federation and old_federation != new_federation:
-                    sender.trainer_profile.sportsmen.update(trainer=None)
-
-                # --- APPLY SNAPSHOT FIELDS ---
-                new_snapshot = user_request.new_data or {}
-                if new_snapshot:
-                    SnapshotService.apply_snapshot(sender.trainer_profile, new_snapshot)
-
-                sender.trainer_profile.federation = new_federation
-                sender.trainer_profile.is_trainer_verified = True
-                sender.trainer_profile.save()
-
-                notification_body = f"{federation.name} has accepted your request."
-                notification_data = {
-                    "request_type": "trainer_federation_request",
-                    "federation_id": str(federation.id),
-                }
-                UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
-            else:
-                return _("Receiver must be a valid federation!"), False
-        else:
-            notification_body = f"{federation.name} has declined your request."
+        if status == enums.UserRequestStatus.REJECTED.value:
+            notification_body = "Your federation request has been rejected."
             notification_data = {
                 "request_type": "trainer_federation_request",
-                "federation_id": str(federation.id),
+                "federation_id": str(receiver.id),
+                "request_id": str(user_request.id),
+                "message_from_receiver": message_from_receiver,
             }
             UserRequestService.decline_request(user_request, receiver, notification_body, notification_data)
+
+        elif user_request.status == enums.UserRequestStatus.PENDING.value and status == enums.UserRequestStatus.ACCEPTED.value:
+            new_data: dict = copy.deepcopy(user_request.new_data)
+
+            serializer = TrainerSnapshotSerializer(data=new_data)
+            serializer.is_valid(raise_exception=True)
+            trainer_data = serializer.validated_data
+
+            sender.trainer_profile.height = trainer_data.get("height")
+            sender.trainer_profile.weight = trainer_data.get("weight")
+            sender.trainer_profile.skill_level = trainer_data.get("skill_level")
+            sender.trainer_profile.sport = trainer_data.get("sport")
+            sender.trainer_profile.federation = user_request.federation
+            sender.trainer_profile.is_trainer_verified = True
+            sender.trainer_profile.save()
+
+            notification_body = f"{user_request.federation.name} has accepted your request."
+            notification_data = {
+                "request_type": "trainer_federation_request",
+                "federation_id": str(user_request.federation.id),
+                "request_id": str(user_request.id),
+                "message_from_receiver": message_from_receiver,
+            }
+            UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
+
+        logger.info(f"Trainer Federation Request | Processed Request -> {user_request.id}")
         return _("Request handled successfully."), True
 
     @staticmethod

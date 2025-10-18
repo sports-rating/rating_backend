@@ -2,6 +2,7 @@ import typing as t
 import re
 
 from uuid import UUID
+from datetime import datetime
 
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
@@ -326,6 +327,7 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "full_name": instance.processed_by.full_name,
             "phone_number": instance.processed_by.phone_number,
         } if instance.processed_by else None
+        data["processed_time"] = datetime.strftime(instance.processed_time, "%Y-%m-%d %H:%M:%S") if instance.processed_time else None
         data.pop("receivers", None)
         return data
 

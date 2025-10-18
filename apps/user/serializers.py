@@ -2,7 +2,7 @@ import typing as t
 import os
 
 from decimal import Decimal, InvalidOperation
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Dict, List
 
 import rest_framework_simplejwt.serializers as jwt_serializers
@@ -1498,7 +1498,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                 "full_name": instance.processed_by.full_name,
                 "phone_number": instance.processed_by.phone_number,
             } if instance.processed_by else None
-        data["processed_time"] = instance.processed_time
+        data["processed_time"] = datetime.strftime(instance.processed_time, "%Y-%m-%d %H:%M:%S") if instance.processed_time else None
         data.pop("receivers")
         return data
 
