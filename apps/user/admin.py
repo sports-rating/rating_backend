@@ -243,7 +243,7 @@ class UserRequestAdmin(admin.ModelAdmin):
 
 @admin.register(TemporaryFile)
 class TemporaryFileAdmin(admin.ModelAdmin):
-    list_display = ["id", "uploaded_by_obj", "created_time"]
+    list_display = ["id", "uploaded_by_obj", "reason", "created_time"]
     search_fields = ["id", "file", "uploaded_by__username", "uploaded_by__first_name", "uploaded_by__last_name"]
     ordering = ['-created_time']
     readonly_fields = ["file_url", "uploaded_by_obj", "created_time", "updated_time"]

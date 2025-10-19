@@ -347,6 +347,7 @@ class TemporaryFile(BaseModel):
         blank=True
     )
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='temporary_files', null=True, blank=True)
+    reason = models.CharField(max_length=100, choices=enums.TemporaryFileReason.choices(), default=enums.TemporaryFileReason.SPORTSMAN_RESULT_VERIFICATION.value)
 
     class Meta:
         db_table = "temporary_file"

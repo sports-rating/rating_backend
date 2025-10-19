@@ -89,6 +89,12 @@ class UserRequestTypes(BaseEnum):
     EDUCATION_VERIFICATION_REQUEST = "education_verification_request"
 
 
+class TemporaryFileReason(BaseEnum):
+    SPORTSMAN_RESULT_VERIFICATION = "sportsman_result_verification"
+    TRAINER_WORKPLACE_VERIFICATION = "trainer_workplace_verification"
+    TRAINER_RESULT_VERIFICATION = "trainer_result_verification"
+
+
 class UserRequestStatus(BaseEnum):
     PENDING = "pending"
     ACCEPTED = "accepted"

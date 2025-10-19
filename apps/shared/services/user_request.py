@@ -365,9 +365,6 @@ class UserRequestService:
             )
             result.save()
 
-            if file:
-                temp_file.delete()  # Clean up TemporaryFile after use
-
             if requested_rating:
                 ScoringService.update_points(
                     sportsman=sender,
