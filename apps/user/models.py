@@ -337,3 +337,27 @@ class UserNotification(BaseModel):
         verbose_name_plural = "User Notifications"
 
     repr_fields = ("user", "title", "is_read")
+
+
+class TemporaryFile(BaseModel):
+    file = models.FileField(
+        upload_to="temporary/files/",
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True
+    )
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='temporary_files', null=True, blank=True)
+
+    class Meta:
+        db_table = "temporary_file"
+        ordering = ["-created_time"]
+        verbose_name = "Temporary File"
+        verbose_name_plural = "Temporary Files"
+
+    repr_fields = ("uploaded_by",)
+
+    def delete(self, *args, **kwargs):
+        # Deletes the file from storage when the TemporaryFile instance is deleted
+        if self.file and os.path.isfile(self.file.path):
+            os.remove(self.file.path)
+        super().delete(*args, **kwargs)

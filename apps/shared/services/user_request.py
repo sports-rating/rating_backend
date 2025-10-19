@@ -30,7 +30,8 @@ from apps.shared.entities import (
     Federation,
     Tournament,
     Result,
-    Education
+    Education,
+    TemporaryFile
 )
 
 
@@ -341,15 +342,31 @@ class UserRequestService:
             tournament: Tournament = result_data.get("tournament")
             logger.info(f"Requested rating: {requested_rating}")  # LOGGING
 
+            file = None
+            temp_file = None
+            if result_data['temp_file']:
+                temp_file = result_data['temp_file']
+                try:
+                    file = temp_file.file
+                    result_data.pop('temp_file', None)
+                    logger.info(f"Retrieved TemporaryFile path: {temp_file.file.name}")  # LOGGING
+                except (ValueError, TemporaryFile.DoesNotExist) as e:
+                    logger.error(f"Error retrieving TemporaryFile with id {temp_file.id}: {e}")
+                    raise_validation_error(_("Invalid file reference in the request data."))
+
             result = Result(
                 user=sender,
                 trainer=receiver.trainer_profile,
                 request=user_request,
                 is_verified=True,
                 status=enums.ResultVerificationStatus.VERIFIED.value, # remove this field later
+                file=file,
                 **result_data
             )
             result.save()
+
+            if file:
+                temp_file.delete()  # Clean up TemporaryFile after use
 
             if requested_rating:
                 ScoringService.update_points(

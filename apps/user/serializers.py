@@ -36,7 +36,8 @@ from apps.federation.models import Federation
 from apps.career.serializers import ResultCreateSerializer, EducationSerializer
 from apps.user.models import (
     ArchivedTrainer, Sportsman, Trainer, User,
-    UserMedia, UserNotification, UserRequest
+    UserMedia, UserNotification, UserRequest,
+    TemporaryFile
 )
 from apps.user.utils import (
     calculate_sportsman_statistics,
@@ -1541,6 +1542,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "age_group",
             "weight",
             "rating",
+            "file",
             "score",
             "message",
             "additional_attributes",
@@ -1581,6 +1583,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data: dict) -> t.Union[Result, UserRequest]:
         sender: User = self.request.user  # type: ignore
         message_from_sender: str | None = validated_data.pop("message", None)
@@ -1596,6 +1599,15 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         validated_data['score'] = score
         trainer: User = validated_data.get("trainer")
 
+        file = validated_data.get("file")
+        temp_file_obj = None
+        if file:
+            temp_file_obj = TemporaryFile.objects.create(
+                file=file,
+                uploaded_by=sender
+            )
+
+        validated_data['temp_file'] = temp_file_obj if temp_file_obj else None
         new_snapshot: dict = SportsmanResultSnapshotSerializer().to_new_snapshot(validated_data)
 
         user_request, message, success = UserRequestService.create_request(

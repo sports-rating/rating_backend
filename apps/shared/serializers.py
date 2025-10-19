@@ -17,9 +17,10 @@ from apps.shared.utils.enums import SportRankEnum
 from apps.shared.utils.logging import logger
 from apps.federation.models import Federation, FederationAgeGroup
 from apps.sport.models import Sport, Tournament, SportInstitution
-from apps.user.models import User, Trainer, Sportsman
+from apps.user.models import User, Trainer, Sportsman, TemporaryFile
 from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.general import get_file_full_url
 
 
 class BaseMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
@@ -93,20 +94,20 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
     rating = serializers.IntegerField(required=False, allow_null=True)
     tournament = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), required=True)
     score = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-    # id = serializers.UUIDField(required=False, allow_null=True)
-    # currently_participating = serializers.BooleanField(default=False)
-    # tournament = ChildTournamentSnapshotSerializer(required=False, allow_null=True)
+    temp_file = serializers.PrimaryKeyRelatedField(queryset=TemporaryFile.objects.all(), required=False, allow_null=True)
 
     def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
         """
         Allow deserialization from both:
-        - {"tournament": "uuid", "age_group": "uuid", ...}
-        - {"tournament": {"id": "uuid", ...}, "age_group": {"id": "uuid", ...}, ...}
+        - {"tournament": "uuid", "age_group": "uuid", ..., "temp_file": "uuid"}
+        - {"tournament": {"id": "uuid", ...}, "age_group": {"id": "uuid", ...}, "temp_file": {"id": "uuid", ...}}
         """
         if isinstance(data.get("age_group"), dict):
             data["age_group"] = data["age_group"].get("id")
         if isinstance(data.get("tournament"), dict):
             data["tournament"] = data["tournament"].get("id")
+        if isinstance(data.get("temp_file"), dict):
+            data["temp_file"] = data["temp_file"].get("id")
         if isinstance(data.get("score"), str):
             try:
                 data["score"] = decimal.Decimal(data["score"])
@@ -134,6 +135,10 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
             "rating": validated_data.get("rating"),
             "score": str(validated_data.get("score")),
             "weight": validated_data.get("weight"),
+            "temp_file": {
+                "id": str(validated_data.get("temp_file").id),
+                "file_url": get_file_full_url(validated_data.get("temp_file").file.url)
+            } if validated_data.get("temp_file") else None
         }
 
 

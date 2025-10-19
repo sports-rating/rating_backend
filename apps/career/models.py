@@ -1,3 +1,6 @@
+import magic
+import os
+
 from django.db import models
 from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 
@@ -13,6 +16,8 @@ from apps.sport.models import (
     Tournament
 )
 from apps.shared.utils import enums
+from apps.shared.utils.utils import CorrectPath
+from apps.shared.utils.general import compress_image
 
 
 class Education(BaseModel):
@@ -134,6 +139,12 @@ class Result(BaseModel):
     age_group = models.ForeignKey("federation.FederationAgeGroup", on_delete=models.SET_NULL, related_name="federation_results", blank=True, null=True)
     weight = models.CharField(max_length=10, null=True, blank=True)
     rating = models.PositiveIntegerField(default=0)
+    file = models.FileField(
+        upload_to=CorrectPath("media"),
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True
+    )
 
     gold = models.PositiveIntegerField(default=0)
     silver = models.PositiveIntegerField(default=0)
@@ -148,3 +159,22 @@ class Result(BaseModel):
     @property
     def score(self) -> float:
         return self.tournament.get_score(self.rating) if self.tournament else 0
+
+    def save(self, *args, **kwargs):
+        if self.file and hasattr(self.file, 'file'):
+            mime = magic.from_buffer(self.file.read(2048), mime=True)
+            self.file.seek(0)  # Reset file pointer after reading
+
+            if mime.startswith("image/"):
+                compressed_image = compress_image(self.file)
+                self.file = compressed_image
+
+            elif mime.startswith("application/pdf"):
+                pass  # No compression for PDF files
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.file:
+            if os.path.isfile(self.file.path):
+                os.remove(self.file.path)
+        super().delete(*args, **kwargs)
