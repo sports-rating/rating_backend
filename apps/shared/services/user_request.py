@@ -320,6 +320,7 @@ class UserRequestService:
         status: t.Union[str, None] = validated_data.get("status")
         sender: User = user_request.sender
         message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
+        logger.info(f"Result Verification Request | Processing request -> {user_request.id}")  # LOGGING
 
         if status == enums.UserRequestStatus.REJECTED.value:
             notification_body = f"Your result verification request has been rejected."
@@ -336,13 +337,10 @@ class UserRequestService:
             serializer.is_valid(raise_exception=True)
             result_data = serializer.validated_data
 
-            logger.info(f"Normalized result data: {result_data}")  # LOGGING
-
             # Applying the requested rating here
             result_data.pop("score", None)  # Score is calculated based on rating and tournament
             requested_rating: int | None = result_data.get("rating")
             tournament: Tournament = result_data.get("tournament")
-            logger.info(f"Requested rating: {requested_rating}")  # LOGGING
 
             temp_file: TemporaryFile = result_data.pop("temp_file")
 
@@ -376,6 +374,7 @@ class UserRequestService:
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
+        logger.info(f"Result Verification Request | Processed Request -> {user_request.id}")  # LOGGING
         return _("Request handled successfully."), True
 
     def _handle_trainer_workplace_verification_request(
@@ -386,6 +385,7 @@ class UserRequestService:
         status: t.Union[str, None] = validated_data.get("status")
         sender: User = user_request.sender
         message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
+        logger.info(f"Trainer Workplace Verification Request | Processing request -> {user_request.id}")  # LOGGING
 
         if status == enums.UserRequestStatus.REJECTED.value:
             notification_body = f"Your workplace verification request has been rejected."
@@ -415,6 +415,7 @@ class UserRequestService:
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
+        logger.info(f"Trainer Workplace Verification Request | Processed Request -> {user_request.id}")  # LOGGING
         return _("Request handled successfully."), True
 
     def _handle_education_verification_request(
@@ -425,6 +426,7 @@ class UserRequestService:
         status: t.Union[str, None] = validated_data.get("status")
         sender: User = user_request.sender
         message_from_receiver: t.Union[str, None] = validated_data.get("message_from_receiver")
+        logger.info(f"Education Verification Request | Processing request -> {user_request.id}")  # LOGGING
 
         if status == enums.UserRequestStatus.REJECTED.value:
             notification_body = f"Your education verification request has been rejected."
@@ -457,4 +459,5 @@ class UserRequestService:
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
+        logger.info(f"Education Verification Request | Processed Request -> {user_request.id}")  # LOGGING
         return _("Request handled successfully."), True

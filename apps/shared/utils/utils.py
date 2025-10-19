@@ -63,7 +63,6 @@ class CorrectPath:
 
     def __call__(self, filename): # images, videos, pdfs
         guessed_type, _ = mimetypes.guess_type(filename)
-        logger.info(f"Guessed MIME type for {filename}: {guessed_type}")
         if guessed_type:
             if guessed_type.startswith("image/"):
                 subfolder = "images"
@@ -73,7 +72,6 @@ class CorrectPath:
                 subfolder = "files"
         else:
             subfolder = "files"
-        logger.info(f"Determined subfolder for {filename}: {subfolder}")
 
         return os.path.join(subfolder, filename)
 
