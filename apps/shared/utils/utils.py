@@ -4,6 +4,7 @@ import random
 import mimetypes
 import typing as t
 import os
+import shutil
 from uuid import UUID
 from datetime import timedelta, datetime
 
@@ -60,9 +61,9 @@ class CorrectPath:
         self.base_path = base_path
         self.owner = owner
 
-    def __call__(self, instance, filename): # images, videos, pdfs
+    def __call__(self, filename): # images, videos, pdfs
         guessed_type, _ = mimetypes.guess_type(filename)
-
+        logger.info(f"Guessed MIME type for {filename}: {guessed_type}")
         if guessed_type:
             if guessed_type.startswith("image/"):
                 subfolder = "images"
@@ -72,6 +73,7 @@ class CorrectPath:
                 subfolder = "files"
         else:
             subfolder = "files"
+        logger.info(f"Determined subfolder for {filename}: {subfolder}")
 
         return os.path.join(subfolder, filename)
 
@@ -146,3 +148,20 @@ def send_sms_message(phone_number: str, text: str) -> int:
         logger.error(f"Error on send_sms: {response.status_code=} {response.text=}")
 
     return response.status_code
+
+
+def finalize_result_file(temp_file) -> str:
+    """
+    Copies the temporary file to the final media directory and returns the new file path.
+    """
+    correct_path = CorrectPath("media")
+    filename = os.path.basename(temp_file.path)
+    logger.info(f"Finalizing result file: {filename}")
+    new_relative_path = correct_path(filename)
+    new_full_path = os.path.join(settings.MEDIA_ROOT, new_relative_path)
+    logger.info(f"Copying file to: {new_full_path}")
+    logger.info(f"Relative path will be: {new_relative_path}")
+    os.makedirs(os.path.dirname(new_full_path), exist_ok=True)
+
+    shutil.copy2(temp_file.path, new_full_path)
+    return new_relative_path

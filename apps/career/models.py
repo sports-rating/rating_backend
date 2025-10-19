@@ -141,7 +141,7 @@ class Result(BaseModel):
     rating = models.PositiveIntegerField(default=0)
     file = models.FileField(
         upload_to=CorrectPath("media"),
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        # validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
         null=True,
         blank=True
     )

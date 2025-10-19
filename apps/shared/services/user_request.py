@@ -1,5 +1,6 @@
 import typing as t
 import copy
+import shutil
 
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from apps.shared.utils.types import *
 from apps.shared.utils.notifications import send_notification_to_user
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.logging import logger
+from apps.shared.utils.utils import finalize_result_file
 import apps.shared.utils.enums as enums
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import (
@@ -342,17 +344,7 @@ class UserRequestService:
             tournament: Tournament = result_data.get("tournament")
             logger.info(f"Requested rating: {requested_rating}")  # LOGGING
 
-            file = None
-            temp_file = None
-            if result_data['temp_file']:
-                temp_file = result_data['temp_file']
-                try:
-                    file = temp_file.file
-                    result_data.pop('temp_file', None)
-                    logger.info(f"Retrieved TemporaryFile path: {temp_file.file.name}")  # LOGGING
-                except (ValueError, TemporaryFile.DoesNotExist) as e:
-                    logger.error(f"Error retrieving TemporaryFile with id {temp_file.id}: {e}")
-                    raise_validation_error(_("Invalid file reference in the request data."))
+            temp_file: TemporaryFile = result_data.pop("temp_file")
 
             result = Result(
                 user=sender,
@@ -360,9 +352,11 @@ class UserRequestService:
                 request=user_request,
                 is_verified=True,
                 status=enums.ResultVerificationStatus.VERIFIED.value, # remove this field later
-                file=file,
                 **result_data
             )
+
+            new_path = finalize_result_file(temp_file.file)
+            result.file.name = new_path
             result.save()
 
             if requested_rating:

@@ -1554,6 +1554,17 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         ]
         read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status", "score"]
 
+    def validate_file(self, value):
+        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
+        max_file_size = 5 * 1024 * 1024  # 5MB
+        file_name = value.name.lower()
+        extension = os.path.splitext(file_name)[1]
+        if extension not in allowed_extensions:
+            raise_validation_error(message=_("Unsupported file extension. Allowed extensions are: .pdf, .jpg, .jpeg, .png"))
+        if value.size > max_file_size:
+            raise_validation_error(message=_("File size exceeds the maximum limit of 5MB."))
+        return value
+
     def validate(self, attrs: dict) -> dict:
         user: User = self.request.user # type: ignore
         federation: Federation = user.sportsman_profile.trainer.federation
