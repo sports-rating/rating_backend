@@ -32,7 +32,8 @@ from apps.federation.models import (
     FederationDocument
 )
 from apps.sport.models import (
-    Sport
+    Sport,
+    SportType
 )
 from apps.user.models import (
     User,
@@ -414,3 +415,24 @@ class FederationAgeGroupSerializer(RequestContextMixin, serializers.ModelSeriali
             "created_time"
         ]
         read_only_fields = ["id", "created_time"]
+
+
+class FederationSportTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SportType
+        fields = [
+            "id",
+            "sport",
+            "name",
+            "created_time"
+        ]
+        read_only_fields = ["id", "created_time"]
+
+    def to_representation(self, instance: SportType) -> dict:
+        data = super().to_representation(instance)
+        data["sport"] = {
+            "id": instance.sport.id,
+            "name": instance.sport.name,
+            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
+        } if instance.sport else None
+        return data

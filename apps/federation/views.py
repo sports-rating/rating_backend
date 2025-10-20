@@ -40,12 +40,13 @@ from apps.user.models import (
     Trainer,
     UserRequest
 )
-from apps.sport.models import Tournament
+from apps.sport.models import Tournament, SportType
 from apps.federation.filters import (
     FederationFilter,
     FederationUserRequestFilter,
     FederationUsersFilter,
-    FederationAgeGroupFilter
+    FederationAgeGroupFilter,
+    FederationSportTypeFilter
 )
 
 from apps.shared.utils.types import *
@@ -393,6 +394,31 @@ class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
         return success_response(
             data=response.data,
             message=_("Federation Age Group list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class FederationSportTypeListAPIView(generics.ListAPIView):
+    permission_classes = (
+        permissions.IsAuthenticated,
+    )
+    serializer_class = serializer.FederationSportTypeSerializer
+    queryset = SportType.objects.all()
+    filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
+    filterset_class = None
+
+    def get_queryset(self) -> QuerySet[SportType]:
+        federation_id: UUID = self.kwargs.get('pk')
+        sport_type_ids = FederationAgeGroup.objects.filter(
+            federation_id=federation_id
+        ).values_list('age_group__sport_type_id', flat=True).distinct()
+        return SportType.objects.filter(id__in=sport_type_ids)
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Federation Sport Type list retrieved successfully"),
             code=status.HTTP_200_OK
         )
 
