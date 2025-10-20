@@ -1542,6 +1542,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "currently_participating",
             "age_group",
             "weight",
+            "sport_type",
             "rating",
             "file",
             "score",
@@ -1567,7 +1568,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         return value
 
     def validate(self, attrs: dict) -> dict:
-        user: User = self.request.user # type: ignore
+        user: User = self.request.user  # type: ignore
         federation: Federation = user.sportsman_profile.trainer.federation
         tournament = attrs.get("tournament", None)
         trainer = attrs.get("trainer", None)

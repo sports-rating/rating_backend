@@ -91,7 +91,7 @@ class ResultAdmin(admin.ModelAdmin):
     search_fields = ["tournament__name", "user__id", "user__first_name", "user__last_name", "trainer__user__first_name", "trainer__user__last_name"]
     list_per_page = 10
     ordering = ['-created_time']
-    readonly_fields = ['trainer_obj', 'sportsman_obj', 'tournament_obj', 'request_obj', 'file_url']
+    readonly_fields = ['trainer_obj', 'sportsman_obj', 'tournament_obj', 'request_obj', 'file_url', 'sport_type_obj']
 
     @admin.display(description="Trainer")
     def trainer_obj(self, obj: Result) -> str:
@@ -128,3 +128,10 @@ class ResultAdmin(admin.ModelAdmin):
             get_file_full_url(obj.file),
             get_file_full_url(obj.file)
         )
+
+    @admin.display(description="Sport Type")
+    def sport_type_obj(self, obj: Result) -> str:
+        if obj.sport_type:
+            url = reverse("admin:sport_sporttype_change", args=[obj.sport_type.id])
+            return format_html('<a href="{}">{}</a>', url, obj.sport_type.name)
+        return "N/A"

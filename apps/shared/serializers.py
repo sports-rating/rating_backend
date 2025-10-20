@@ -16,7 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.shared.utils.enums import SportRankEnum
 from apps.shared.utils.logging import logger
 from apps.federation.models import Federation, FederationAgeGroup
-from apps.sport.models import Sport, Tournament, SportInstitution
+from apps.sport.models import Sport, Tournament, SportInstitution, SportType
 from apps.user.models import User, Trainer, Sportsman
 from apps.career.models import Result
 from apps.shared.utils.mixins import RequestContextMixin
@@ -96,6 +96,7 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
     tournament = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), required=True)
     score = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
     file_url = serializers.CharField(required=False, allow_null=True)
+    sport_type = serializers.PrimaryKeyRelatedField(queryset=SportType.objects.all(), required=False, allow_null=True)
 
     def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
         """
@@ -109,6 +110,8 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
             data["tournament"] = data["tournament"].get("id")
         if isinstance(data.get("temp_file"), dict):
             data["temp_file"] = data["temp_file"].get("id")
+        if isinstance(data.get("sport_type"), dict):
+            data["sport_type"] = data["sport_type"].get("id")
         if isinstance(data.get("score"), str):
             try:
                 data["score"] = decimal.Decimal(data["score"])
@@ -120,6 +123,7 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
     def to_old_snapshot(self, instance: Result) -> dict:
         tournament: Tournament = instance.tournament
         age_group: FederationAgeGroup = instance.age_group
+        sport_type: SportType = instance.sport_type
         return {
             "result_id": str(instance.id),
             "tournament": {
@@ -132,6 +136,10 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
                 "min_age": age_group.age_group.min_age,
                 "max_age": age_group.age_group.max_age,
             } if age_group else None,
+            "sport_type": {
+                "id": str(sport_type.id),
+                "name": sport_type.name
+            } if sport_type else None,
             "country": instance.country,
             "year": instance.year,
             "rating": instance.rating,
@@ -143,6 +151,7 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
     def to_new_snapshot(self, validated_data: dict) -> dict:
         tournament: Tournament = validated_data.get("tournament")
         age_group: FederationAgeGroup = validated_data.get("age_group")
+        sport_type: SportType = validated_data.get("sport_type")
         return {
             "tournament": {
                 "id": str(tournament.id),
@@ -154,6 +163,10 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
                 "min_age": age_group.age_group.min_age,
                 "max_age": age_group.age_group.max_age,
             } if age_group else None,
+            "sport_type": {
+                "id": str(sport_type.id),
+                "name": sport_type.name
+            } if sport_type else None,
             "country": validated_data.get("country"),
             "year": validated_data.get("year"),
             "rating": validated_data.get("rating"),

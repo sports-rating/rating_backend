@@ -136,6 +136,7 @@ class Result(BaseModel):
         related_name="requested_result"
     )
 
+    sport_type = models.ForeignKey("sport.SportType", on_delete=models.SET_NULL, related_name="sport_type_results", blank=True, null=True)
     age_group = models.ForeignKey("federation.FederationAgeGroup", on_delete=models.SET_NULL, related_name="federation_results", blank=True, null=True)
     weight = models.CharField(max_length=10, null=True, blank=True)
     rating = models.PositiveIntegerField(default=0)

@@ -59,6 +59,7 @@ class TournamentListCreateView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self) -> QuerySet[Tournament]:
+        user: User = self.request.user  # type: ignore
         name: str = self.request.query_params.get("name")
         queryset = self.queryset.select_related(
             "sport",
@@ -67,6 +68,11 @@ class TournamentListCreateView(generics.ListCreateAPIView):
             "scoring_policies",
             "tournament_results"
         )
+        if user.is_authenticated:
+            if user.user_role == enums.UserRoles.SPORTSMAN.value:
+                queryset = queryset.filter(sport=user.sportsman_profile.sport)
+            elif user.user_role == enums.UserRoles.TRAINER.value:
+                queryset = queryset.filter(sport=user.trainer_profile.sport)
         if name:
             return queryset.filter(name__icontains=name)
         return queryset
