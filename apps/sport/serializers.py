@@ -55,6 +55,8 @@ from apps.shared.serializers import BaseMediaSerializer
 
 
 class SportTypeSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+
     class Meta:
         model = SportType
         fields = (
@@ -62,12 +64,12 @@ class SportTypeSerializer(serializers.ModelSerializer):
             "name",
             "created_time"
         )
-        read_only_fields = ("id", "created_time")
+        read_only_fields = ("created_time",)
         validators = []
 
 
 class SportSerializer(serializers.ModelSerializer):
-    sport_types = SportTypeSerializer(many=True, required=False)
+    types = SportTypeSerializer(many=True, required=False)
 
     class Meta:
         model = Sport
@@ -75,7 +77,7 @@ class SportSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "logo",
-            "sport_types",
+            "types",
             "created_time"
         )
         read_only_fields = ("id", "created_time")
@@ -88,7 +90,7 @@ class SportSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        sport_types = validated_data.pop("sport_types", None)
+        sport_types = validated_data.pop("types", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

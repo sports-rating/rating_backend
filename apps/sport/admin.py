@@ -45,6 +45,19 @@ class TournamentAdmin(admin.ModelAdmin):
 class SportAdmin(admin.ModelAdmin):
     list_display = ["id", "name",]
     search_fields = ["name",]
+    readonly_fields = ["types_list",]
+
+    @admin.display(description="Types")
+    def types_list(self, obj):
+        links = [
+            format_html(
+                '<a href="{}">{}</a>',
+                reverse("admin:sport_sporttype_change", args=[sport_type.id]),
+                sport_type.name,
+            )
+            for sport_type in obj.types.all()
+        ]
+        return format_html("<br>".join(links)) if links else "-"
 
 
 @admin.register(SportType)
