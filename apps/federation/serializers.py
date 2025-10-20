@@ -59,6 +59,7 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "sport",
+            "sport_type",
             "min_age",
             "max_age",
             "weights",
@@ -104,6 +105,10 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "name": instance.sport.name,
             "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
         } if instance.sport else None
+        data["sport_type"] = {
+            "id": instance.sport_type.id,
+            "name": instance.sport_type.name
+        } if instance.sport_type else None
         return data
 
 

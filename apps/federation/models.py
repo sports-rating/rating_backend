@@ -12,7 +12,7 @@ from apps.shared.utils.enums import LanguageTypes, GenderChoices
 from apps.shared.utils.utils import handle_file_update, handle_file_delete, CorrectPath
 from apps.shared.utils.exceptions import raise_validation_error
 
-from apps.sport.models import Sport
+from apps.sport.models import Sport, SportType
 from apps.federation.managers import FederationManager
 
 
@@ -109,6 +109,14 @@ class FederationDocument(BaseMedia):
 
 class AgeGroup(BaseModel):
     sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='age_groups')
+    sport_type = models.ForeignKey(
+        SportType,
+        on_delete=models.SET_NULL,
+        related_name='sport_type_age_groups',
+        null=True,
+        blank=True,
+        help_text="Specific type of sport (optional, e.g., freestyle, kata)"
+    )
     name = models.CharField(max_length=255)
     min_age = models.PositiveIntegerField(
         validators=[MinValueValidator(0)],
@@ -141,7 +149,10 @@ class AgeGroup(BaseModel):
         verbose_name = "Age Group"
         verbose_name_plural = "Age Groups"
 
-    repr_fields = ("name", "sport")
+    repr_fields = ("name", "sport", "sport_type")
+
+    def get_name(self):
+        return f"{self.name} - {self.sport.name} - {self.sport_type.name if self.sport_type else 'General'}"
 
 
 class FederationAgeGroup(BaseModel):
