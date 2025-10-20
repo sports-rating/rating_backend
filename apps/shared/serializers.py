@@ -17,7 +17,7 @@ from apps.shared.utils.enums import SportRankEnum
 from apps.shared.utils.logging import logger
 from apps.federation.models import Federation, FederationAgeGroup
 from apps.sport.models import Sport, Tournament, SportInstitution
-from apps.user.models import User, Trainer, Sportsman, TemporaryFile
+from apps.user.models import User, Trainer, Sportsman
 from apps.career.models import Result
 from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.exceptions import raise_validation_error

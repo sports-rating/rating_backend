@@ -36,7 +36,6 @@ from apps.shared.entities import (
     Tournament,
     Result,
     Education,
-    TemporaryFile
 )
 
 

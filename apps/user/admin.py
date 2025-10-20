@@ -10,7 +10,6 @@ from apps.user.models import (
     ArchivedTrainer,
     UserRequest,
     UserNotification,
-    TemporaryFile
 )
 from apps.shared.models import (
     Country,
@@ -238,29 +237,6 @@ class UserRequestAdmin(admin.ModelAdmin):
         if obj.processed_by:
             url = reverse("admin:user_user_change", args=[obj.processed_by.id])
             return format_html('<a href="{}">{}</a>', url, obj.processed_by.full_name)
-        return "N/A"
-
-
-@admin.register(TemporaryFile)
-class TemporaryFileAdmin(admin.ModelAdmin):
-    list_display = ["id", "uploaded_by_obj", "reason", "created_time"]
-    search_fields = ["id", "file", "uploaded_by__username", "uploaded_by__first_name", "uploaded_by__last_name"]
-    ordering = ['-created_time']
-    readonly_fields = ["file_url", "uploaded_by_obj", "created_time", "updated_time"]
-
-    @admin.display(description="File URL")
-    def file_url(self, obj):
-        return format_html(
-            '<a href="{}" target="_blank">{}</a>',
-            get_file_full_url(obj.file),
-            get_file_full_url(obj.file)
-        )
-
-    @admin.display(description="Uploaded By")
-    def uploaded_by_obj(self, obj):
-        if obj.uploaded_by:
-            url = reverse("admin:user_user_change", args=[obj.uploaded_by.id])
-            return format_html('<a href="{}">{}</a>', url, obj.uploaded_by.get_full_name())
         return "N/A"
 
 

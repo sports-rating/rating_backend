@@ -37,7 +37,6 @@ from apps.career.serializers import ResultCreateSerializer, EducationSerializer
 from apps.user.models import (
     ArchivedTrainer, Sportsman, Trainer, User,
     UserMedia, UserNotification, UserRequest,
-    TemporaryFile
 )
 from apps.user.utils import (
     calculate_sportsman_statistics,
