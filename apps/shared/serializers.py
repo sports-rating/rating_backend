@@ -18,6 +18,7 @@ from apps.shared.utils.logging import logger
 from apps.federation.models import Federation, FederationAgeGroup
 from apps.sport.models import Sport, Tournament, SportInstitution
 from apps.user.models import User, Trainer, Sportsman, TemporaryFile
+from apps.career.models import Result
 from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.general import get_file_full_url
@@ -94,7 +95,7 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
     rating = serializers.IntegerField(required=False, allow_null=True)
     tournament = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), required=True)
     score = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
-    temp_file = serializers.PrimaryKeyRelatedField(queryset=TemporaryFile.objects.all(), required=False, allow_null=True)
+    file_url = serializers.CharField(required=False, allow_null=True)
 
     def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
         """
@@ -116,6 +117,29 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
         logger.debug(f"Deserialized Internal data: {data}")
         return super().to_internal_value(data)
 
+    def to_old_snapshot(self, instance: Result) -> dict:
+        tournament: Tournament = instance.tournament
+        age_group: FederationAgeGroup = instance.age_group
+        return {
+            "result_id": str(instance.id),
+            "tournament": {
+                "id": str(tournament.id),
+                "name": tournament.name
+            } if tournament else None,
+            "age_group": {
+                "id": str(age_group.id),
+                "name": age_group.age_group.name,
+                "min_age": age_group.age_group.min_age,
+                "max_age": age_group.age_group.max_age,
+            } if age_group else None,
+            "country": instance.country,
+            "year": instance.year,
+            "rating": instance.rating,
+            "score": str(instance.score),
+            "weight": instance.weight,
+            "file_url": get_file_full_url(instance.file.file.url) if instance.file else None
+        }
+
     def to_new_snapshot(self, validated_data: dict) -> dict:
         tournament: Tournament = validated_data.get("tournament")
         age_group: FederationAgeGroup = validated_data.get("age_group")
@@ -135,10 +159,7 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
             "rating": validated_data.get("rating"),
             "score": str(validated_data.get("score")),
             "weight": validated_data.get("weight"),
-            "temp_file": {
-                "id": str(validated_data.get("temp_file").id),
-                "file_url": get_file_full_url(validated_data.get("temp_file").file.url)
-            } if validated_data.get("temp_file") else None
+            "file_url": None  # File URL will be set after file is saved in UserRequest
         }
 
 

@@ -61,7 +61,7 @@ class CorrectPath:
         self.base_path = base_path
         self.owner = owner
 
-    def __call__(self, filename): # images, videos, pdfs
+    def __call__(self, instance, filename):
         guessed_type, _ = mimetypes.guess_type(filename)
         if guessed_type:
             if guessed_type.startswith("image/"):
@@ -73,7 +73,9 @@ class CorrectPath:
         else:
             subfolder = "files"
 
-        return os.path.join(subfolder, filename)
+        # Distinguish by model name
+        model_folder = instance.__class__.__name__.lower()
+        return os.path.join(model_folder, subfolder, filename)
 
         # if self.owner == "sportsman":
         #     return os.path.join("sportsman/profile", filename)
@@ -148,14 +150,14 @@ def send_sms_message(phone_number: str, text: str) -> int:
     return response.status_code
 
 
-def finalize_result_file(temp_file) -> str:
+def finalize_result_file(result, temp_file) -> str:
     """
     Copies the temporary file to the final media directory and returns the new file path.
     """
     correct_path = CorrectPath("media")
     filename = os.path.basename(temp_file.path)
     logger.info(f"Finalizing result file: {filename}")
-    new_relative_path = correct_path(filename)
+    new_relative_path = correct_path(result, filename)
     new_full_path = os.path.join(settings.MEDIA_ROOT, new_relative_path)
     logger.info(f"Copying file to: {new_full_path}")
     logger.info(f"Relative path will be: {new_relative_path}")

@@ -299,6 +299,13 @@ class UserRequest(BaseModel):
     old_data = models.JSONField(null=True, blank=True, help_text="Snapshot of user's data before changes")
     new_data = models.JSONField(null=True, blank=True, help_text="Snapshot of user's data after changes")
 
+    file = models.FileField(
+        upload_to=CorrectPath("media"),
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True,
+        help_text="Optional file attachment for the request"
+    )
     metadata = models.JSONField(null=True, blank=True, help_text="Additional context or request-specific data")
 
     objects = models.Manager()
@@ -316,6 +323,12 @@ class UserRequest(BaseModel):
         ordering = ['-created_time']
 
     repr_fields = ("sender", "request_type", "status")
+
+    def delete(self, *args, **kwargs):
+        # Deletes the file from storage when the UserRequest instance is deleted
+        if self.file and os.path.isfile(self.file.path):
+            os.remove(self.file.path)
+        super().delete(*args, **kwargs)
 
 
 class UserNotification(BaseModel):

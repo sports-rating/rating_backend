@@ -1428,6 +1428,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
             "message_from_receiver",
             "old_data",
             "new_data",
+            "file",
             "processed_by",
             "processed_time",
             "created_time",
@@ -1522,6 +1523,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
             } if instance.processed_by else None
         data["processed_time"] = datetime.strftime(instance.processed_time, "%Y-%m-%d %H:%M:%S") if instance.processed_time else None
         data.pop("receivers")
+        data["file"] = get_file_full_url(instance.file.url) if instance.file else None
         return data
 
 
@@ -1575,9 +1577,9 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         age_group = attrs.get("age_group", None)
         weight = attrs.get("weight", None)
         instance: Result = self.instance
-        # if instance and tournament:
-        #     if instance.tournament != tournament:
-        #         raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
+        if instance and tournament:
+            if instance.tournament != tournament:
+                raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
         if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
             raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
         if not trainer:
@@ -1611,6 +1613,40 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         trainer: User = validated_data.get("trainer")
 
         file = validated_data.get("file")
+        # temp_file_obj = None
+        # if file:
+        #     temp_file_obj = TemporaryFile.objects.create(
+        #         file=file,
+        #         uploaded_by=sender
+        #     )
+
+        # validated_data['temp_file'] = temp_file_obj if temp_file_obj else None
+        new_snapshot: dict = SportsmanResultSnapshotSerializer().to_new_snapshot(validated_data)
+
+        user_request, message, success = UserRequestService.create_request(
+            sender=sender,
+            receivers=User.objects.filter(id=trainer.user_id),
+            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+            old_data={},
+            new_data=new_snapshot,
+            file=file,
+            message_from_sender=message_from_sender
+        )
+        if not success:
+            raise_validation_error(message=message)
+
+        return user_request
+
+    @transaction.atomic
+    def update(self, instance: Result, validated_data: dict) -> t.Union[Result, UserRequest]:
+        sender: User = self.request.user  # type: ignore
+        message_from_sender: str | None = validated_data.pop("message", None)
+        tournament = instance.tournament
+        score = tournament.get_score(validated_data.get("rating")) if tournament else None
+        validated_data['score'] = score
+        trainer: User = instance.trainer.user
+
+        file = validated_data.get("file")
         temp_file_obj = None
         if file:
             temp_file_obj = TemporaryFile.objects.create(
@@ -1619,13 +1655,16 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             )
 
         validated_data['temp_file'] = temp_file_obj if temp_file_obj else None
+        validated_data['tournament'] = instance.tournament
+
+        old_snapshot: dict = SportsmanResultSnapshotSerializer().to_old_snapshot(instance)
         new_snapshot: dict = SportsmanResultSnapshotSerializer().to_new_snapshot(validated_data)
 
         user_request, message, success = UserRequestService.create_request(
             sender=sender,
-            receivers=User.objects.filter(id=trainer.user_id),
+            receivers=User.objects.filter(id=trainer.id),
             request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
-            old_data={},
+            old_data=old_snapshot,
             new_data=new_snapshot,
             message_from_sender=message_from_sender
         )

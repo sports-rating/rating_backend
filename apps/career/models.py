@@ -174,7 +174,7 @@ class Result(BaseModel):
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if self.file:
-            if os.path.isfile(self.file.path):
-                os.remove(self.file.path)
+        # Deletes the file from storage when the UserRequest instance is deleted
+        if self.file and os.path.isfile(self.file.path):
+            os.remove(self.file.path)
         super().delete(*args, **kwargs)

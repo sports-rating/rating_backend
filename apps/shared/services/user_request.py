@@ -9,12 +9,15 @@ from django.db.models import QuerySet, Model
 from django.utils.functional import Promise
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from django.core.files import File
+from django.db.models.fields.files import FieldFile
 
 from apps.shared.utils.types import *
 from apps.shared.utils.notifications import send_notification_to_user
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.logging import logger
 from apps.shared.utils.utils import finalize_result_file
+from apps.shared.utils.general import get_file_full_url
 import apps.shared.utils.enums as enums
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import (
@@ -47,6 +50,7 @@ class UserRequestService:
         old_data: t.Optional[dict] = None,
         new_data: t.Optional[dict] = None,
         metadata: t.Optional[dict] = None,
+        file: t.Union[FieldFile, File, None] = None,
         message_from_sender: t.Optional[str] = None,
         message_from_receiver: t.Optional[str] = None
     ) -> tuple[t.Optional[UserRequest], str | Promise, bool]:
@@ -69,9 +73,14 @@ class UserRequestService:
             old_data=old_data or {},
             new_data=new_data or {},
             metadata=metadata or {},
+            file=file,
             message_from_sender=message_from_sender
         )
         user_request.receivers.set(receivers)
+        user_request.save()
+        if file:
+            user_request.new_data['file_url'] = get_file_full_url(user_request.file.url)
+            user_request.save()
 
         # Notify all receivers
         for receiver in receivers:
@@ -336,32 +345,57 @@ class UserRequestService:
             serializer = SportsmanResultSnapshotSerializer(data=new_data)
             serializer.is_valid(raise_exception=True)
             result_data = serializer.validated_data
-
-            # Applying the requested rating here
             result_data.pop("score", None)  # Score is calculated based on rating and tournament
+            result_data.pop("file_url", None)  # File URL will be set after file is saved in finalize_result_file
+
             requested_rating: int | None = result_data.get("rating")
             tournament: Tournament = result_data.get("tournament")
 
-            temp_file: TemporaryFile = result_data.pop("temp_file")
+            old_rating: t.Union[int, None] = None
 
-            result = Result(
-                user=sender,
-                trainer=receiver.trainer_profile,
-                request=user_request,
-                is_verified=True,
-                status=enums.ResultVerificationStatus.VERIFIED.value, # remove this field later
-                **result_data
-            )
+            if user_request.old_data and user_request.old_data.get("result_id"):
+                result_id = UUID(user_request.old_data.get("result_id"))
+                result = Result.objects.filter(id=result_id).first()
 
-            new_path = finalize_result_file(temp_file.file)
-            result.file.name = new_path
-            result.save()
+                if not result:
+                    raise_validation_error(message=_("The result you are trying to update does not exist."))
+
+                # Update existing result
+                old_rating = result.rating
+                result.tournament = tournament
+                result.age_group = result_data.get("age_group")
+                result.country = result_data.get("country")
+                result.year = result_data.get("year")
+                result.weight = result_data.get("weight")
+                result.rating = result_data.get("rating")
+
+                new_path = finalize_result_file(result, user_request.file)
+                # Remove old file if exists
+                if result.file:
+                    result.file.delete(save=False)
+                result.file.name = new_path
+                result.is_verified = True
+                result.save()
+
+            else:
+                result = Result(
+                    user=sender,
+                    trainer=receiver.trainer_profile,
+                    request=user_request,
+                    is_verified=True,
+                    status=enums.ResultVerificationStatus.VERIFIED.value, # remove this field later
+                    **result_data
+                )
+
+                new_path = finalize_result_file(result, user_request.file)
+                result.file.name = new_path
+                result.save()
 
             if requested_rating:
                 ScoringService.update_points(
                     sportsman=sender,
                     trainer=receiver,
-                    old_rating=None,
+                    old_rating=old_rating,
                     tournament=tournament,
                     new_rating=requested_rating,
                 )
