@@ -10,6 +10,7 @@ from apps.sport.models import (
     SportInstitution,
     SportInstitutionMedia,
     SportInstitutionRequest,
+    SportType
 )
 from apps.shared.utils.general import calculate_file_size
 
@@ -44,6 +45,20 @@ class TournamentAdmin(admin.ModelAdmin):
 class SportAdmin(admin.ModelAdmin):
     list_display = ["id", "name",]
     search_fields = ["name",]
+
+
+@admin.register(SportType)
+class SportTypeAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "sport",]
+    search_fields = ["name", "sport__name"]
+    readonly_fields = ["sport_obj",]
+
+    @admin.display(description="Sport")
+    def sport_obj(self, obj):
+        if obj.sport:
+            url = reverse("admin:sport_sport_change", args=[obj.sport.id])
+            return format_html('<a href="{}">{}</a>', url, obj.sport.name)
+        return "N/A"
 
 
 @admin.register(SportInstitution)

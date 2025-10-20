@@ -56,6 +56,21 @@ class Sport(BaseModel):
         super().delete(*args, **kwargs)
 
 
+class SportType(BaseModel):
+    sport = models.ForeignKey(Sport, on_delete=models.CASCADE, related_name='types')
+    name = models.CharField(max_length=250)
+
+    class Meta:
+        db_table = "sport_type"
+        verbose_name = "Sport Type"
+        verbose_name_plural = "Sport Types"
+
+    repr_fields = ("sport", "name")
+
+    def get_name(self):
+        return f"{self.sport.name} - {self.name}"
+
+
 class SportInstitution(BaseModel):
     user = models.ForeignKey(
         "user.User",
