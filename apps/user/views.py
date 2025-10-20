@@ -668,7 +668,7 @@ class SportsmanResultRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyA
         serializer.save()
         return success_response(
             data=serializer.data,
-            message=_("Sportsman Result updated successfully"),
+            message=_("Sportsman Result Update request sent for verification successfully"),
             code=status.HTTP_200_OK
         )
 

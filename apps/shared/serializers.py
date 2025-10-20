@@ -137,7 +137,7 @@ class SportsmanResultSnapshotSerializer(serializers.Serializer):
             "rating": instance.rating,
             "score": str(instance.score),
             "weight": instance.weight,
-            "file_url": get_file_full_url(instance.file.file.url) if instance.file else None
+            "file_url": get_file_full_url(instance.file.url) if instance.file else None
         }
 
     def to_new_snapshot(self, validated_data: dict) -> dict:

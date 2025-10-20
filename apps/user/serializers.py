@@ -1580,20 +1580,24 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         if instance and tournament:
             if instance.tournament != tournament:
                 raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
-        if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
-            raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
-        if not trainer:
-            raise_validation_error(message=_("You must specify a trainer to submit results."))
-        if not federation:
-            raise_validation_error(message=_("You must be part of a federation to submit results."))
-        if federation and not federation.tournaments.filter(id=tournament.id).exists():
-            raise_validation_error(message=_("You are not allowed to submit results for this tournament."))
-        if trainer and not federation.trainers.filter(user_id=trainer.pk).exists():
-            raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
-        if rating and not tournament.scoring_policies.filter(position=rating).exists():
-            raise_validation_error(message=_("Invalid rating for this tournament."))
-        if instance and Result.objects.exclude(pk=instance.pk).filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
-            raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
+        if not instance:
+            if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
+                raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
+            if not trainer:
+                raise_validation_error(message=_("You must specify a trainer to submit results."))
+            if not federation:
+                raise_validation_error(message=_("You must be part of a federation to submit results."))
+            if federation and not federation.tournaments.filter(id=tournament.id).exists():
+                raise_validation_error(message=_("You are not allowed to submit results for this tournament."))
+            if trainer and not federation.trainers.filter(user_id=trainer.pk).exists():
+                raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
+            if rating and not tournament.scoring_policies.filter(position=rating).exists():
+                raise_validation_error(message=_("Invalid rating for this tournament."))
+        else:
+            if instance and Result.objects.exclude(pk=instance.pk).filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
+                raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
+            if rating and not instance.tournament.scoring_policies.filter(position=rating).exists():
+                raise_validation_error(message=_("Invalid rating for this tournament."))
         return attrs
 
     @transaction.atomic
@@ -1611,16 +1615,8 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         score = tournament.get_score(validated_data.get("rating")) if tournament else None
         validated_data['score'] = score
         trainer: User = validated_data.get("trainer")
-
         file = validated_data.get("file")
-        # temp_file_obj = None
-        # if file:
-        #     temp_file_obj = TemporaryFile.objects.create(
-        #         file=file,
-        #         uploaded_by=sender
-        #     )
 
-        # validated_data['temp_file'] = temp_file_obj if temp_file_obj else None
         new_snapshot: dict = SportsmanResultSnapshotSerializer().to_new_snapshot(validated_data)
 
         user_request, message, success = UserRequestService.create_request(
@@ -1645,16 +1641,8 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         score = tournament.get_score(validated_data.get("rating")) if tournament else None
         validated_data['score'] = score
         trainer: User = instance.trainer.user
-
         file = validated_data.get("file")
-        temp_file_obj = None
-        if file:
-            temp_file_obj = TemporaryFile.objects.create(
-                file=file,
-                uploaded_by=sender
-            )
 
-        validated_data['temp_file'] = temp_file_obj if temp_file_obj else None
         validated_data['tournament'] = instance.tournament
 
         old_snapshot: dict = SportsmanResultSnapshotSerializer().to_old_snapshot(instance)
@@ -1666,6 +1654,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
             old_data=old_snapshot,
             new_data=new_snapshot,
+            file=file,
             message_from_sender=message_from_sender
         )
         if not success:
