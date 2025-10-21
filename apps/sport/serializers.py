@@ -1,5 +1,6 @@
 import typing as t
 import os
+from uuid import UUID
 from datetime import datetime
 from pathlib import Path
 
@@ -89,8 +90,21 @@ class SportSerializer(serializers.ModelSerializer):
         return attrs
 
     @transaction.atomic
-    def update(self, instance, validated_data):
-        sport_types = validated_data.pop("types", None)
+    def create(self, validated_data: dict) -> Sport:
+        sport_types: list[dict] | None = validated_data.pop("types", None)
+
+        sport: Sport = Sport.objects.create(**validated_data)
+
+        # Create sport types if provided
+        if sport_types:
+            for sport_type in sport_types:
+                SportType.objects.create(sport=sport, **sport_type)
+
+        return sport
+
+    @transaction.atomic
+    def update(self, instance: Sport, validated_data: dict) -> Sport:
+        sport_types: list[dict] | None = validated_data.pop("types", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -101,14 +115,14 @@ class SportSerializer(serializers.ModelSerializer):
             left_sport_types_id = []
 
             for sport_type in sport_types:
-                sport_type_id = sport_type.get("id", None)
-                name = sport_type.get("name")
+                sport_type_id: UUID | None = sport_type.get("id", None)
+                name: str = sport_type.get("name")
                 if sport_type_id:  # if id exists, update the existing sport type
                     SportType.objects.filter(id=sport_type_id).update(**sport_type)
                     left_sport_types_id.append(sport_type_id)
                 else:  # if id does not exist, create a new sport type
                     # Check if the same sport/type already exists
-                    existing = SportType.objects.filter(
+                    existing: SportType | None = SportType.objects.filter(
                         sport=instance,
                         name=sport_type.get("name")
                     ).first()
