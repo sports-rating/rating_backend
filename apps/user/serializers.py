@@ -25,7 +25,12 @@ from apps.career.models import Education
 from apps.shared.models import District, Neighborhood, Region
 from apps.shared.utils import enums
 from apps.shared.utils.exceptions import raise_validation_error
-from apps.shared.utils.general import get_file_full_url
+from apps.shared.utils.general import (
+    get_file_full_url,
+    check_uniqueness,
+    check_phone_valid,
+    check_m2m_uniqueness
+)
 # custom
 from apps.shared.utils.logging import logger
 from apps.shared.utils.notifications import send_notification_to_user
@@ -241,66 +246,6 @@ class PublicBaseUserSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         if instance.profile_photo:
             data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
-        data["region"] = {
-            "id": instance.region.id,
-            "name": instance.region.name
-        } if instance.region else None
-        data["district"] = {
-            "id": instance.district.id,
-            "name": instance.district.name
-        } if instance.district else None
-        return data
-
-
-class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
-    media = UserMediaSerializer(many=True)
-    educations = EducationSerializer(many=True, required=False)
-    results = ResultCreateSerializer(many=True, required=False)
-
-    class Meta:
-        model = User
-        fields = [
-            "id",
-            "first_name",
-            "middle_name",
-            "last_name",
-            "pinfl",
-            "phone_number",
-            "email",
-            "gender",
-            "region",
-            "district",
-            "birth_date",
-            "media",
-            "educations",
-            "results",
-            "user_role",
-            "is_verified",
-            "created_time",
-        ]
-        read_only_fields = ["id", "created_time", "is_verified", "user_role"]
-
-    def to_representation(self, instance: User) -> dict:
-        data = super().to_representation(instance)
-        if instance.user_role == "sportsman":
-            data["sportsman_profile"] = SportsmanProfileSerializer(instance.sportsman_profile, context=self.context).data
-        elif instance.user_role == "trainer":
-            data["trainer_profile"] = TrainerProfileSerializer(instance.trainer_profile, context=self.context).data
-        elif instance.user_role == "federation":
-            data["federation"] = {
-                "id": instance.federation.id,
-                "name": instance.federation.name,
-                "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
-            } if instance.federation else None
-        elif instance.user_role == "sport_institution_admin":
-            data["sport_institution"] = {
-                "id": instance.sport_institution.id,
-                "name": instance.sport_institution.name,
-            }
-        if instance.profile_photo:
-            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
-        else:
-            data["profile_photo"] = None
         data["region"] = {
             "id": instance.region.id,
             "name": instance.region.name
@@ -921,6 +866,70 @@ class PublicTrainerUserSerializer(PublicBaseUserSerializer):
         fields = PublicBaseUserSerializer.Meta.fields + ["trainer_profile"]
 
 
+class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
+    sportsman_profile = SportsmanProfileSerializer(read_only=True)
+    trainer_profile = TrainerProfileSerializer(read_only=True)
+    media = UserMediaSerializer(many=True)
+    educations = EducationSerializer(many=True, required=False)
+    results = ResultCreateSerializer(many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "pinfl",
+            "phone_number",
+            "email",
+            "gender",
+            "region",
+            "district",
+            "birth_date",
+            "media",
+            "educations",
+            "results",
+            "user_role",
+            "sportsman_profile",
+            "trainer_profile",
+            "is_verified",
+            "created_time",
+        ]
+        read_only_fields = ["id", "created_time", "is_verified", "user_role"]
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
+        if instance.user_role == "federation":
+            data["federation"] = {
+                "id": instance.federation.id,
+                "name": instance.federation.name,
+                "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
+            } if instance.federation else None
+        elif instance.user_role == "sport_institution_admin":
+            data["sport_institution"] = {
+                "id": instance.sport_institution.id,
+                "name": instance.sport_institution.name,
+            }
+        if getattr(instance, "sportsman_profile", None) is None:
+                data.pop("sportsman_profile", None)
+        if getattr(instance, "trainer_profile", None) is None:
+            data.pop("trainer_profile", None)
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        else:
+            data["profile_photo"] = None
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        return data
+
+
 class RegistrationSerializer(serializers.ModelSerializer):
     educations = EducationSerializer(many=True, required=True)
     results = ResultCreateSerializer(many=True, required=True)
@@ -1239,7 +1248,7 @@ class CustomTokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
         return data
 
 
-class UserUpdateSerializer(serializers.ModelSerializer):
+class AdminUserUpdateSerializer(serializers.ModelSerializer):
     sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
@@ -1275,7 +1284,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_time", "is_verified", "profile_photo"]
 
-    def get_profile_photo(self, obj):
+    def get_profile_photo(self, obj) -> t.Optional[str]:
         """
         Returns the URL of the user's profile photo if it exists.
         """
@@ -1401,6 +1410,101 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         if getattr(instance, "trainer_profile", None) is None:
             data.pop("trainer_profile", None)
         return data
+
+
+class ProfileUserUpdateSerializer(serializers.ModelSerializer):
+    sportsman_profile = SportsmanProfileSerializer(required=False)
+    trainer_profile = TrainerProfileSerializer(required=False)
+    profile_photo = serializers.SerializerMethodField()
+    media = UserMediaSerializer(read_only=True, many=True)
+    educations = EducationSerializer(many=True, required=False)
+    results = ResultCreateSerializer(many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "email",
+            "gender",
+            "region",
+            "district",
+            "birth_date",
+            "user_role",
+            "profile_photo",
+            "media",
+            "educations",
+            "results",
+            "sportsman_profile",
+            "trainer_profile",
+            "created_time",
+            "is_verified",
+        ]
+        read_only_fields = ["id", "created_time", "user_role", "is_verified", "profile_photo"]
+
+        def get_profile_photo(self, obj) -> t.Optional[str]:
+            """
+            Returns the URL of the user's profile photo if it exists.
+            """
+            profile_photo = self.instance.media.filter(is_profile_photo=True).first()
+            if profile_photo:
+                return get_file_full_url(profile_photo.file.url)
+            return None
+
+        def validate(self, attrs: dict) -> dict:
+            instance: User = t.cast(User, self.instance)
+
+            check_uniqueness("email", attrs, User, instance)
+            return attrs
+
+        @transaction.atomic
+        def update(self, instance: User, validated_data: dict) -> User:
+            sportsman_data = validated_data.pop("sportsman_profile", {}) or {}
+            trainer_data = validated_data.pop("trainer_profile", {}) or {}
+
+            # Performing actual updates on allowed fields
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            if sportsman_data:
+                sportsman_profile = getattr(instance, "sportsman_profile", None)
+                if sportsman_profile:
+                    SportsmanProfileSerializer(
+                        context={
+                            "request": self.context.get("request"),
+                        }
+                    ).update(sportsman_profile, sportsman_data)
+
+            if trainer_data:
+                trainer_profile = getattr(instance, "trainer_profile", None)
+                if trainer_profile:
+                    TrainerProfileSerializer(
+                        context={
+                            "request": self.context.get("request"),
+                        }
+                    ).update(trainer_profile, trainer_data)
+
+            return instance
+
+        def to_representation(self, instance):
+            data = super().to_representation(instance)
+            data["region"] = {
+                "id": instance.region.id,
+                "name": instance.region.name,
+            } if instance.region.id else None
+            data["district"] = {
+                "id": instance.district.id,
+                "name": instance.district.name,
+            } if instance.district.id else None
+            # Remove empty profiles
+            if getattr(instance, "sportsman_profile", None) is None:
+                data.pop("sportsman_profile", None)
+            if getattr(instance, "trainer_profile", None) is None:
+                data.pop("trainer_profile", None)
+            return data
 
 
 class ArchivedTrainerSerializer(serializers.ModelSerializer):

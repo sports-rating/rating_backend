@@ -221,7 +221,7 @@ class DeleteAccountAPIView(generics.DestroyAPIView):
 
 class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = serializers.UserUpdateSerializer
+    serializer_class = serializers.ProfileUserUpdateSerializer
     permission_classes = [
         permissions.IsAuthenticated,
     ]
@@ -401,7 +401,7 @@ class SportsmanListCreateView(generics.ListCreateAPIView):
 class SportsmanRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     queryset = User.objects.all()
-    serializer_class = serializers.UserUpdateSerializer
+    serializer_class = serializers.AdminUserUpdateSerializer
 
     def get_queryset(self):
         queryset = User.stats.with_sportsman_statistics().select_related(
@@ -494,7 +494,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["request"] = self.request  # Pass the request to the serializer
+        context["request"] = self.request
         return context
 
     def get_queryset(self):
@@ -538,7 +538,7 @@ class TrainerListCreateView(generics.ListCreateAPIView):
 class TrainerRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     queryset = User.objects.all()
-    serializer_class = serializers.UserUpdateSerializer
+    serializer_class = serializers.AdminUserUpdateSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_Class = TrainerFilter
     pagination_class = CustomPagination
