@@ -308,7 +308,7 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
         ).prefetch_related(
             "receivers",
         ).filter(
-            receivers=user,
+            # receivers=user,
             federation_id=federation_id
         )
         return queryset
