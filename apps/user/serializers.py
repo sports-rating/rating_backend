@@ -1704,6 +1704,11 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "min_age": instance.age_group.age_group.min_age,
             "max_age": instance.age_group.age_group.max_age,
         } if instance.age_group else None
+        data["sport_type"] = {
+            "id": instance.sport_type.id,
+            "name": instance.sport_type.name,
+        } if instance.sport_type else None
+        data["file"] = get_file_full_url(instance.file.url) if instance.file else None
         return data
 
 
