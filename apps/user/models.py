@@ -24,6 +24,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.shared.models import BaseModel, BaseMedia
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
+from apps.shared.utils.logging import logger
 
 from apps.sport.models import (
     Sport,
@@ -256,8 +257,9 @@ class UserMedia(BaseMedia):
 
     def save(self, *args, **kwargs):
         if self.is_profile_photo:
-            # Ensure only one profile photo per user
-            UserMedia.objects.filter(user=self.user, is_profile_photo=True).update(is_profile_photo=False)
+            previous_profile_photo = UserMedia.objects.filter(user=self.user, is_profile_photo=True).first()
+            if previous_profile_photo and previous_profile_photo != self:
+                previous_profile_photo.delete()
         super().save(*args, **kwargs)
 
 

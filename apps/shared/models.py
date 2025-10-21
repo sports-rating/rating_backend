@@ -8,6 +8,7 @@ from django.db import models
 from apps.shared.utils.enums import MediaChoices
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils.general import compress_image
+from apps.shared.utils.logging import logger
 
 
 class BaseModel(models.Model):
@@ -97,9 +98,7 @@ class BaseMedia(BaseModel):
         super().save(*args, **kwargs)  # Final save to ensure the object is saved
 
     def delete(self, *args, **kwargs):
-        print(self.file)
         if self.file:
-            print(self.file.path)
             if os.path.isfile(self.file.path):
                 os.remove(self.file.path)
         super().delete(*args, **kwargs)

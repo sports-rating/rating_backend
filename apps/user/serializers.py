@@ -159,6 +159,18 @@ class UserMediaSerializer(BaseMediaSerializer):
         read_only_fields = ("id", "user", "media_type", "size", "extension", "created_time")
 
     def validate(self, data) -> dict:
+        data = super().validate(data)
+
+        # Validate profile photo file type: must be in jpg, jpeg, png
+        is_profile_photo = data.get("is_profile_photo", False)
+        if is_profile_photo:
+            file = data.get("file", None)
+            file_name = file.name.lower()
+            _, ext = os.path.splitext(file_name)
+            allowed_extensions = ['.jpg', '.jpeg', '.png']
+            if ext not in allowed_extensions:
+                raise_validation_error(message=_("Profile photo must be an image file (jpg, jpeg, png)"))
+
         return super().validate(data)
 
 
