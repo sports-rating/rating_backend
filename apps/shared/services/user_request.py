@@ -367,6 +367,7 @@ class UserRequestService:
                 result.year = result_data.get("year")
                 result.weight = result_data.get("weight")
                 result.rating = result_data.get("rating")
+                result.requests.add(user_request)
 
                 new_path = finalize_result_file(result, user_request.file)
                 # Remove old file if exists
@@ -380,11 +381,11 @@ class UserRequestService:
                 result = Result(
                     user=sender,
                     trainer=receiver.trainer_profile,
-                    request=user_request,
                     is_verified=True,
                     status=enums.ResultVerificationStatus.VERIFIED.value, # remove this field later
                     **result_data
                 )
+                result.requests.add(user_request)
 
                 new_path = finalize_result_file(result, user_request.file)
                 result.file.name = new_path

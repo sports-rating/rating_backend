@@ -128,12 +128,10 @@ class Result(BaseModel):
     additional_attributes = models.JSONField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=enums.ResultVerificationStatus.choices(), default=enums.ResultVerificationStatus.PENDING.value)
-    request = models.OneToOneField(
+    requests = models.ManyToManyField(
         UserRequest,
-        on_delete=models.SET_NULL,
-        null=True,
+        related_name="requested_results",
         blank=True,
-        related_name="requested_result"
     )
 
     sport_type = models.ForeignKey("sport.SportType", on_delete=models.SET_NULL, related_name="sport_type_results", blank=True, null=True)
