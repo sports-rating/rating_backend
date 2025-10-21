@@ -23,6 +23,15 @@ from apps.sport.models import (
 )
 
 
+class SportTypeFilter(BaseFilterSet):
+    federation = filters.CharFilter(field_name="sport__age_groups__federation_links__federation__id")
+    sport = filters.CharFilter(field_name="sport__id")
+
+    class Meta:
+        model = Sport
+        fields = ["federation", "sport"]
+
+
 class TournamentFilter(BaseFilterSet):
     start_time = filters.DateFilter(field_name="start_time", lookup_expr='gte')
     end_time = filters.DateFilter(field_name="end_time", lookup_expr="lte")

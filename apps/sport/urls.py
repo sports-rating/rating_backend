@@ -44,4 +44,6 @@ urlpatterns = [
 
     path("", views.SportListCreateView.as_view(), name='sport-create-list'),
     path("<uuid:pk>/", views.SportRetrieveUpdateDeleteView.as_view(), name='sport-retrieve-update-delete'),
+
+    path("types/", views.SportTypeListAPIView.as_view(), name='sport-type-list'),
 ]
