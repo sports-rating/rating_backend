@@ -217,6 +217,15 @@ class UserRequestService:
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
+        elif status == enums.UserRequestStatus.CANCELLED.value:
+            notification_body = f"Successfully cancelled the request."
+            notification_data = {
+                "request_type": "sportsman_trainer_request",
+                "trainer_id": str(receiver.id),
+                "request_id": str(user_request.id),
+            }
+            UserRequestService.cancel_request(user_request, notification_body, notification_data)
+
         logger.info(f"Sportsman Trainer Request | Processed Request -> {user_request.id}")
         return _("Request handled successfully."), True
 
@@ -266,6 +275,15 @@ class UserRequestService:
                 "message_from_receiver": message_from_receiver,
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
+
+        elif status == enums.UserRequestStatus.CANCELLED.value:
+            notification_body = f"Successfully cancelled the request."
+            notification_data = {
+                "request_type": "trainer_federation_request",
+                "federation_id": str(receiver.id),
+                "request_id": str(user_request.id),
+            }
+            UserRequestService.cancel_request(user_request, notification_body, notification_data)
 
         logger.info(f"Trainer Federation Request | Processed Request -> {user_request.id}")
         return _("Request handled successfully."), True
@@ -408,6 +426,14 @@ class UserRequestService:
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
 
+        elif status == enums.UserRequestStatus.CANCELLED.value:
+            notification_body = f"Successfully cancelled the request."
+            notification_data = {
+                "request_type": "sportsman_result_verification_request",
+                "request_id": str(user_request.id),
+            }
+            UserRequestService.cancel_request(user_request, notification_body, notification_data)
+
         logger.info(f"Result Verification Request | Processed Request -> {user_request.id}")  # LOGGING
         return _("Request handled successfully."), True
 
@@ -448,6 +474,14 @@ class UserRequestService:
                 "message_from_receiver": message_from_receiver,
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
+
+        elif status == enums.UserRequestStatus.CANCELLED.value:
+            notification_body = f"Successfully cancelled the request."
+            notification_data = {
+                "request_type": "trainer_workplace_verification_request",
+                "request_id": str(user_request.id),
+            }
+            UserRequestService.cancel_request(user_request, notification_body, notification_data)
 
         logger.info(f"Trainer Workplace Verification Request | Processed Request -> {user_request.id}")  # LOGGING
         return _("Request handled successfully."), True
@@ -492,6 +526,14 @@ class UserRequestService:
                 "message_from_receiver": message_from_receiver,
             }
             UserRequestService.accept_request(user_request, receiver, notification_body, notification_data)
+
+        elif status == enums.UserRequestStatus.CANCELLED.value:
+            notification_body = f"Successfully cancelled the request."
+            notification_data = {
+                "request_type": "education_verification_request",
+                "request_id": str(user_request.id),
+            }
+            UserRequestService.cancel_request(user_request, notification_body, notification_data)
 
         logger.info(f"Education Verification Request | Processed Request -> {user_request.id}")  # LOGGING
         return _("Request handled successfully."), True
