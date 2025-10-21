@@ -19,7 +19,8 @@ from apps.sport.models import (
     Sport,
     SportInstitution,
     SportInstitutionMedia,
-    SportInstitutionRequest
+    SportInstitutionRequest,
+    SportType
 )
 
 
@@ -28,7 +29,7 @@ class SportTypeFilter(BaseFilterSet):
     sport = filters.CharFilter(field_name="sport__id")
 
     class Meta:
-        model = Sport
+        model = SportType
         fields = ["federation", "sport"]
 
 
