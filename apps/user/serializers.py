@@ -1417,8 +1417,8 @@ class ProfileUserUpdateSerializer(serializers.ModelSerializer):
     trainer_profile = TrainerProfileSerializer(required=False)
     profile_photo = serializers.SerializerMethodField()
     media = UserMediaSerializer(read_only=True, many=True)
-    educations = EducationSerializer(many=True, required=False)
-    results = ResultCreateSerializer(many=True, required=False)
+    educations = EducationSerializer(read_only=True, many=True)
+    results = ResultCreateSerializer(read_only=True, many=True)
 
     class Meta:
         model = User
