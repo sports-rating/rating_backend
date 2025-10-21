@@ -1444,67 +1444,67 @@ class ProfileUserUpdateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_time", "user_role", "is_verified", "profile_photo"]
 
-        def get_profile_photo(self, obj) -> t.Optional[str]:
-            """
-            Returns the URL of the user's profile photo if it exists.
-            """
-            profile_photo = self.instance.media.filter(is_profile_photo=True).first()
-            if profile_photo:
-                return get_file_full_url(profile_photo.file.url)
-            return None
+    def get_profile_photo(self, obj) -> t.Optional[str]:
+        """
+        Returns the URL of the user's profile photo if it exists.
+        """
+        profile_photo = self.instance.media.filter(is_profile_photo=True).first()
+        if profile_photo:
+            return get_file_full_url(profile_photo.file.url)
+        return None
 
-        def validate(self, attrs: dict) -> dict:
-            instance: User = t.cast(User, self.instance)
+    def validate(self, attrs: dict) -> dict:
+        instance: User = t.cast(User, self.instance)
 
-            check_uniqueness("email", attrs, User, instance)
-            return attrs
+        check_uniqueness("email", attrs, User, instance)
+        return attrs
 
-        @transaction.atomic
-        def update(self, instance: User, validated_data: dict) -> User:
-            sportsman_data = validated_data.pop("sportsman_profile", {}) or {}
-            trainer_data = validated_data.pop("trainer_profile", {}) or {}
+    @transaction.atomic
+    def update(self, instance: User, validated_data: dict) -> User:
+        sportsman_data = validated_data.pop("sportsman_profile", {}) or {}
+        trainer_data = validated_data.pop("trainer_profile", {}) or {}
 
-            # Performing actual updates on allowed fields
-            for attr, value in validated_data.items():
-                setattr(instance, attr, value)
-            instance.save()
+        # Performing actual updates on allowed fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
 
-            if sportsman_data:
-                sportsman_profile = getattr(instance, "sportsman_profile", None)
-                if sportsman_profile:
-                    SportsmanProfileSerializer(
-                        context={
-                            "request": self.context.get("request"),
-                        }
-                    ).update(sportsman_profile, sportsman_data)
+        if sportsman_data:
+            sportsman_profile = getattr(instance, "sportsman_profile", None)
+            if sportsman_profile:
+                SportsmanProfileSerializer(
+                    context={
+                        "request": self.context.get("request"),
+                    }
+                ).update(sportsman_profile, sportsman_data)
 
-            if trainer_data:
-                trainer_profile = getattr(instance, "trainer_profile", None)
-                if trainer_profile:
-                    TrainerProfileSerializer(
-                        context={
-                            "request": self.context.get("request"),
-                        }
-                    ).update(trainer_profile, trainer_data)
+        if trainer_data:
+            trainer_profile = getattr(instance, "trainer_profile", None)
+            if trainer_profile:
+                TrainerProfileSerializer(
+                    context={
+                        "request": self.context.get("request"),
+                    }
+                ).update(trainer_profile, trainer_data)
 
-            return instance
+        return instance
 
-        def to_representation(self, instance):
-            data = super().to_representation(instance)
-            data["region"] = {
-                "id": instance.region.id,
-                "name": instance.region.name,
-            } if instance.region.id else None
-            data["district"] = {
-                "id": instance.district.id,
-                "name": instance.district.name,
-            } if instance.district.id else None
-            # Remove empty profiles
-            if getattr(instance, "sportsman_profile", None) is None:
-                data.pop("sportsman_profile", None)
-            if getattr(instance, "trainer_profile", None) is None:
-                data.pop("trainer_profile", None)
-            return data
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name,
+        } if instance.region.id else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name,
+        } if instance.district.id else None
+        # Remove empty profiles
+        if getattr(instance, "sportsman_profile", None) is None:
+            data.pop("sportsman_profile", None)
+        if getattr(instance, "trainer_profile", None) is None:
+            data.pop("trainer_profile", None)
+        return data
 
 
 class ArchivedTrainerSerializer(serializers.ModelSerializer):

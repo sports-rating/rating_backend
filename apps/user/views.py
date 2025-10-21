@@ -262,7 +262,7 @@ class UserRetrieveUpdateView(generics.RetrieveUpdateAPIView):
             data=serializer.data, message=_("User retrieved successfully")
         )
 
-    def update(self, request: Request, *args, **kwargs):
+    def update(self, request: Request, *args, **kwargs) -> Response:
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
