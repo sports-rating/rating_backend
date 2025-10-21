@@ -27,7 +27,8 @@ from apps.user.models import (
     User,
     Sportsman,
     Trainer,
-    UserRequest
+    UserRequest,
+    UserMedia
 )
 
 from apps.dashboard.models import (
@@ -65,13 +66,19 @@ class UserListView(generics.ListAPIView):
 
     def get_queryset(self) -> QuerySet[User]:
         queryset = User.objects.exclude(user_role__in=["ordinary", "admin", "super_admin"]).select_related(
-            "sportsman_profile__trainer",
             "sportsman_profile__sport",
+            "sportsman_profile__trainer__user",
+            'sportsman_profile__trainer__sport',
+            'sportsman_profile__trainer__federation',
             "trainer_profile__sport",
             "region",
             "district",
         ).prefetch_related(
-            "media",
+            Prefetch(
+                "media",
+                queryset=UserMedia.objects.filter(is_profile_photo=True),
+                to_attr="prefetched_profile_photos",
+            ),
             "results",
         )
         return queryset
