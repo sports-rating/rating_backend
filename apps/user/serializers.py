@@ -299,6 +299,8 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             }
         if instance.profile_photo:
             data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        else:
+            data["profile_photo"] = None
         data["region"] = {
             "id": instance.region.id,
             "name": instance.region.name
