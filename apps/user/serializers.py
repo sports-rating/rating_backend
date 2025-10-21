@@ -499,17 +499,20 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             "logo": get_file_full_url(instance.trainer.federation.logo.url) if instance.trainer.federation.logo else None
         } if instance.trainer and instance.trainer.federation else None
         data["sport_rank"] = _(instance.sport_rank) if instance.sport_rank else None
-        data["request_id"] = self._get_last_request(instance).id if self._get_last_request(instance) else None
+        last_request, last_request_status = self._get_last_request(instance)
+        data["request_id"] = last_request.id if last_request else None
+        data["request_status"] = last_request_status
         return data
 
     # ----------------------------
     # Helpers
     # ----------------------------
-    def _get_last_request(self, instance: Sportsman) -> UserRequest | None:
-        return UserRequest.objects.filter(
+    def _get_last_request(self, instance: Sportsman) -> t.Tuple[UserRequest | None, str | None]:
+        request = UserRequest.objects.filter(
             sender=instance.user,
             request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
         ).order_by('-created_time').first()
+        return request, request.status if request else None
 
     def _extract_non_critical_data(self, data: dict) -> dict:
         """
@@ -803,17 +806,20 @@ class TrainerProfileSerializer(RequestContextMixin, serializers.ModelSerializer)
             "name": instance.federation.name,
             "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
         } if instance.federation else None
-        data["request_id"] = self._get_last_request(instance).id if self._get_last_request(instance) else None
+        last_request, last_request_status = self._get_last_request(instance)
+        data["request_id"] = last_request.id if last_request else None
+        data["request_status"] = last_request_status
         return data
 
     # ----------------------------
     # Helpers
     # ----------------------------
-    def _get_last_request(self, instance: Trainer) -> UserRequest | None:
-        return UserRequest.objects.filter(
+    def _get_last_request(self, instance: Trainer) -> t.Tuple[UserRequest | None, str | None]:
+        request = UserRequest.objects.filter(
             sender=instance.user,
             request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
         ).order_by('-created_time').first()
+        return request, request.status if request else None
 
     def _extract_non_critical_data(self, data: dict) -> dict:
         """
