@@ -54,12 +54,12 @@ class CommentSerializer(RequestContextMixin, serializers.ModelSerializer):
         if not (1 <= rating <= 5):
             raise_validation_error(message=_("Rating must be between 1 and 5."))
 
-        # Check if the user has already commented on this sport institution
-        if Comment.objects.filter(
-            user=user,
-            sport_institution=sport_institution
-        ).exists():
-            raise_validation_error(message=_("You have already commented on this sport institution."))
+        # # Check if the user has already commented on this sport institution
+        # if Comment.objects.filter(
+        #     user=user,
+        #     sport_institution=sport_institution
+        # ).exists():
+        #     raise_validation_error(message=_("You have already commented on this sport institution."))
 
         return attrs
 
