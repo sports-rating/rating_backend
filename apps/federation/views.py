@@ -26,6 +26,8 @@ from apps.shared.utils.utils import (
     success_response,
     error_response
 )
+from apps.shared.utils import enums
+from apps.shared.utils.logging import logger
 
 from apps.federation.models import (
     FederationAgeGroup,
@@ -408,11 +410,29 @@ class FederationSportTypeListAPIView(generics.ListAPIView):
     filterset_class = None
 
     def get_queryset(self) -> QuerySet[SportType]:
+        user = self.request.user  # type: ignore
         federation_id: UUID = self.kwargs.get('pk')
         sport_type_ids = FederationAgeGroup.objects.filter(
             federation_id=federation_id
         ).values_list('age_group__sport_type_id', flat=True).distinct()
-        return SportType.objects.filter(id__in=sport_type_ids)
+        queryset = SportType.objects.filter(id__in=sport_type_ids).select_related("sport")
+        logger.info(f"Sport types: {queryset}")
+        if user.is_authenticated:
+            if user.user_role == enums.UserRoles.SPORTSMAN.value:
+                queryset = queryset.filter(sport=user.sportsman_profile.sport)
+            elif user.user_role == enums.UserRoles.TRAINER.value:
+                queryset = queryset.filter(sport=user.trainer_profile.sport)
+
+        # ✅ Prefetch only relevant age groups for this federation
+        relevant_age_groups = AgeGroup.objects.filter(
+            federation_links__federation_id=federation_id
+        ).select_related("sport").distinct()
+
+        queryset = queryset.prefetch_related(
+            Prefetch("sport_type_age_groups", queryset=relevant_age_groups, to_attr="federation_age_groups")
+        )
+
+        return queryset
 
     def list(self, request: Request, *args, **kwargs) -> Response:
         response: Response = super().list(request, *args, **kwargs)

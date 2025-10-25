@@ -418,21 +418,23 @@ class FederationAgeGroupSerializer(RequestContextMixin, serializers.ModelSeriali
 
 
 class FederationSportTypeSerializer(serializers.ModelSerializer):
+    age_groups = serializers.SerializerMethodField()
+
     class Meta:
         model = SportType
         fields = [
             "id",
             "sport",
             "name",
+            "age_groups",
             "created_time"
         ]
-        read_only_fields = ["id", "created_time"]
+        read_only_fields = ["id", "age_groups", "created_time"]
+
+    def get_age_groups(self, obj):
+        age_groups = getattr(obj, "federation_age_groups", [])
+        return AgeGroupSerializer(age_groups, many=True).data
 
     def to_representation(self, instance: SportType) -> dict:
         data = super().to_representation(instance)
-        data["sport"] = {
-            "id": instance.sport.id,
-            "name": instance.sport.name,
-            "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
-        } if instance.sport else None
         return data
