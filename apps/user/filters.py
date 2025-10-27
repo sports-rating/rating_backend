@@ -38,7 +38,7 @@ class TrainerFilter(BaseFilterSet):
     # sport = filters.CharFilter(method='filter_sport')
     sport = filters.CharFilter(field_name="trainer_profile__sport__id")
     verified = filters.BooleanFilter(field_name='trainer_profile__is_trainer_verified')
-    federation = filters.CharFilter(field_name='federations__id')
+    federation = filters.CharFilter(field_name='trainer_profile__federation__id')
 
     class Meta:
         model = User
