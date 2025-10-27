@@ -164,6 +164,11 @@ class SportListCreateView(generics.ListCreateAPIView):
     queryset = Sport.objects.all()
     serializer_class = serializers.SportSerializer
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related(
+            "types"
+        ).order_by("-created_time")
+
     def get_permissions(self):
         if self.request.method == "GET":
             return (permissions.AllowAny(),)
