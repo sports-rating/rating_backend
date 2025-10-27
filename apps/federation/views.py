@@ -386,7 +386,7 @@ class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
                 "federation"
             ).filter(
                 federation_id=federation_id
-            ).select_related('age_group__sport')
+            )
         if user.user_role in ['sportsman', 'trainer']:
             return queryset.filter(age_group__gender=user.gender)
         return queryset
@@ -410,13 +410,19 @@ class FederationSportTypeListAPIView(generics.ListAPIView):
     filterset_class = None
 
     def get_queryset(self) -> QuerySet[SportType]:
-        user = self.request.user  # type: ignore
+        user: User = self.request.user  # type: ignore
         federation_id: UUID = self.kwargs.get('pk')
         sport_type_ids = FederationAgeGroup.objects.filter(
-            federation_id=federation_id
+            federation_id=federation_id,
+            # age_group__sport_type__isnull=False
         ).values_list('age_group__sport_type_id', flat=True).distinct()
-        queryset = SportType.objects.filter(id__in=sport_type_ids).select_related("sport")
-        logger.info(f"Sport types: {queryset}")
+
+        queryset = SportType.objects.filter(
+            id__in=sport_type_ids
+        ).select_related(
+            "sport"
+        )
+
         if user.is_authenticated:
             if user.user_role == enums.UserRoles.SPORTSMAN.value:
                 queryset = queryset.filter(sport=user.sportsman_profile.sport)
@@ -424,13 +430,22 @@ class FederationSportTypeListAPIView(generics.ListAPIView):
                 queryset = queryset.filter(sport=user.trainer_profile.sport)
 
         # ✅ Prefetch only relevant age groups for this federation
-        relevant_age_groups = AgeGroup.objects.filter(
-            federation_links__federation_id=federation_id
-        ).select_related("sport").distinct()
+        relevant_federation_age_groups = FederationAgeGroup.objects.filter(
+            federation_id=federation_id
+        ).select_related("age_group__sport", "age_group__sport_type").distinct()
 
         queryset = queryset.prefetch_related(
-            Prefetch("sport_type_age_groups", queryset=relevant_age_groups, to_attr="federation_age_groups")
+            Prefetch(
+                "sport_type_age_groups__federation_links",
+                queryset=relevant_federation_age_groups,
+                to_attr="federation_age_groups"
+            )
         )
+
+        if user.user_role in ['sportsman', 'trainer']:
+            queryset = queryset.filter(
+                sport_type_age_groups__gender=user.gender
+            ).distinct()
 
         return queryset
 

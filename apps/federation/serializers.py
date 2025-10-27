@@ -432,8 +432,14 @@ class FederationSportTypeSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "age_groups", "created_time"]
 
     def get_age_groups(self, obj):
-        age_groups = getattr(obj, "federation_age_groups", [])
-        return AgeGroupSerializer(age_groups, many=True).data
+        # Loop through prefetched sport_type_age_groups (AgeGroups)
+        all_fed_links = []
+        for ag in getattr(obj, "sport_type_age_groups").all():
+            # Each ag now has "federation_age_groups"
+            all_fed_links.extend(getattr(ag, "federation_age_groups", []))
+
+        # logger.info(f"Federation Age Groups for {obj.name}: {all_fed_links}")
+        return FederationAgeGroupSerializer(all_fed_links, many=True).data
 
     def to_representation(self, instance: SportType) -> dict:
         data = super().to_representation(instance)

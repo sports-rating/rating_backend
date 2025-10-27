@@ -23,7 +23,7 @@ class FederationAdmin(admin.ModelAdmin):
             format_html(
                 '<a href="{}">{}</a>',
                 reverse("admin:federation_federationagegroup_change", args=[age_group.id]),
-                str(age_group.age_group.name)
+                f"{age_group.age_group.name} - {age_group.age_group.gender}"
             )
             for age_group in obj.age_group_links.all()
         ]
