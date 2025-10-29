@@ -1,6 +1,7 @@
 import random
 import string
 import os
+import magic
 import mimetypes
 import io
 import typing as t
@@ -25,6 +26,7 @@ from apps.shared.models import BaseModel, BaseMedia
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
 from apps.shared.utils.logging import logger
+from apps.shared.utils.general import compress_image
 
 from apps.sport.models import (
     Sport,
@@ -325,6 +327,23 @@ class UserRequest(BaseModel):
         ordering = ['-created_time']
 
     repr_fields = ("sender", "request_type", "status")
+
+    def save(self, *args, **kwargs):
+        if self.file and hasattr(self.file, 'file'):
+            try:
+                mime = magic.from_buffer(self.file.read(2048), mime=True)
+                self.file.seek(0) # Reset file pointer after reading
+
+                if mime.startswith("image/"):
+                    compressed_image = compress_image(self.file)
+                    self.file = compressed_image
+
+                elif mime.startswith("application/pdf"):
+                    pass # No compression for PDF files
+            except Exception as e:
+                logger.warning(f"Skipping compression: {e}")
+
+        super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         # Deletes the file from storage when the UserRequest instance is deleted
