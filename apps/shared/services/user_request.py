@@ -1,3 +1,4 @@
+import os
 import typing as t
 import copy
 import shutil
@@ -388,6 +389,8 @@ class UserRequestService:
                 result.requests.add(user_request)
 
                 new_path = finalize_result_file(result, user_request.file)
+                # logger.info(f"New file path for result {result.id}: {new_path}")
+
                 # Remove old file if exists
                 if result.file:
                     result.file.delete(save=False)

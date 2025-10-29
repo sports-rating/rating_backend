@@ -154,13 +154,18 @@ def finalize_result_file(result, temp_file) -> str:
     """
     Copies the temporary file to the final media directory and returns the new file path.
     """
+    logger.info(
+        f"Temp file object: {temp_file}, "
+        f"path: {getattr(temp_file, 'path', None)}, "
+        f"name: {temp_file.name}, "
+        f"exists: {os.path.exists(getattr(temp_file, 'path', ''))}"
+    )
     correct_path = CorrectPath("media")
     filename = os.path.basename(temp_file.path)
     logger.info(f"Finalizing result file: {filename}")
     new_relative_path = correct_path(result, filename)
     new_full_path = os.path.join(settings.MEDIA_ROOT, new_relative_path)
     logger.info(f"Copying file to: {new_full_path}")
-    logger.info(f"Relative path will be: {new_relative_path}")
     os.makedirs(os.path.dirname(new_full_path), exist_ok=True)
 
     shutil.copy2(temp_file.path, new_full_path)
