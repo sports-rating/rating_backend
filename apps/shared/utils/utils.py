@@ -164,6 +164,7 @@ def finalize_result_file(result, temp_file) -> str:
     filename = os.path.basename(temp_file.path)
     logger.info(f"Finalizing result file: {filename}")
     new_relative_path = correct_path(result, filename)
+    logger.info(f"CorrectPath returned: {new_relative_path} | Is absolute? {os.path.isabs(new_relative_path)}")
     new_full_path = os.path.join(settings.MEDIA_ROOT, new_relative_path)
     logger.info(f"Copying file to: {new_full_path}")
     os.makedirs(os.path.dirname(new_full_path), exist_ok=True)

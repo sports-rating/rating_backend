@@ -389,11 +389,11 @@ class UserRequestService:
                 result.requests.add(user_request)
 
                 new_path = finalize_result_file(result, user_request.file)
-                # logger.info(f"New file path for result {result.id}: {new_path}")
-
+                logger.info(f"New file path for result {result.id}: {new_path}")
                 # Remove old file if exists
                 if result.file:
                     result.file.delete(save=False)
+                logger.info(f"Old file for result {result.id} deleted.")
                 result.file.name = new_path
                 result.is_verified = True
                 result.save()
