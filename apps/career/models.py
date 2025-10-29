@@ -160,23 +160,6 @@ class Result(BaseModel):
     def score(self) -> float:
         return self.tournament.get_score(self.rating) if self.tournament else 0
 
-    def save(self, *args, **kwargs):
-        if self.file and hasattr(self.file, 'file'):
-            try:
-                mime = magic.from_buffer(self.file.read(2048), mime=True)
-                self.file.seek(0)  # Reset file pointer after reading
-
-                if mime.startswith("image/"):
-                    compressed_image = compress_image(self.file)
-                    self.file = compressed_image
-
-                elif mime.startswith("application/pdf"):
-                    pass  # No compression for PDF files
-            except Exception as e:
-                logger.warning(f"Skipping compression: {e}")
-
-        super().save(*args, **kwargs)
-
     def delete(self, *args, **kwargs):
         # Deletes the file from storage when the UserRequest instance is deleted
         if self.file and os.path.isfile(self.file.path):
