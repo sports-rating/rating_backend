@@ -391,7 +391,9 @@ class UserRequestService:
                 new_path = finalize_result_file(result, user_request.file)
                 # Remove old file if exists
                 if result.file:
-                    result.file.delete(save=False)
+                    # result.file.delete(save=False)
+                    # Add archive method later
+                    pass
                 result.file.name = new_path
                 result.is_verified = True
                 result.save()
