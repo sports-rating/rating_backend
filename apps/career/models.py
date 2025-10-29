@@ -18,6 +18,7 @@ from apps.sport.models import (
 from apps.shared.utils import enums
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils.general import compress_image
+from apps.shared.utils.logging import logger
 
 
 class Education(BaseModel):
@@ -161,15 +162,19 @@ class Result(BaseModel):
 
     def save(self, *args, **kwargs):
         if self.file and hasattr(self.file, 'file'):
-            mime = magic.from_buffer(self.file.read(2048), mime=True)
-            self.file.seek(0)  # Reset file pointer after reading
+            try:
+                mime = magic.from_buffer(self.file.read(2048), mime=True)
+                self.file.seek(0)  # Reset file pointer after reading
 
-            if mime.startswith("image/"):
-                compressed_image = compress_image(self.file)
-                self.file = compressed_image
+                if mime.startswith("image/"):
+                    compressed_image = compress_image(self.file)
+                    self.file = compressed_image
 
-            elif mime.startswith("application/pdf"):
-                pass  # No compression for PDF files
+                elif mime.startswith("application/pdf"):
+                    pass  # No compression for PDF files
+            except Exception as e:
+                logger.warning(f"Skipping compression: {e}")
+
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
