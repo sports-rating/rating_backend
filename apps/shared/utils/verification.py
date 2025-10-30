@@ -6,6 +6,7 @@ import requests
 
 # django related
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 # custom
 from apps.shared.utils.logging import logger
@@ -62,7 +63,7 @@ def send_verification_code(phone_number: str) -> tuple[int, str, t.Optional[str]
             ),
         )
         if response != 200:
-            return 400, "Something went wrong with sending sms", verification_code
+            return 400, _("Something went wrong with sending sms"), verification_code
 
     # If sms sent successfuly, then we put it on redis
     redis_connection.set(
@@ -74,7 +75,7 @@ def send_verification_code(phone_number: str) -> tuple[int, str, t.Optional[str]
         ex=settings.VERIFICATION_CODE_EXPIRE,
     )
 
-    return 200, "Verification code is successfully sent", verification_code
+    return 200, _("Verification code is successfully sent"), verification_code
 
 
 def check_existence_of_verification(
@@ -87,7 +88,7 @@ def check_existence_of_verification(
     verified_phone_number_key = f"verified_phone_number:{phone_number}"
 
     if redis_connection.get(verification_code_key):
-        return 400, "Verification code already exist", None, None
+        return 400, _("Verification code already exist"), None, None
 
     # if redis_connection.get(verified_phone_number_key):
     #     return 400, "Phone number already verified", None, None
@@ -99,27 +100,27 @@ def check_verification_status(phone_number: str) -> tuple[bool, str]:
     verification_status = redis_connection.get(f"verified_phone_number:{phone_number}")
 
     if verification_status is None:
-        return False, "User must be verified first"
+        return False, _("User must be verified first")
 
     if verification_status != "verified":
-        return False, "Your phone number is not verified"
+        return False, _("Your phone number is not verified")
 
     return True, str()
 
 
 def verify_code(phone_number: str, code: str):
     if not phone_number:
-        return 400, "Send phone number to check verification"
+        return 400, _("Send phone number to check verification")
 
     verification_code_key = f"verification_code:{phone_number}"
     stored_code = redis_connection.get(verification_code_key)
     # logger.info(f"Verification code: {redis_connection.get(verification_code_key)}")
 
     if stored_code is None:
-        return 400, "Verification code expired or not found"
+        return 400, _("Verification code expired or not found")
 
     if code != stored_code:
-        return 400, "Verification code is incorrect"
+        return 400, _("Verification code is incorrect")
 
     redis_connection.set(
         f"verified_phone_number:{phone_number}",
@@ -131,4 +132,4 @@ def verify_code(phone_number: str, code: str):
     )  # it won't be used, we don't have wait until it expires,
     # will be removed asynchronously
 
-    return 200, "Verified successfully"
+    return 200, _("Verified successfully")
