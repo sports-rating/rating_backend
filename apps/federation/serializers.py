@@ -2,6 +2,7 @@ import typing as t
 import re
 
 from uuid import UUID
+from datetime import datetime
 
 from django.db import transaction, IntegrityError
 from django.utils.translation import gettext as _
@@ -31,7 +32,8 @@ from apps.federation.models import (
     FederationDocument
 )
 from apps.sport.models import (
-    Sport
+    Sport,
+    SportType
 )
 from apps.user.models import (
     User,
@@ -58,6 +60,7 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "sport",
+            "sport_type",
             "min_age",
             "max_age",
             "weights",
@@ -103,6 +106,10 @@ class AgeGroupSerializer(serializers.ModelSerializer):
             "name": instance.sport.name,
             "logo": get_file_full_url(instance.sport.logo.url) if instance.sport.logo else None
         } if instance.sport else None
+        data["sport_type"] = {
+            "id": instance.sport_type.id,
+            "name": instance.sport_type.name
+        } if instance.sport_type else None
         return data
 
 
@@ -326,6 +333,7 @@ class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSeri
             "full_name": instance.processed_by.full_name,
             "phone_number": instance.processed_by.phone_number,
         } if instance.processed_by else None
+        data["processed_time"] = datetime.strftime(instance.processed_time, "%Y-%m-%d %H:%M:%S") if instance.processed_time else None
         data.pop("receivers", None)
         return data
 
@@ -407,3 +415,32 @@ class FederationAgeGroupSerializer(RequestContextMixin, serializers.ModelSeriali
             "created_time"
         ]
         read_only_fields = ["id", "created_time"]
+
+
+class FederationSportTypeSerializer(serializers.ModelSerializer):
+    age_groups = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SportType
+        fields = [
+            "id",
+            "sport",
+            "name",
+            "age_groups",
+            "created_time"
+        ]
+        read_only_fields = ["id", "age_groups", "created_time"]
+
+    def get_age_groups(self, obj):
+        # Loop through prefetched sport_type_age_groups (AgeGroups)
+        all_fed_links = []
+        for ag in getattr(obj, "sport_type_age_groups").all():
+            # Each ag now has "federation_age_groups"
+            all_fed_links.extend(getattr(ag, "federation_age_groups", []))
+
+        # logger.info(f"Federation Age Groups for {obj.name}: {all_fed_links}")
+        return FederationAgeGroupSerializer(all_fed_links, many=True).data
+
+    def to_representation(self, instance: SportType) -> dict:
+        data = super().to_representation(instance)
+        return data

@@ -1,0 +1,893 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-10-16 10:37+0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || "
+"(n%100>=11 && n%100<=14)? 2 : 3);\n"
+#: apps/career/serializers.py:121 apps/career/serializers.py:349
+msgid "Start year must be less than end year"
+msgstr "Год начала должен быть меньше года окончания"
+
+#: apps/career/serializers.py:173
+msgid "Start date must be before end date."
+msgstr "Дата начала должна быть раньше даты окончания."
+
+#: apps/career/serializers.py:182
+msgid "You already have a workplace entry for this period."
+msgstr "У вас уже есть запись о месте работы за этот период."
+
+#: apps/career/serializers.py:185 apps/career/serializers.py:344
+msgid "This sport is not offered by the selected sport institution."
+msgstr "Этот вид спорта не предлагается выбранным спортивным учреждением."
+
+#: apps/career/serializers.py:192
+msgid "You already have a pending workplace verification request."
+msgstr "У вас уже есть ожидающий запрос на проверку места работы."
+
+#: apps/career/views.py:59
+msgid "Trainer WorkPlace sent for verification successfully"
+msgstr "Место работы тренера успешно отправлено на проверку"
+
+#: apps/career/views.py:67
+msgid "Trainer WorkPlaces retrieved successfully"
+msgstr "Места работы тренера успешно получены"
+
+#: apps/career/views.py:90
+msgid "Trainer WorkPlace not found"
+msgstr "Место работы тренера не найдено"
+
+#: apps/career/views.py:98
+msgid "Trainer WorkPlace retrieved successfully"
+msgstr "Место работы тренера успешно получено"
+
+#: apps/career/views.py:109
+msgid "Trainer WorkPlace updated successfully"
+msgstr "Место работы тренера успешно обновлено"
+
+#: apps/career/views.py:117
+msgid "Trainer WorkPlace deleted successfully"
+msgstr "Место работы тренера успешно удалено"
+
+#: apps/career/views.py:144
+msgid "Education sent for verification successfully"
+msgstr "Образование успешно отправлено на проверку"
+
+#: apps/career/views.py:152
+msgid "Educations retrieved successfully"
+msgstr "Данные об образовании успешно получены"
+
+#: apps/career/views.py:175
+msgid "Education not found"
+msgstr "Образование не найдено"
+
+#: apps/career/views.py:183
+msgid "Education retrieved successfully"
+msgstr "Образование успешно получено"
+
+#: apps/career/views.py:194
+msgid "Education updated successfully"
+msgstr "Образование успешно обновлено"
+
+#: apps/career/views.py:202
+msgid "Education deleted successfully"
+msgstr "Образование успешно удалено"
+
+#: apps/dashboard/serializers.py:93
+msgid "User with this phone number already exists."
+msgstr "Пользователь с таким номером телефона уже существует."
+
+#: apps/dashboard/serializers.py:95
+msgid "User with this email already exists."
+msgstr "Пользователь с таким адресом электронной почты уже существует."
+
+#: apps/dashboard/serializers.py:97
+msgid "Wrong user role has been provided."
+msgstr "Указана неверная роль пользователя."
+
+#: apps/dashboard/serializers.py:266 apps/dashboard/serializers.py:270
+msgid "Privacy Policy with this language already exists"
+msgstr "Политика конфиденциальности на этом языке уже существует"
+
+#: apps/dashboard/serializers.py:293 apps/dashboard/serializers.py:297
+msgid "Terms of Conditions with this language already exists"
+msgstr "Условия использования на этом языке уже существуют"
+
+#: apps/dashboard/views.py:84
+msgid "Users list retrieved successfully"
+msgstr "Список пользователей успешно получен"
+
+#: apps/dashboard/views.py:106
+msgid "User created successfully"
+msgstr "Пользователь успешно создан"
+
+#: apps/dashboard/views.py:154
+msgid "PrivacyPolicy list retrieved successfully"
+msgstr "Список политик конфиденциальности успешно получен"
+
+#: apps/dashboard/views.py:163
+msgid "PrivacyPolicy created successfully"
+msgstr "Политика конфиденциальности успешно создана"
+
+#: apps/dashboard/views.py:183
+msgid "PrivacyPolicy instance retrieved successfully"
+msgstr "Экземпляр политики конфиденциальности успешно получен"
+
+#: apps/dashboard/views.py:193
+msgid "PrivacyPolicy is updated successfully"
+msgstr "Политика конфиденциальности успешно обновлена"
+
+#: apps/dashboard/views.py:201
+msgid "PrivacyPolicy is deleted successfully"
+msgstr "Политика конфиденциальности успешно удалена"
+
+#: apps/dashboard/views.py:207
+msgid "Privacy policy not found"
+msgstr "Политика конфиденциальности не найдена"
+
+#: apps/dashboard/views.py:221
+msgid "Terms of condition list retrieved successfully"
+msgstr "Список условий использования успешно получен"
+
+#: apps/dashboard/views.py:229
+msgid "Terms of condition created successfully"
+msgstr "Условия использования успешно созданы"
+
+#: apps/dashboard/views.py:249
+msgid "Terms of condition instance retrieved successfully"
+msgstr "Экземпляр условий использования успешно получен"
+
+#: apps/dashboard/views.py:259
+msgid "Terms of condition is updated successfully"
+msgstr "Условия использования успешно обновлены"
+
+#: apps/dashboard/views.py:267
+msgid "Terms of condition is deleted successfully"
+msgstr "Условия использования успешно удалены"
+
+#: apps/dashboard/views.py:273
+msgid "Terms of condition not found"
+msgstr "Условия использования не найдены"
+
+#: apps/dashboard/views.py:286
+msgid "Dashboard general statistics retrieved successfully"
+msgstr "Общая статистика панели управления успешно получена"
+
+#: apps/dashboard/views.py:300
+msgid "Dashboard payment statistics retrieved successfully"
+msgstr "Статистика платежей панели управления успешно получена"
+
+#: apps/dashboard/views.py:314
+msgid "Dashboard request statistics retrieved successfully"
+msgstr "Статистика запросов панели управления успешно получена"
+
+#: apps/dashboard/views.py:350
+msgid "User request list retrieved successfully"
+msgstr "Список пользовательских запросов успешно получен"
+
+#: apps/dashboard/views.py:373
+msgid "User request not found"
+msgstr "Пользовательский запрос не найден"
+
+#: apps/dashboard/views.py:381
+msgid "User request detail retrieved successfully"
+msgstr "Детали пользовательского запроса успешно получены"
+
+#: apps/federation/serializers.py:171
+msgid "National federations cannot have a region."
+msgstr "Национальные федерации не могут иметь регион."
+
+#: apps/federation/serializers.py:173
+msgid "Documents must be a list of files."
+msgstr "Документы должны быть списком файлов."
+
+#: apps/federation/views.py:99
+msgid "Federation created successfully"
+msgstr "Федерация успешно создана"
+
+#: apps/federation/views.py:107
+msgid "Federation list retrieved successfully"
+msgstr "Список федераций успешно получен"
+
+#: apps/federation/views.py:138
+msgid "Federation not found"
+msgstr "Федерация не найдена"
+
+#: apps/federation/views.py:151
+msgid "Federation retrieved successfully"
+msgstr "Федерация успешно получена"
+
+#: apps/federation/views.py:162
+msgid "Federation updated successfully"
+msgstr "Федерация успешно обновлена"
+
+#: apps/federation/views.py:175
+msgid "Federation deleted successfully"
+msgstr "Федерация успешно удалена"
+
+#: apps/federation/views.py:224
+msgid "Federation users list retrieved successfully"
+msgstr "Список пользователей федерации успешно получен"
+
+#: apps/federation/views.py:256
+msgid "Regional federations list retrieved successfully"
+msgstr "Список региональных федераций успешно получен"
+
+#: apps/federation/views.py:266
+msgid "Regional federation created successfully"
+msgstr "Региональная федерация успешно создана"
+
+#: apps/federation/views.py:320
+msgid "Federation's User Requests list retrieved successfully"
+msgstr "Список пользовательских запросов федерации успешно получен"
+
+#: apps/federation/views.py:348
+msgid "Federation's Tournament list retrieved successfully"
+msgstr "Список турниров федерации успешно получен"
+
+#: apps/federation/views.py:395
+msgid "Federation Age Group list retrieved successfully"
+msgstr "Список возрастных групп федерации успешно получен"
+
+#: apps/federation/views.py:415
+msgid "Age Group not found"
+msgstr "Возрастная группа не найдена"
+
+#: apps/federation/views.py:428
+msgid "Age Group retrieved successfully"
+msgstr "Возрастная группа успешно получена"
+
+#: apps/payment/serializers.py:36
+msgid "Invalid payment method selected!"
+msgstr "Выбран недопустимый способ оплаты!"
+
+#: apps/payment/serializers.py:42
+msgid "User does not have a sportsman profile!"
+msgstr "У пользователя нет профиля спортсмена!"
+
+#: apps/payment/serializers.py:45
+msgid "Sportsman is not verified!"
+msgstr "Спортсмен не подтвержден!"
+
+#: apps/payment/views.py:97
+msgid "Section fee not found! Please contact support."
+msgstr "Плата за раздел не найдена! Пожалуйста, свяжитесь со службой поддержки."
+
+#: apps/payment/views.py:122
+msgid "Successfully created payment link"
+msgstr "Ссылка для оплаты успешно создана"
+
+#: apps/review/serializers.py:55
+msgid "Rating must be between 1 and 5."
+msgstr "Оценка должна быть от 1 до 5."
+
+#: apps/review/serializers.py:62
+msgid "You have already commented on this sport institution."
+msgstr "Вы уже оставили комментарий об этом спортивном учреждении."
+
+#: apps/review/views.py:71
+msgid "Comment created successfully."
+msgstr "Комментарий успешно создан."
+
+#: apps/review/views.py:79
+msgid "Comments retrieved successfully."
+msgstr "Комментарии успешно получены."
+
+#: apps/review/views.py:106
+msgid "Comment not found."
+msgstr "Комментарий не найден."
+
+#: apps/review/views.py:114
+msgid "Comment retrieved successfully."
+msgstr "Комментарий успешно получен."
+
+#: apps/review/views.py:125
+msgid "Comment updated successfully."
+msgstr "Комментарий успешно обновлен."
+
+#: apps/review/views.py:134
+msgid "Comment deleted successfully."
+msgstr "Комментарий успешно удален."
+
+#: apps/shared/services/user_request.py:58
+msgid "You already have a pending request!"
+msgstr "У вас уже есть ожидающий запрос!"
+
+#: apps/shared/services/user_request.py:78
+msgid "New Request"
+msgstr "Новый запрос"
+
+#: apps/shared/services/user_request.py:83
+msgid "Request created successfully."
+msgstr "Запрос успешно создан."
+
+#: apps/shared/services/user_request.py:100
+msgid "Request Accepted"
+msgstr "Запрос принят."
+
+#: apps/shared/services/user_request.py:117
+msgid "Request Cancelled"
+msgstr "Запрос отменен."
+
+#: apps/shared/services/user_request.py:137
+msgid "Request Rejected"
+msgstr "Запрос отклонен."
+
+#: apps/shared/services/user_request.py:161
+msgid "Invalid request type!"
+msgstr "Недопустимый тип запроса!"
+
+#: apps/shared/services/user_request.py:194
+msgid "Receiver must be a valid trainer!"
+msgstr "Получатель должен быть действительным тренером!"
+
+#: apps/shared/services/user_request.py:202
+#: apps/shared/services/user_request.py:247
+#: apps/shared/services/user_request.py:289
+#: apps/shared/services/user_request.py:352
+#: apps/shared/services/user_request.py:391
+#: apps/shared/services/user_request.py:433
+msgid "Request handled successfully."
+msgstr "Запрос успешно обработан."
+
+#: apps/shared/services/user_request.py:239
+#: apps/shared/services/user_request.py:273
+msgid "Receiver must be a valid federation!"
+msgstr "Получатель должен быть действительной федерацией!"
+
+#: apps/shared/utils/exceptions.py:21
+msgid "Invalid input."
+msgstr "Недопустимые входные данные."
+
+#: apps/shared/utils/general.py:127 apps/shared/utils/general.py:129
+msgid "Please enter a valid phone number."
+msgstr "Пожалуйста, введите действительный номер телефона."
+
+#: apps/shared/utils/general.py:146
+#, python-format
+msgid ""
+"Your request to register the sport institution '%(school_name)s' has been "
+"approved. You can now log in and start using our services."
+msgstr ""
+"Ваш запрос на регистрацию спортивного учреждения '%(school_name)s' был одобрен. "
+"Теперь вы можете войти в систему и начать пользоваться нашими услугами."
+
+#: apps/shared/utils/general.py:151
+#, python-format
+msgid ""
+"Your request to register the sport institution '%(school_name)s' has been "
+"rejected. For more information, please contact support."
+msgstr ""
+"Ваш запрос на регистрацию спортивного учреждения '%(school_name)s' был отклонен. "
+"Для получения дополнительной информации свяжитесь со службой поддержки."
+
+#: apps/shared/utils/permissions.py:13
+msgid "You don't have super admin permissions!"
+msgstr "У вас нет прав супер-администратора!"
+
+#: apps/shared/utils/permissions.py:23
+msgid "You don't have admin permissions!"
+msgstr "У вас нет прав администратора!"
+
+#: apps/shared/utils/permissions.py:33
+msgid "You don't have admin or super admin permissions!"
+msgstr "У вас нет прав администратора или супер-администратора!"
+
+#: apps/shared/utils/permissions.py:46
+msgid "You must be federation admin!"
+msgstr "Вы должны быть администратором федерации!"
+
+#: apps/shared/utils/permissions.py:60
+msgid "You must be sport institution admin!"
+msgstr "Вы должны быть администратором спортивного учреждения!"
+
+#: apps/sport/serializers.py:232
+msgid "Selected sport does not belong to the given federation!"
+msgstr "Выбранный вид спорта не относится к данной федерации!"
+
+#: apps/sport/serializers.py:234
+msgid "Federation and sport must be provided."
+msgstr "Необходимо указать федерацию и вид спорта."
+
+#: apps/sport/serializers.py:237
+msgid ""
+"Tournament with this name already exists for the selected sport and "
+"federation!"
+msgstr ""
+"Турнир с таким названием уже существует для выбранного вида спорта и федерации!"
+
+#: apps/sport/serializers.py:330
+msgid "Team with this name already exists"
+msgstr "Команда с таким названием уже существует"
+
+#: apps/sport/serializers.py:334
+msgid "Founded year must be less than current year"
+msgstr "Год основания должен быть меньше текущего года"
+
+#: apps/sport/serializers.py:465
+msgid "Processed by must be set when approving or rejecting a request."
+msgstr "Поле 'Обработано' должно быть заполнено при одобрении или отклонении запроса."
+
+#: apps/sport/serializers.py:489
+msgid "Failed to send SMS notification. Please try again later."
+msgstr "Не удалось отправить SMS-уведомление. Пожалуйста, попробуйте позже."
+
+#: apps/sport/views.py:85
+msgid "Tournament created successfully"
+msgstr "Турнир успешно создан"
+
+#: apps/sport/views.py:94
+msgid "Tournament list retrieved successfully"
+msgstr "Список турниров успешно получен"
+
+#: apps/sport/views.py:122
+msgid "Tournament not found"
+msgstr "Турнир не найден"
+
+#: apps/sport/views.py:130
+msgid "Tournament retrieved successfully"
+msgstr "Турнир успешно получен"
+
+#: apps/sport/views.py:140
+msgid "Tournament is updated successfully"
+msgstr "Турнир успешно обновлен"
+
+#: apps/sport/views.py:149
+msgid "Tournament is deleted successfully"
+msgstr "Турнир успешно удален"
+
+#: apps/sport/views.py:170
+msgid "Sport created successfully"
+msgstr "Вид спорта успешно создан"
+
+#: apps/sport/views.py:178
+msgid "Sport list retrieved successfully"
+msgstr "Список видов спорта успешно получен"
+
+#: apps/sport/views.py:197
+msgid "Sport not found"
+msgstr "Вид спорта не найден"
+
+#: apps/sport/views.py:205
+msgid "Sport retrieved successfully"
+msgstr "Вид спорта успешно получен"
+
+#: apps/sport/views.py:216
+msgid "Sport is updated successfully"
+msgstr "Вид спорта успешно обновлен"
+
+#: apps/sport/views.py:224
+msgid "Sport is deleted successfully"
+msgstr "Вид спорта успешно удален"
+
+#: apps/sport/views.py:248
+msgid "Team created successfully"
+msgstr "Команда успешно создана"
+
+#: apps/sport/views.py:257
+msgid "Team list retrieved successfully"
+msgstr "Список команд успешно получен"
+
+#: apps/sport/views.py:276
+msgid "Team not found"
+msgstr "Команда не найдена"
+
+#: apps/sport/views.py:284
+msgid "Team retrieved successfully"
+msgstr "Команда успешно получена"
+
+#: apps/sport/views.py:294
+msgid "Team updated successfully"
+msgstr "Команда успешно обновлена"
+
+#: apps/sport/views.py:303
+msgid "Team deleted successfully"
+msgstr "Команда успешно удалена"
+
+#: apps/sport/views.py:337
+msgid "Sport institution created successfully"
+msgstr "Спортивное учреждение успешно создано"
+
+#: apps/sport/views.py:345
+msgid "Sport institution list retrieved successfully"
+msgstr "Список спортивных учреждений успешно получен"
+
+#: apps/sport/views.py:367
+msgid "Sport institution not found"
+msgstr "Спортивное учреждение не найдено"
+
+#: apps/sport/views.py:375
+msgid "Sport institution retrieved successfully"
+msgstr "Спортивное учреждение успешно получено"
+
+#: apps/sport/views.py:386
+msgid "Sport institution updated successfully"
+msgstr "Спортивное учреждение успешно обновлено"
+
+#: apps/sport/views.py:394
+msgid "Sport institution deleted successfully"
+msgstr "Спортивное учреждение успешно удалено"
+
+#: apps/sport/views.py:428
+msgid "Sport institution request created successfully"
+msgstr "Заявка на спортивное учреждение успешно создана"
+
+#: apps/sport/views.py:436
+msgid "Sport institution request list retrieved successfully"
+msgstr "Список заявок на спортивные учреждения успешно получен"
+
+#: apps/sport/views.py:450
+msgid "Sport institution request not found"
+msgstr "Заявка на спортивное учреждение не найдена"
+
+#: apps/sport/views.py:458
+msgid "Sport institution request retrieved successfully"
+msgstr "Заявка на спортивное учреждение успешно получена"
+
+#: apps/sport/views.py:469
+msgid "Sport institution request updated successfully"
+msgstr "Заявка на спортивное учреждение успешно обновлена"
+
+#: apps/sport/views.py:477
+msgid "Sport institution request deleted successfully"
+msgstr "Заявка на спортивное учреждение успешно удалена"
+
+#: apps/sport/views.py:523
+msgid "Sport institution users retrieved successfully"
+msgstr "Пользователи спортивного учреждения успешно получены"
+
+#: apps/sport/views.py:543
+msgid "Sport institution media list retrieved successfully"
+msgstr "Список медиа спортивного учреждения успешно получен"
+
+#: apps/user/serializers.py:79 apps/user/serializers.py:963
+#: apps/user/serializers.py:1096 apps/user/serializers.py:1203
+#: apps/user/serializers.py:1286
+msgid "Phone number is already registered"
+msgstr "Номер телефона уже зарегистрирован"
+
+#: apps/user/serializers.py:82
+msgid "Your phone number is not registered"
+msgstr "Ваш номер телефона не зарегистрирован"
+
+#: apps/user/serializers.py:107 apps/user/views.py:203
+msgid "User not found"
+msgstr "Пользователь не найден"
+
+#: apps/user/serializers.py:414
+msgid "Sport is required"
+msgstr "Требуется указать вид спорта"
+
+#: apps/user/serializers.py:416
+msgid "Trainer's sport must be equal to sportsman's sport"
+msgstr "Вид спорта тренера должен совпадать с видом спорта спортсмена"
+
+#: apps/user/serializers.py:735
+msgid "Sport is required."
+msgstr "Необходимо указать вид спорта."
+
+#: apps/user/serializers.py:737
+msgid "Federation is required to send request."
+msgstr "Для отправки запроса необходимо указать федерацию."
+
+#: apps/user/serializers.py:739
+msgid "Sport must be part of the federation sports."
+msgstr "Вид спорта должен входить в виды спорта федерации."
+
+#: apps/user/serializers.py:968 apps/user/serializers.py:1292
+msgid "PINFL is already registered"
+msgstr "ПИНФЛ уже зарегистрирован"
+
+#: apps/user/serializers.py:970 apps/user/serializers.py:1294
+msgid "PINFL must contain only numbers."
+msgstr "ПИНФЛ должен содержать только цифры."
+
+#: apps/user/serializers.py:972 apps/user/serializers.py:1296
+msgid "PINFL must be exactly 14 digits."
+msgstr "ПИНФЛ должен содержать ровно 14 цифр."
+
+#: apps/user/serializers.py:974
+msgid "PINFL is required"
+msgstr "ПИНФЛ обязателен для заполнения"
+
+#: apps/user/serializers.py:998 apps/user/serializers.py:1318
+msgid "At least one media must be uploaded"
+msgstr "Необходимо загрузить хотя бы один медиафайл"
+
+#: apps/user/serializers.py:1101
+msgid "User with this name and phone number already exists"
+msgstr "Пользователь с таким именем и номером телефона уже существует"
+
+#: apps/user/serializers.py:1170
+msgid "New password don't match"
+msgstr "Новые пароли не совпадают"
+
+#: apps/user/serializers.py:1197
+msgid "All required fields must be present"
+msgstr "Все обязательные поля должны быть заполнены"
+
+#: apps/user/serializers.py:1200
+msgid "You entered your current phone number!"
+msgstr "Вы ввели свой текущий номер телефона!"
+
+#: apps/user/serializers.py:1207
+msgid "Passwords do not match"
+msgstr "Пароли не совпадают"
+
+#: apps/user/serializers.py:1212
+msgid "Invalid password"
+msgstr "Неверный пароль"
+
+#: apps/user/serializers.py:1401
+msgid "Archived Trainer with this name already exists"
+msgstr "Архивированный тренер с таким именем уже существует"
+
+#: apps/user/serializers.py:1447
+msgid "Trainers cannot send trainer requests!"
+msgstr "Тренеры не могут отправлять запросы тренерам!"
+
+#: apps/user/serializers.py:1561 apps/user/serializers.py:1573
+msgid "You have already submitted a result for this tournament and year."
+msgstr "Вы уже отправили результат для этого турнира и года."
+
+#: apps/user/serializers.py:1563
+msgid "You must specify a trainer to submit results."
+msgstr "Вы должны указать тренера, чтобы отправить результаты."
+
+#: apps/user/serializers.py:1565
+msgid "You must be part of a federation to submit results."
+msgstr "Вы должны быть членом федерации, чтобы отправить результаты."
+
+#: apps/user/serializers.py:1567
+msgid "You are not allowed to submit results for this tournament."
+msgstr "Вам не разрешено отправлять результаты для этого турнира."
+
+#: apps/user/serializers.py:1569
+msgid "You are not allowed to submit results for this trainer."
+msgstr "Вам не разрешено отправлять результаты для этого тренера."
+
+#: apps/user/serializers.py:1571
+msgid "Invalid rating for this tournament."
+msgstr "Недопустимая оценка для этого турнира."
+
+#: apps/user/views.py:122
+msgid "Confirmation code is incorrect"
+msgstr "Код подтверждения неверен"
+
+#: apps/user/views.py:142
+msgid "User registration successful!"
+msgstr "Регистрация пользователя прошла успешно!"
+
+#: apps/user/views.py:153
+msgid "Token refreshed successfully"
+msgstr "Токен успешно обновлён"
+
+#: apps/user/views.py:173
+msgid "You are logged out"
+msgstr "Вы вышли из системы"
+
+#: apps/user/views.py:179 apps/user/views.py:184
+msgid "Invalid refresh token"
+msgstr "Недопустимый токен обновления"
+
+#: apps/user/views.py:208
+msgid "You do not have permission to delete this user"
+msgstr "У вас нет прав на удаление этого пользователя"
+
+#: apps/user/views.py:217
+msgid "User deleted successfully"
+msgstr "Пользователь успешно удалён"
+
+#: apps/user/views.py:262
+msgid "User retrieved successfully"
+msgstr "Пользователь успешно получен"
+
+#: apps/user/views.py:271
+msgid "User updated successfully"
+msgstr "Пользователь успешно обновлён"
+
+#: apps/user/views.py:289
+msgid "Password changed successfully."
+msgstr "Пароль успешно изменён."
+
+#: apps/user/views.py:334
+msgid "User phone number is updated successfully"
+msgstr "Номер телефона пользователя успешно обновлён"
+
+#: apps/user/views.py:388
+msgid "Sportsman created successfully"
+msgstr "Спортсмен успешно создан"
+
+#: apps/user/views.py:396
+msgid "Sportsman list retrieved successfully"
+msgstr "Список спортсменов успешно получен"
+
+#: apps/user/views.py:442
+msgid "Sportsman Profile not found"
+msgstr "Профиль спортсмена не найден"
+
+#: apps/user/views.py:455
+msgid "Sportsman retrieved successfully"
+msgstr "Спортсмен успешно получен"
+
+#: apps/user/views.py:466
+msgid "Sportsman profile updated successfully"
+msgstr "Профиль спортсмена успешно обновлён"
+
+#: apps/user/views.py:474
+msgid "Sportsman deleted successfully"
+msgstr "Спортсмен успешно удалён"
+
+#: apps/user/views.py:525
+msgid "Trainer created successfully"
+msgstr "Тренер успешно создан"
+
+#: apps/user/views.py:533
+msgid "Trainer list retrieved successfully"
+msgstr "Список тренеров успешно получен"
+
+#: apps/user/views.py:568 apps/user/views.py:894
+msgid "Trainer Profile not found"
+msgstr "Профиль тренера не найден"
+
+#: apps/user/views.py:586
+msgid "Trainer retrieved successfully"
+msgstr "Тренер успешно получен"
+
+#: apps/user/views.py:597
+msgid "Trainer profile updated successfully"
+msgstr "Профиль тренера успешно обновлён"
+
+#: apps/user/views.py:605
+msgid "Trainer deleted successfully"
+msgstr "Тренер успешно удалён"
+
+#: apps/user/views.py:631
+msgid "Sportsman Result sent for verification successfully"
+msgstr "Результат спортсмена успешно отправлен на проверку"
+
+#: apps/user/views.py:639
+msgid "Sportsman Result list retrieved successfully"
+msgstr "Список результатов спортсмена успешно получен"
+
+#: apps/user/views.py:652
+msgid "Sportsman Result not found"
+msgstr "Результат спортсмена не найден"
+
+#: apps/user/views.py:660
+msgid "Sportsman Result retrieved successfully"
+msgstr "Результат спортсмена успешно получен"
+
+#: apps/user/views.py:671
+msgid "Sportsman Result updated successfully"
+msgstr "Результат спортсмена успешно обновлён"
+
+#: apps/user/views.py:688
+msgid "Sportsman Result deleted successfully"
+msgstr "Результат спортсмена успешно удалён"
+
+#: apps/user/views.py:840
+msgid "Media not found"
+msgstr "Медиа не найдено"
+
+#: apps/user/views.py:847
+msgid "Media deleted successfully"
+msgstr "Медиа успешно удалено"
+
+#: apps/user/views.py:873
+msgid "Archived Trainer created successfully"
+msgstr "Архивированный тренер успешно создан"
+
+#: apps/user/views.py:881
+msgid "Archived Trainer list"
+msgstr "Список архивированных тренеров"
+
+#: apps/user/views.py:902
+msgid "Archived Trainer retrieved successfully"
+msgstr "Архивированный тренер успешно получен"
+
+#: apps/user/views.py:913
+msgid "Archived Trainer profile updated successfully"
+msgstr "Профиль архивированного тренера успешно обновлён"
+
+#: apps/user/views.py:921
+msgid "Archived Trainer deleted successfully"
+msgstr "Архивированный тренер успешно удалён"
+
+#: apps/user/views.py:942
+msgid "Bildirishnomalar ro'yxati"
+msgstr "Список уведомлений"
+
+#: apps/user/views.py:953
+msgid "Notification is not found"
+msgstr "Уведомление не найдено"
+
+#: apps/user/views.py:962
+msgid "Notification updated successfully"
+msgstr "Уведомление успешно обновлено"
+
+#: apps/user/views.py:990
+msgid ""
+"You cannot create a new request while you have a pending trainer request."
+msgstr "Вы не можете создать новый запрос, пока у вас есть ожидающий запрос тренера."
+
+#: apps/user/views.py:992
+msgid ""
+"You cannot create a new request while you have a pending federation request."
+msgstr "Вы не можете создать новый запрос, пока у вас есть ожидающий запрос федерации."
+
+#: apps/user/views.py:994
+msgid ""
+"You cannot create a new request while you have a pending federation admin "
+"request."
+msgstr "Вы не можете создать новый запрос, пока у вас есть ожидающий запрос администратора федерации."
+
+#: apps/user/views.py:1020
+msgid "User Request successfully created"
+msgstr "Пользовательский запрос успешно создан"
+
+#: apps/user/views.py:1028
+msgid "User Request list retrieved successfully"
+msgstr "Список пользовательских запросов успешно получен"
+
+#: apps/user/views.py:1050
+msgid "User Request not found"
+msgstr "Пользовательский запрос не найден"
+
+#: apps/user/views.py:1058
+msgid "User Request retrieved successfully"
+msgstr "Пользовательский запрос успешно получен"
+
+#: apps/user/views.py:1069
+msgid "User Request updated successfully"
+msgstr "Пользовательский запрос успешно обновлён"
+
+#: apps/user/views.py:1077
+msgid "User Request deleted successfully"
+msgstr "Пользовательский запрос успешно удалён"
+
+#: apps/user/views.py:1092
+msgid "Region list retrieved successfully"
+msgstr "Список регионов успешно получен"
+
+#: apps/user/views.py:1109
+msgid "District list retrieved successfully"
+msgstr "Список районов успешно получен"
+
+#: apps/user/views.py:1126
+msgid "Neighborhood list retrieved successfully"
+msgstr "Список махаллей успешно получен"
+
+#: apps/user/views.py:1162
+msgid "User media list retrieved successfully"
+msgstr "Список пользовательских медиа успешно получен"
+
+#: apps/user/views.py:1174
+msgid "Points recalculation has been initiated."
+msgstr "Пересчёт баллов был инициирован."
+
+#: core/settings.py:254
+msgid "English"
+msgstr ""
+
+#: core/settings.py:255
+msgid "Uzbek"
+msgstr ""
+
+#: core/settings.py:256
+msgid "Russian"
+msgstr ""

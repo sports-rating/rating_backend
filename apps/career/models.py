@@ -1,3 +1,6 @@
+import magic
+import os
+
 from django.db import models
 from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 
@@ -13,6 +16,9 @@ from apps.sport.models import (
     Tournament
 )
 from apps.shared.utils import enums
+from apps.shared.utils.utils import CorrectPath
+from apps.shared.utils.general import compress_image
+from apps.shared.utils.logging import logger
 
 
 class Education(BaseModel):
@@ -123,17 +129,22 @@ class Result(BaseModel):
     additional_attributes = models.JSONField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=enums.ResultVerificationStatus.choices(), default=enums.ResultVerificationStatus.PENDING.value)
-    request = models.OneToOneField(
+    requests = models.ManyToManyField(
         UserRequest,
-        on_delete=models.SET_NULL,
-        null=True,
+        related_name="requested_results",
         blank=True,
-        related_name="requested_result"
     )
 
+    sport_type = models.ForeignKey("sport.SportType", on_delete=models.SET_NULL, related_name="sport_type_results", blank=True, null=True)
     age_group = models.ForeignKey("federation.FederationAgeGroup", on_delete=models.SET_NULL, related_name="federation_results", blank=True, null=True)
     weight = models.CharField(max_length=10, null=True, blank=True)
     rating = models.PositiveIntegerField(default=0)
+    file = models.FileField(
+        upload_to=CorrectPath("media"),
+        # validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True
+    )
 
     gold = models.PositiveIntegerField(default=0)
     silver = models.PositiveIntegerField(default=0)
@@ -148,3 +159,9 @@ class Result(BaseModel):
     @property
     def score(self) -> float:
         return self.tournament.get_score(self.rating) if self.tournament else 0
+
+    def delete(self, *args, **kwargs):
+        # Deletes the file from storage when the UserRequest instance is deleted
+        if self.file and os.path.isfile(self.file.path):
+            os.remove(self.file.path)
+        super().delete(*args, **kwargs)

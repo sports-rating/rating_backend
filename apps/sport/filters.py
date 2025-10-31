@@ -19,8 +19,18 @@ from apps.sport.models import (
     Sport,
     SportInstitution,
     SportInstitutionMedia,
-    SportInstitutionRequest
+    SportInstitutionRequest,
+    SportType
 )
+
+
+class SportTypeFilter(BaseFilterSet):
+    federation = filters.CharFilter(field_name="sport__age_groups__federation_links__federation__id")
+    sport = filters.CharFilter(field_name="sport__id")
+
+    class Meta:
+        model = SportType
+        fields = ["federation", "sport"]
 
 
 class TournamentFilter(BaseFilterSet):

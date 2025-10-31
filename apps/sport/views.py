@@ -33,6 +33,7 @@ from apps.sport.models import (
     SportInstitution,
     SportInstitutionMedia,
     SportInstitutionRequest,
+    SportType
 )
 from apps.user.models import User
 
@@ -46,6 +47,7 @@ from apps.sport.filters import (
     SportInstitutionUsersFilter,
     SportInstitutionRequestFilter,
     SportInstitutionMediaFilter,
+    SportTypeFilter
 )
 
 
@@ -59,6 +61,7 @@ class TournamentListCreateView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self) -> QuerySet[Tournament]:
+        user: User = self.request.user  # type: ignore
         name: str = self.request.query_params.get("name")
         queryset = self.queryset.select_related(
             "sport",
@@ -67,6 +70,11 @@ class TournamentListCreateView(generics.ListCreateAPIView):
             "scoring_policies",
             "tournament_results"
         )
+        if user.is_authenticated:
+            if user.user_role == enums.UserRoles.SPORTSMAN.value:
+                queryset = queryset.filter(sport=user.sportsman_profile.sport)
+            elif user.user_role == enums.UserRoles.TRAINER.value:
+                queryset = queryset.filter(sport=user.trainer_profile.sport)
         if name:
             return queryset.filter(name__icontains=name)
         return queryset
@@ -156,6 +164,11 @@ class SportListCreateView(generics.ListCreateAPIView):
     queryset = Sport.objects.all()
     serializer_class = serializers.SportSerializer
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related(
+            "types"
+        ).order_by("-created_time")
+
     def get_permissions(self):
         if self.request.method == "GET":
             return (permissions.AllowAny(),)
@@ -223,6 +236,34 @@ class SportRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
         return success_response(
             message=_("Sport is deleted successfully"),
             code=status.HTTP_204_NO_CONTENT
+        )
+
+
+class SportTypeListAPIView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    queryset = SportType.objects.all()
+    serializer_class = serializers.SportTypeSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = SportTypeFilter
+    search_fields = ["name",]
+    pagination_class = CustomPagination
+
+    def get_queryset(self) -> QuerySet[SportType]:
+        user = self.request.user  # type: ignore
+        queryset = self.queryset.select_related("sport")
+        if user.is_authenticated:
+            if user.user_role == enums.UserRoles.SPORTSMAN.value:
+                queryset = queryset.filter(sport=user.sportsman_profile.sport)
+            elif user.user_role == enums.UserRoles.TRAINER.value:
+                queryset = queryset.filter(sport=user.trainer_profile.sport)
+        return queryset
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response =  super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Sport type list retrieved successfully"),
+            code=status.HTTP_200_OK
         )
 
 

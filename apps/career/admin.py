@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 
-
+from apps.shared.utils.general import get_file_full_url
 from apps.career.models import (
     Education,
     WorkPlace,
@@ -88,10 +88,10 @@ class WorkPlaceAdmin(admin.ModelAdmin):
 class ResultAdmin(admin.ModelAdmin):
     list_display = ["id", "tournament", "year", "currently_participating"]
     list_filter = ["currently_participating",]
-    search_fields = ["tournament__name", "trainer__user__first_name", "trainer__user__last_name"]
+    search_fields = ["tournament__name", "user__id", "user__first_name", "user__last_name", "trainer__user__first_name", "trainer__user__last_name"]
     list_per_page = 10
     ordering = ['-created_time']
-    readonly_fields = ['trainer_obj', 'sportsman_obj', 'tournament_obj', 'request_obj']
+    readonly_fields = ['trainer_obj', 'sportsman_obj', 'tournament_obj', 'request_obj', 'file_url', 'sport_type_obj']
 
     @admin.display(description="Trainer")
     def trainer_obj(self, obj: Result) -> str:
@@ -119,4 +119,19 @@ class ResultAdmin(admin.ModelAdmin):
         if obj.request:
             url = reverse("admin:user_userrequest_change", args=[obj.request.id])
             return format_html('<a href="{}">Request #{}</a>', url, obj.request.id)
+        return "N/A"
+
+    @admin.display(description="File URL")
+    def file_url(self, obj):
+        return format_html(
+            '<a href="{}" target="_blank">{}</a>',
+            get_file_full_url(obj.file),
+            get_file_full_url(obj.file)
+        )
+
+    @admin.display(description="Sport Type")
+    def sport_type_obj(self, obj: Result) -> str:
+        if obj.sport_type:
+            url = reverse("admin:sport_sporttype_change", args=[obj.sport_type.id])
+            return format_html('<a href="{}">{}</a>', url, obj.sport_type.name)
         return "N/A"

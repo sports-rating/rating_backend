@@ -54,12 +54,12 @@ class CommentSerializer(RequestContextMixin, serializers.ModelSerializer):
         if not (1 <= rating <= 5):
             raise_validation_error(message=_("Rating must be between 1 and 5."))
 
-        # Check if the user has already commented on this sport institution
-        if Comment.objects.filter(
-            user=user,
-            sport_institution=sport_institution
-        ).exists():
-            raise_validation_error(message=_("You have already commented on this sport institution."))
+        # # Check if the user has already commented on this sport institution
+        # if Comment.objects.filter(
+        #     user=user,
+        #     sport_institution=sport_institution
+        # ).exists():
+        #     raise_validation_error(message=_("You have already commented on this sport institution."))
 
         return attrs
 
@@ -96,6 +96,7 @@ class CommentSerializer(RequestContextMixin, serializers.ModelSerializer):
             "id": instance.user.id,
             "first_name": instance.user.first_name,
             "last_name": instance.user.last_name,
+            "profile_picture": get_file_full_url(instance.user.profile_photo.file.url) if instance.user.profile_photo else None,
         }
         if instance.sport_institution:
             data['sport_institution'] = {

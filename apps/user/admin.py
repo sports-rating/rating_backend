@@ -9,7 +9,7 @@ from apps.user.models import (
     UserMedia,
     ArchivedTrainer,
     UserRequest,
-    UserNotification
+    UserNotification,
 )
 from apps.shared.models import (
     Country,
@@ -158,6 +158,7 @@ class SportsmanAdmin(admin.ModelAdmin):
 
     )
     list_filter = ["sport_rank",]
+    search_fields = ["user__username", "user__first_name", "user__last_name", "user__id"]
 
 
 @admin.register(Trainer)
@@ -185,6 +186,7 @@ class TrainerAdmin(admin.ModelAdmin):
 
     )
     list_filter = ["skill_level",]
+    search_fields = ["user__username", "user__first_name", "user__last_name", "user__id"]
 
 
 @admin.register(UserMedia)
@@ -211,7 +213,7 @@ class UserRequestAdmin(admin.ModelAdmin):
     search_fields = ['sender__first_name', 'sender__last_name']
     list_per_page = 10
     ordering = ['-created_time']
-    readonly_fields = ["sender_obj", "receivers_obj", "processed_by_obj", "created_time", "updated_time"]
+    readonly_fields = ["sender_obj", "receivers_obj", "processed_by_obj", "associated_result", "created_time", "updated_time"]
 
     @admin.display(description="Sender")
     def sender_obj(self, obj):
@@ -235,6 +237,14 @@ class UserRequestAdmin(admin.ModelAdmin):
         if obj.processed_by:
             url = reverse("admin:user_user_change", args=[obj.processed_by.id])
             return format_html('<a href="{}">{}</a>', url, obj.processed_by.full_name)
+        return "N/A"
+
+    @admin.display(description="Associated Result")
+    def associated_result(self, obj):
+        if hasattr(obj, 'requested_results') and obj.requested_results.exists():
+            url = reverse("admin:career_result_change", args=[obj.requested_results.first().id])
+            return format_html('<a href="{}">{}</a>', url, str(obj.requested_results.first()))
+
         return "N/A"
 
 

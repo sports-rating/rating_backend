@@ -2,7 +2,7 @@ import typing as t
 import os
 
 from decimal import Decimal, InvalidOperation
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Dict, List
 
 import rest_framework_simplejwt.serializers as jwt_serializers
@@ -25,7 +25,12 @@ from apps.career.models import Education
 from apps.shared.models import District, Neighborhood, Region
 from apps.shared.utils import enums
 from apps.shared.utils.exceptions import raise_validation_error
-from apps.shared.utils.general import get_file_full_url
+from apps.shared.utils.general import (
+    get_file_full_url,
+    check_uniqueness,
+    check_phone_valid,
+    check_m2m_uniqueness
+)
 # custom
 from apps.shared.utils.logging import logger
 from apps.shared.utils.notifications import send_notification_to_user
@@ -36,24 +41,25 @@ from apps.federation.models import Federation
 from apps.career.serializers import ResultCreateSerializer, EducationSerializer
 from apps.user.models import (
     ArchivedTrainer, Sportsman, Trainer, User,
-    UserMedia, UserNotification, UserRequest
+    UserMedia, UserNotification, UserRequest,
 )
 from apps.user.utils import (
     calculate_sportsman_statistics,
     calculate_trainer_statistics
 )
 from apps.shared.services.user_request import UserRequestService
-from apps.shared.services.snapshot_service import SnapshotService
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import BaseMediaSerializer
 from apps.shared.utils.mixins import RequestContextMixin
 from apps.shared.utils.payloads import (
-    SPORTSMAN_APPROVAL_REQUIRED_FIELDS,
     TRAINER_APPROVAL_REQUIRED_FIELDS,
     SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
 )
 from apps.shared.serializers import (
-    SportsmanResultSnapshotSerializer
+    SportsmanResultSnapshotSerializer,
+    SportsmanSnapshotSerializer,
+    TrainerSnapshotSerializer,
+    FederationAdminApprovalSnapshotSerializer
 )
 
 
@@ -158,6 +164,18 @@ class UserMediaSerializer(BaseMediaSerializer):
         read_only_fields = ("id", "user", "media_type", "size", "extension", "created_time")
 
     def validate(self, data) -> dict:
+        data = super().validate(data)
+
+        # Validate profile photo file type: must be in jpg, jpeg, png
+        is_profile_photo = data.get("is_profile_photo", False)
+        if is_profile_photo:
+            file = data.get("file", None)
+            file_name = file.name.lower()
+            _, ext = os.path.splitext(file_name)
+            allowed_extensions = ['.jpg', '.jpeg', '.png']
+            if ext not in allowed_extensions:
+                raise_validation_error(message=_("Profile photo must be an image file (jpg, jpeg, png)"))
+
         return super().validate(data)
 
 
@@ -226,64 +244,6 @@ class PublicBaseUserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if instance.profile_photo:
-            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
-        data["region"] = {
-            "id": instance.region.id,
-            "name": instance.region.name
-        } if instance.region else None
-        data["district"] = {
-            "id": instance.district.id,
-            "name": instance.district.name
-        } if instance.district else None
-        return data
-
-
-class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
-    media = UserMediaSerializer(many=True)
-    educations = EducationSerializer(many=True, required=False)
-    results = ResultCreateSerializer(many=True, required=False)
-
-    class Meta:
-        model = User
-        fields = [
-            "id",
-            "first_name",
-            "middle_name",
-            "last_name",
-            "pinfl",
-            "phone_number",
-            "email",
-            "gender",
-            "region",
-            "district",
-            "birth_date",
-            "media",
-            "educations",
-            "results",
-            "user_role",
-            "is_verified",
-            "created_time",
-        ]
-        read_only_fields = ["id", "created_time", "is_verified", "user_role"]
-
-    def to_representation(self, instance: User) -> dict:
-        data = super().to_representation(instance)
-        if instance.user_role == "sportsman":
-            data["sportsman_profile"] = SportsmanProfileSerializer(instance.sportsman_profile, context=self.context).data
-        elif instance.user_role == "trainer":
-            data["trainer_profile"] = TrainerProfileSerializer(instance.trainer_profile, context=self.context).data
-        elif instance.user_role == "federation":
-            data["federation"] = {
-                "id": instance.federation.id,
-                "name": instance.federation.name,
-                "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
-            } if instance.federation else None
-        elif instance.user_role == "sport_institution_admin":
-            data["sport_institution"] = {
-                "id": instance.sport_institution.id,
-                "name": instance.sport_institution.name,
-            }
         if instance.profile_photo:
             data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
         data["region"] = {
@@ -408,13 +368,19 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
     def validate(self, attrs: dict) -> dict:
         sport = attrs.get("sport", None)
         trainer = attrs.get("trainer", None)
+        height = attrs.get("height", None)
+        weight = attrs.get("weight", None)
+        sport_rank = attrs.get("sport_rank", None)
         if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:
             trainer_profile = trainer.trainer_profile
             if not sport:
                 raise_validation_error(message=_("Sport is required"))
             if trainer_profile.sport and trainer_profile.sport.id != sport.id:
                 raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
-
+            if not height or not weight:
+                raise_validation_error(message=_("Height and Weight are required when selecting a trainer."))
+            if not sport_rank:
+                raise_validation_error(message=_("Sport rank is required when selecting a trainer."))
         return super().validate(attrs)
 
     def create(self, validated_data: dict) -> Sportsman:
@@ -430,18 +396,31 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
     @transaction.atomic
     def update(self, instance: Sportsman, validated_data: dict) -> Sportsman:
-        sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type, send_request = \
-        self._extract_update_data(instance, validated_data)
+        """
+        Update the Sportsman profile.
+        Sends a request for approval if critical fields are changed.
+        """
+        logger.info(f"Sportsman Profile Update | Updating profile -> {instance.user_id}")
+        sender: User = self.request.user  # type: ignore
+        new_trainer: User | None = validated_data.get("trainer")
+        old_trainer: User | None = instance.trainer.user if instance.trainer else None
+        validated_data.pop("send_request", None)
+        message_from_sender: str | None = validated_data.pop("message", None)
+        validated_data["trainer"] = new_trainer.trainer_profile if new_trainer else None
+        send_request: bool = self._check_critical_fields(instance=instance, data=validated_data)
 
+        logger.info(f"Sportsman Profile Update | Send request: {send_request}")
         if send_request and new_trainer:
-            old_snapshot, new_snapshot, sportsman_data = self._handle_snapshot(instance, validated_data)
+            old_snapshot: dict = SportsmanSnapshotSerializer().to_old_snapshot(instance)
+            new_snapshot: dict = SportsmanSnapshotSerializer().to_new_snapshot(validated_data)
+
             if old_trainer != new_trainer:
                 old_snapshot = None  # Reset old snapshot if trainer is changing
 
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
                 receivers=User.objects.filter(id=new_trainer.id),
-                request_type=request_type,
+                request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value,
                 old_data=old_snapshot,
                 new_data=new_snapshot,
                 message_from_sender=message_from_sender
@@ -451,6 +430,9 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
 
         elif new_trainer:
             instance.trainer = new_trainer.trainer_profile
+
+        sportsman_data = self._extract_non_critical_data(validated_data)
+        logger.info(f"Sportsman Profile Update | Non-critical data: {sportsman_data}")
 
         # Update other fields
         for attr, value in sportsman_data.items():
@@ -482,69 +464,52 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
             "logo": get_file_full_url(instance.trainer.federation.logo.url) if instance.trainer.federation.logo else None
         } if instance.trainer and instance.trainer.federation else None
         data["sport_rank"] = _(instance.sport_rank) if instance.sport_rank else None
+        last_request, last_request_status = self._get_last_request(instance)
+        data["request_id"] = last_request.id if last_request else None
+        data["request_status"] = last_request_status
         return data
 
     # ----------------------------
     # Helpers
     # ----------------------------
-    def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
-        filtered = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                # Recursively filter nested dictionaries
-                filtered[k] = self._filter_critical_fields(v, critical_fields)
-            elif k not in critical_fields:
-                filtered[k] = v
-        return filtered
+    def _get_last_request(self, instance: Sportsman) -> t.Tuple[UserRequest | None, str | None]:
+        request = UserRequest.objects.filter(
+            sender=instance.user,
+            request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
+        ).order_by('-created_time').first()
+        return request, request.status if request else None
+
+    def _extract_non_critical_data(self, data: dict) -> dict:
+        """
+        Extracts non-critical data from the provided data to be updated directly.
+        """
+        fields = SportsmanSnapshotSerializer._get_approval_fields()
+        extracted_data = {k: v for k, v in data.items() if k not in fields}
+        return extracted_data
 
     def _check_critical_fields(self, instance: Sportsman, data: dict) -> bool:
-        critical_fields: list[str] = SPORTSMAN_APPROVAL_REQUIRED_FIELDS
-        changed: bool = False
-        sender: User = self.context.get("request").user  # type: ignore
+        """
+        Determines whether critical fields of a Sportsman were changed
+        and whether a request should be sent for approval.
+        """
+        critical_fields = SportsmanSnapshotSerializer._get_approval_fields()
+        sender: User = self.context["request"].user  # type: ignore
 
-        changed = any(
-            field in data and getattr(instance, field) != data[field]
-            for field in critical_fields
-        )
-
-        # If the sender is admin/super_admin, always return False
-        if sender.user_role in ["admin", "super_admin"]:
+        # Skip checks for admin/super_admin
+        if sender.user_role in {"admin", "super_admin"}:
             return False
-        # If the sender is sportsman and fields have changed, return True
-        elif changed and sender.user_role == "sportsman":
-            return True
+
+        # Detect if any critical field has changed
+        changed_fields = [
+            field for field in critical_fields
+            if field in data and getattr(instance, field) != data[field]
+        ]
+        logger.info(f"Critical fields changed: {changed_fields}")
+
+        if changed_fields:
+            return sender.user_role == "sportsman"
+
         return False
-
-    def _handle_snapshot(
-        self,
-        instance: Sportsman,
-        sportsman_data: dict,
-    ) -> tuple[dict | None, dict | None, dict | None]:
-        critical_fields = SPORTSMAN_APPROVAL_REQUIRED_FIELDS
-
-        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-            model=instance,
-            data=sportsman_data,
-            request_type=enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
-        )
-        sportsman_data = self._filter_critical_fields(sportsman_data, critical_fields)
-
-        return old_snapshot, new_snapshot, sportsman_data
-
-    def _extract_update_data(self, instance: Sportsman, validated_data: dict) -> tuple:
-        """
-        Extracts and prepares the necessary fields from validated_data.
-        Returns: (sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type)
-        """
-        sender: User = self.request.user  # type: ignore
-        new_trainer: User | None = validated_data.get("trainer")
-        old_trainer: User | None = instance.trainer.user if instance.trainer else None
-        validated_data.pop("send_request", None)
-        message_from_sender: str | None = validated_data.pop("message", None)
-        sportsman_data: dict = validated_data
-        request_type = enums.UserRequestTypes.SPORTSMAN_TRAINER_REQUEST.value
-        send_request: bool = self._check_critical_fields(instance=instance, data=sportsman_data)
-        return sender, new_trainer, old_trainer, message_from_sender, sportsman_data, request_type, send_request
 
 
 class SportsmanUserSerializer(BaseUserSerializer):
@@ -700,7 +665,7 @@ class TrainerListSerializer(serializers.ModelSerializer):
         return stats
 
 
-class TrainerProfileSerializer(serializers.ModelSerializer):
+class TrainerProfileSerializer(RequestContextMixin, serializers.ModelSerializer):
     sport_id = serializers.PrimaryKeyRelatedField(queryset=Sport.objects.all(), source="sport", write_only=True)
     statistics = serializers.SerializerMethodField()
     send_request = serializers.BooleanField(required=True, write_only=True)
@@ -729,14 +694,16 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict) -> dict:
         sport = attrs.get("sport", None)
-        send_request = attrs.get("send_request", None)
         federation = attrs.get("federation", None)
-        if not sport:
-            raise_validation_error(message=_("Sport is required."))
-        if send_request and not federation:
-            raise_validation_error(message=_("Federation is required to send request."))
-        if sport not in federation.sports.all():
-            raise_validation_error(message=_("Sport must be part of the federation sports."))
+        height = attrs.get("height", None)
+        weight = attrs.get("weight", None)
+        if federation:
+            if not sport:
+                raise_validation_error(message=_("Sport is required."))
+            if sport not in federation.sports.all():
+                raise_validation_error(message=_("Sport must be part of the federation sports."))
+            if not height or not weight:
+                raise_validation_error(message=_("Height and Weight are required when selecting a federation."))
         return super().validate(attrs)
 
     def create(self, validated_data: dict) -> Trainer:
@@ -749,19 +716,27 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance: Trainer, validated_data: dict) -> Trainer:
-        sender, trainer_data, new_federation, old_federation, send_request, message_from_sender, request_type, receivers = \
-        self._extract_update_data(instance, validated_data)
+        logger.info(f"Trainer Profile Update | Updating profile -> {instance.user_id}")
+        sender: User = self.request.user  # type: ignore
+        new_federation: Federation = validated_data.get("federation")
+        old_federation: Federation = instance.federation
+        validated_data.pop("send_request", None)
+        message_from_sender: str | None = validated_data.pop("message", None)
+        validated_data["federation"] = new_federation
+        send_request: bool = self._check_critical_fields(instance=instance, data=validated_data)
 
+        logger.info(f"Trainer Profile Update | Send request: {send_request}")
         if send_request and new_federation:
-            # TODO(CoderB7): change receivers filtering logic after applying RBAC to system
-            old_snapshot, new_snapshot, trainer_data = self._handle_snapshot(instance, validated_data)
+            old_snapshot: dict = TrainerSnapshotSerializer().to_old_snapshot(instance)
+            new_snapshot: dict = TrainerSnapshotSerializer().to_new_snapshot(validated_data)
+
             if old_federation != new_federation:
-                old_snapshot = None # Reset old snapshot if federation is changing
+                old_snapshot = None  # Reset old snapshot if federation is changing
 
             user_request, message, success = UserRequestService.create_request(
                 sender=sender,
-                receivers=receivers,
-                request_type=request_type,
+                receivers=new_federation.users.filter(user_role="federation"),
+                request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value,
                 federation=new_federation,
                 old_data=old_snapshot,
                 new_data=new_snapshot,
@@ -773,12 +748,14 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
         elif new_federation:
             instance.federation = new_federation
 
+        trainer_data = self._extract_non_critical_data(validated_data)
+        logger.info(f"Trainer Profile Update | Non-critical data: {trainer_data}")
+
         # Update other fields
         for attr, value in trainer_data.items():
             setattr(instance, attr, value)
 
         instance.save()
-
         return instance
 
     def get_statistics(self, obj: Trainer) ->  List[Dict[str, Any]]:
@@ -796,69 +773,52 @@ class TrainerProfileSerializer(serializers.ModelSerializer):
             "name": instance.federation.name,
             "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
         } if instance.federation else None
+        last_request, last_request_status = self._get_last_request(instance)
+        data["request_id"] = last_request.id if last_request else None
+        data["request_status"] = last_request_status
         return data
 
     # ----------------------------
     # Helpers
     # ----------------------------
-    def _filter_critical_fields(self, data: dict, critical_fields: list[str]) -> dict:
-        filtered = {}
-        for k, v in data.items():
-            if isinstance(v, dict):
-                # Recursively filter nested dictionaries
-                filtered[k] = self._filter_critical_fields(v, critical_fields)
-            elif k not in critical_fields:
-                filtered[k] = v
-        return filtered
+    def _get_last_request(self, instance: Trainer) -> t.Tuple[UserRequest | None, str | None]:
+        request = UserRequest.objects.filter(
+            sender=instance.user,
+            request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
+        ).order_by('-created_time').first()
+        return request, request.status if request else None
+
+    def _extract_non_critical_data(self, data: dict) -> dict:
+        """
+        Extracts non-critical data from the provided data to be updated directly.
+        """
+        critical_fields: list[str] = TrainerSnapshotSerializer._get_approval_fields()
+        extracted_data = {k: v for k, v in data.items() if k not in critical_fields}
+        return extracted_data
 
     def _check_critical_fields(self, instance: Trainer, data: dict) -> bool:
-        critical_fields: list[str] = TRAINER_APPROVAL_REQUIRED_FIELDS
-        changed: bool = False
-        sender: User = self.context.get("request").user  # type: ignore
+        """
+        Determines whether critical fields of a Trainer were changed
+        and whether a request should be sent for approval.
+        """
+        critical_fields: list[str] = TrainerSnapshotSerializer._get_approval_fields()
+        sender: User = self.context["request"].user  # type: ignore
 
-        changed = any(
-            field in data and getattr(instance, field) != data[field]
-            for field in critical_fields
-        )
-        # If sender is admin/super_admin, always return False
-        if sender.user_role in ["admin", "super_admin"]:
+        # Skip checks for admin/super_admin
+        if sender.user_role in {"admin", "super_admin"}:
             return False
-        # If sender is trainer and fields have changed, return True
-        elif changed and sender.user_role == "trainer":
-            return True
+
+        # Detect if any critical field has changed
+        changed_fields = [
+            field for field in critical_fields
+            if field in data and getattr(instance, field) != data[field]
+        ]
+        logger.info(f"Critical fields changed: {changed_fields}")
+
+        if changed_fields:
+            return sender.user_role == "trainer"
+
         return False
-
-    def _handle_snapshot(
-        self,
-        instance: Trainer,
-        trainer_data: dict,
-    ) -> tuple[dict | None, dict | None, dict | None]:
-        critical_fields: list[str] = TRAINER_APPROVAL_REQUIRED_FIELDS
-
-        old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-            model=instance,
-            data=trainer_data,
-            request_type=enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
-        )
-        trainer_data = self._filter_critical_fields(trainer_data, critical_fields)
-
-        return old_snapshot, new_snapshot, trainer_data
-
-    def _extract_update_data(self, instance: Trainer, validated_data: dict) -> tuple[dict, Federation | None, bool, str | None]:
-        """
-        Extracts and prepares trainer update-related data for the update method.
-        Returns: (trainer_data, new_federation, send_request, message_from_sender)
-        """
-        sender: User = self.context.get("request").user  # type: ignore
-        new_federation: Federation = validated_data.get("federation")
-        old_federation = instance.federation
-        validated_data.pop("send_request", None)
-        message_from_sender: str | None = validated_data.pop("message", None)
-        trainer_data: dict = validated_data
-        send_request: bool = self._check_critical_fields(instance=instance, data=trainer_data)
-        request_type: str = enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value
-        receivers: QuerySet[User] = new_federation.users.filter(user_role="federation")
-        return sender, trainer_data, new_federation, old_federation, send_request, message_from_sender, request_type, receivers
 
 
 class TrainerUserSerializer(BaseUserSerializer):
@@ -912,6 +872,70 @@ class PublicTrainerUserSerializer(PublicBaseUserSerializer):
 
     class Meta(PublicBaseUserSerializer.Meta):
         fields = PublicBaseUserSerializer.Meta.fields + ["trainer_profile"]
+
+
+class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
+    sportsman_profile = SportsmanProfileSerializer(read_only=True)
+    trainer_profile = TrainerProfileSerializer(read_only=True)
+    media = UserMediaSerializer(many=True)
+    educations = EducationSerializer(many=True, required=False)
+    results = ResultCreateSerializer(many=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "pinfl",
+            "phone_number",
+            "email",
+            "gender",
+            "region",
+            "district",
+            "birth_date",
+            "media",
+            "educations",
+            "results",
+            "user_role",
+            "sportsman_profile",
+            "trainer_profile",
+            "is_verified",
+            "created_time",
+        ]
+        read_only_fields = ["id", "created_time", "is_verified", "user_role"]
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
+        if instance.user_role == "federation":
+            data["federation"] = {
+                "id": instance.federation.id,
+                "name": instance.federation.name,
+                "logo": get_file_full_url(instance.federation.logo.url) if instance.federation.logo else None
+            } if instance.federation else None
+        elif instance.user_role == "sport_institution_admin":
+            data["sport_institution"] = {
+                "id": instance.sport_institution.id,
+                "name": instance.sport_institution.name,
+            }
+        if getattr(instance, "sportsman_profile", None) is None:
+                data.pop("sportsman_profile", None)
+        if getattr(instance, "trainer_profile", None) is None:
+            data.pop("trainer_profile", None)
+        if instance.profile_photo:
+            data["profile_photo"] = get_file_full_url(instance.profile_photo.file.url)
+        else:
+            data["profile_photo"] = None
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name
+        } if instance.district else None
+        return data
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -1102,55 +1126,64 @@ class SelfRegistrationSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data: dict) -> User:
         fcm_token = validated_data.pop("fcm_token", None)
         device_type = validated_data.pop("device_type", None)
-        federation = validated_data.pop("federation", None)
+        federation: Federation | None = validated_data.pop("federation", None)
         message_from_sender: str | None = validated_data.pop("message", None)
-        with transaction.atomic():
-            user: User = super().create(validated_data)
-            user_role = validated_data.get("user_role")
-            if fcm_token:
-                FCMDevice.objects.update_or_create(
-                    registration_id=fcm_token,
-                    defaults={
-                        'user': user,
-                        'type': device_type,
-                        'active': True,
-                    }
-                )
-            if user_role == "sportsman":
-                Sportsman.objects.create(user=user)
-            elif user_role == "trainer":
-                Trainer.objects.create(user=user)
-            elif user_role == "federation":
-                if federation:
-                    logger.info(f"Federation '{federation.name}' selected for user {user.first_name} {user.last_name}")
-                    request_type: str = enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value
-                    receivers: QuerySet[User] = federation.users.all()
-                    old_snapshot, new_snapshot = SnapshotService.build_snapshot(
-                        model=user,
-                        request_type=request_type
-                    )
-                    logger.info(new_snapshot)
-                    user_request, message, success = UserRequestService.create_request(
-                        sender=user,
-                        receivers=receivers,
-                        request_type=request_type,
-                        federation=federation,
-                        old_data={},
-                        new_data=new_snapshot,
-                        message_from_sender=message_from_sender
-                    )
-                    if not success:
-                        raise_validation_error(message=message)
-            logger.info(f"User created -> {user}")
-            return user
+        user: User = super().create(validated_data)
+        user_role = validated_data.get("user_role")
 
-    def get_tokens(self, user): # noqa
+        if fcm_token:
+            FCMDevice.objects.update_or_create(
+                registration_id=fcm_token,
+                defaults={
+                    'user': user,
+                    'type': device_type,
+                    'active': True,
+                }
+            )
+
+        if user_role == "sportsman":
+            Sportsman.objects.create(user=user)
+        elif user_role == "trainer":
+            Trainer.objects.create(user=user)
+        elif user_role == "federation":
+            if federation:
+                logger.info(f"Federation Admin Request | Federation -> {federation.id} | User -> {user.id}")  # LOGGING
+                new_snapshot: dict = FederationAdminApprovalSnapshotSerializer().to_new_snapshot(user)
+                receivers: QuerySet[User] = federation.users.all()
+                user_request, message, success = UserRequestService.create_request(
+                    sender=user,
+                    receivers=receivers,
+                    request_type=enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
+                    federation=federation,
+                    old_data={},
+                    new_data=new_snapshot,
+                    message_from_sender=message_from_sender
+                )
+                if not success:
+                    raise_validation_error(message=message)
+        logger.info(f"Self Registration | User created -> {user.id}")  # LOGGING
+        return user
+
+    def get_tokens(self, user: User) -> t.Optional[dict[str, str]]:
         if not user:
             return None
         return user.tokens()
+
+    def to_representation(self, instance: User) -> dict:
+        data = super().to_representation(instance)
+        if instance.user_role == "federation":
+            data["request_id"] = self._get_last_request(instance).id if self._get_last_request(instance) else None
+        return data
+
+    def _get_last_request(self, instance: User) -> UserRequest | None:
+        return UserRequest.objects.filter(
+            sender=instance,
+            request_type=enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value
+        ).order_by('-created_time').first()
 
 
 class LogoutSerializer(serializers.Serializer):  # noqa
@@ -1223,7 +1256,7 @@ class CustomTokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
         return data
 
 
-class UserUpdateSerializer(serializers.ModelSerializer):
+class AdminUserUpdateSerializer(serializers.ModelSerializer):
     sportsman_profile = SportsmanProfileSerializer(required=False)
     trainer_profile = TrainerProfileSerializer(required=False)
     media_ids = serializers.ListField(child=serializers.UUIDField(format='hex_verbose'), write_only=True, required=False)
@@ -1259,7 +1292,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_time", "is_verified", "profile_photo"]
 
-    def get_profile_photo(self, obj):
+    def get_profile_photo(self, obj) -> t.Optional[str]:
         """
         Returns the URL of the user's profile photo if it exists.
         """
@@ -1387,6 +1420,101 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         return data
 
 
+class ProfileUserUpdateSerializer(serializers.ModelSerializer):
+    sportsman_profile = SportsmanProfileSerializer(required=False)
+    trainer_profile = TrainerProfileSerializer(required=False)
+    profile_photo = serializers.SerializerMethodField()
+    media = UserMediaSerializer(read_only=True, many=True)
+    educations = EducationSerializer(read_only=True, many=True)
+    results = ResultCreateSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "middle_name",
+            "last_name",
+            "email",
+            "gender",
+            "region",
+            "district",
+            "birth_date",
+            "user_role",
+            "profile_photo",
+            "media",
+            "educations",
+            "results",
+            "sportsman_profile",
+            "trainer_profile",
+            "created_time",
+            "is_verified",
+        ]
+        read_only_fields = ["id", "created_time", "user_role", "is_verified", "profile_photo"]
+
+    def get_profile_photo(self, obj) -> t.Optional[str]:
+        """
+        Returns the URL of the user's profile photo if it exists.
+        """
+        profile_photo = self.instance.media.filter(is_profile_photo=True).first()
+        if profile_photo:
+            return get_file_full_url(profile_photo.file.url)
+        return None
+
+    def validate(self, attrs: dict) -> dict:
+        instance: User = t.cast(User, self.instance)
+
+        check_uniqueness("email", attrs, User, instance)
+        return attrs
+
+    @transaction.atomic
+    def update(self, instance: User, validated_data: dict) -> User:
+        sportsman_data = validated_data.pop("sportsman_profile", {}) or {}
+        trainer_data = validated_data.pop("trainer_profile", {}) or {}
+
+        # Performing actual updates on allowed fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if sportsman_data:
+            sportsman_profile = getattr(instance, "sportsman_profile", None)
+            if sportsman_profile:
+                SportsmanProfileSerializer(
+                    context={
+                        "request": self.context.get("request"),
+                    }
+                ).update(sportsman_profile, sportsman_data)
+
+        if trainer_data:
+            trainer_profile = getattr(instance, "trainer_profile", None)
+            if trainer_profile:
+                TrainerProfileSerializer(
+                    context={
+                        "request": self.context.get("request"),
+                    }
+                ).update(trainer_profile, trainer_data)
+
+        return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["region"] = {
+            "id": instance.region.id,
+            "name": instance.region.name,
+        } if instance.region.id else None
+        data["district"] = {
+            "id": instance.district.id,
+            "name": instance.district.name,
+        } if instance.district.id else None
+        # Remove empty profiles
+        if getattr(instance, "sportsman_profile", None) is None:
+            data.pop("sportsman_profile", None)
+        if getattr(instance, "trainer_profile", None) is None:
+            data.pop("trainer_profile", None)
+        return data
+
+
 class ArchivedTrainerSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArchivedTrainer
@@ -1431,6 +1559,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
             "message_from_receiver",
             "old_data",
             "new_data",
+            "file",
             "processed_by",
             "processed_time",
             "created_time",
@@ -1455,20 +1584,32 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
         #TODO(CoderB7): implement logic of sending request if needed in some cases
         return user_request
 
+    def _get_federation_required_requests(self) -> list[str]:
+        return [
+            enums.UserRequestTypes.FEDERATION_ADMIN_REQUEST.value,
+            enums.UserRequestTypes.TRAINER_FEDERATION_REQUEST.value,
+            enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value,
+        ]
+
     def update(self, instance: UserRequest, validated_data: dict) -> UserRequest:
+        logger.info(f"User Request Update | Updating Request -> {instance.id}")  # LOGGING
         sender: User = instance.sender
-        logger.info(f"Sender: {sender}")  # LOGGING
         receiver: User = self.request.user  # type: ignore
-        logger.info(f"New data: {instance.new_data}")  # LOGGING
+
+        if instance.request_type in self._get_federation_required_requests():
+            logger.info(f"User Request Update | Sender: {sender.id} | Receiver(Federation): {instance.federation.id}")  # LOGGING
+        else:
+            logger.info(f"User Request Update | Sender: {sender.id} | Receiver(User): {receiver.id}")  # LOGGING
+
         message, success = UserRequestService.handle_request(instance, validated_data, receiver)
         if success:
-            logger.info(f"{message}")
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.save()
         else:
-            logger.error(f"Failed to handle request: {message}")
+            logger.error(f"User Request Update | Failed to handle request: {message}")
             raise_validation_error(message=message)
+
         return instance
 
     def to_representation(self, instance: UserRequest) -> dict:
@@ -1482,7 +1623,6 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
         }
         if instance.federation:
             federation: Federation = instance.federation
-            logger.info(f"Federation: {federation}")
             data["receiver"] = {
                 "federation": {
                     "id": federation.id,
@@ -1491,14 +1631,15 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                     "is_national": federation.is_national,
                 } if federation else None
             }
-            data["processed_by"] = {
-                "federation": {
-                    "id": federation.id,
-                    "name": federation.name,
-                    "phone_number": federation.phone_number,
-                    "is_national": federation.is_national,
-                } if federation else None
-            }
+            if instance.status in [enums.UserRequestStatus.ACCEPTED.value, enums.UserRequestStatus.REJECTED.value]:
+                data["processed_by"] = {
+                    "federation": {
+                        "id": federation.id,
+                        "name": federation.name,
+                        "phone_number": federation.phone_number,
+                        "is_national": federation.is_national,
+                    } if federation else None
+                }
         else:
             data["receiver"] = {
                 "id": receiver.id,
@@ -1511,8 +1652,9 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                 "full_name": instance.processed_by.full_name,
                 "phone_number": instance.processed_by.phone_number,
             } if instance.processed_by else None
-        data["processed_time"] = instance.processed_time
+        data["processed_time"] = datetime.strftime(instance.processed_time, "%Y-%m-%d %H:%M:%S") if instance.processed_time else None
         data.pop("receivers")
+        data["file"] = get_file_full_url(instance.file.url) if instance.file else None
         return data
 
 
@@ -1532,7 +1674,9 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "currently_participating",
             "age_group",
             "weight",
+            "sport_type",
             "rating",
+            "file",
             "score",
             "message",
             "additional_attributes",
@@ -1544,8 +1688,19 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         ]
         read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status", "score"]
 
+    def validate_file(self, value):
+        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
+        max_file_size = 5 * 1024 * 1024  # 5MB
+        file_name = value.name.lower()
+        extension = os.path.splitext(file_name)[1]
+        if extension not in allowed_extensions:
+            raise_validation_error(message=_("Unsupported file extension. Allowed extensions are: .pdf, .jpg, .jpeg, .png"))
+        if value.size > max_file_size:
+            raise_validation_error(message=_("File size exceeds the maximum limit of 5MB."))
+        return value
+
     def validate(self, attrs: dict) -> dict:
-        user: User = self.request.user # type: ignore
+        user: User = self.request.user  # type: ignore
         federation: Federation = user.sportsman_profile.trainer.federation
         tournament = attrs.get("tournament", None)
         trainer = attrs.get("trainer", None)
@@ -1554,25 +1709,30 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         age_group = attrs.get("age_group", None)
         weight = attrs.get("weight", None)
         instance: Result = self.instance
-        # if instance and tournament:
-        #     if instance.tournament != tournament:
-        #         raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
-        if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
-            raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
-        if not trainer:
-            raise_validation_error(message=_("You must specify a trainer to submit results."))
-        if not federation:
-            raise_validation_error(message=_("You must be part of a federation to submit results."))
-        if federation and not federation.tournaments.filter(id=tournament.id).exists():
-            raise_validation_error(message=_("You are not allowed to submit results for this tournament."))
-        if trainer and not federation.trainers.filter(user_id=trainer.pk).exists():
-            raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
-        if rating and not tournament.scoring_policies.filter(position=rating).exists():
-            raise_validation_error(message=_("Invalid rating for this tournament."))
-        if instance and Result.objects.exclude(pk=instance.pk).filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
-            raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
+        if instance and tournament:
+            if instance.tournament != tournament:
+                raise_validation_error(message=_("You are not allowed to update a tournament of this result."))
+        if not instance:
+            if Result.objects.filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
+                raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
+            if not trainer:
+                raise_validation_error(message=_("You must specify a trainer to submit results."))
+            if not federation:
+                raise_validation_error(message=_("You must be part of a federation to submit results."))
+            if federation and not federation.tournaments.filter(id=tournament.id).exists():
+                raise_validation_error(message=_("You are not allowed to submit results for this tournament."))
+            if trainer and not federation.trainers.filter(user_id=trainer.pk).exists():
+                raise_validation_error(message=_("You are not allowed to submit results for this trainer."))
+            if rating and not tournament.scoring_policies.filter(position=rating).exists():
+                raise_validation_error(message=_("Invalid rating for this tournament."))
+        else:
+            if instance and Result.objects.exclude(pk=instance.pk).filter(user=user, tournament=tournament, trainer=trainer, year=year, age_group=age_group, weight=weight).exists():
+                raise_validation_error(message=_("You have already submitted a result for this tournament and year."))
+            if rating and not instance.tournament.scoring_policies.filter(position=rating).exists():
+                raise_validation_error(message=_("Invalid rating for this tournament."))
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data: dict) -> t.Union[Result, UserRequest]:
         sender: User = self.request.user  # type: ignore
         message_from_sender: str | None = validated_data.pop("message", None)
@@ -1587,6 +1747,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
         score = tournament.get_score(validated_data.get("rating")) if tournament else None
         validated_data['score'] = score
         trainer: User = validated_data.get("trainer")
+        file = validated_data.get("file")
 
         new_snapshot: dict = SportsmanResultSnapshotSerializer().to_new_snapshot(validated_data)
 
@@ -1596,6 +1757,36 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
             old_data={},
             new_data=new_snapshot,
+            file=file,
+            message_from_sender=message_from_sender
+        )
+        if not success:
+            raise_validation_error(message=message)
+
+        return user_request
+
+    @transaction.atomic
+    def update(self, instance: Result, validated_data: dict) -> t.Union[Result, UserRequest]:
+        sender: User = self.request.user  # type: ignore
+        message_from_sender: str | None = validated_data.pop("message", None)
+        tournament = instance.tournament
+        score = tournament.get_score(validated_data.get("rating")) if tournament else None
+        validated_data['score'] = score
+        trainer: User = instance.trainer.user
+        file = validated_data.get("file")
+
+        validated_data['tournament'] = instance.tournament
+
+        old_snapshot: dict = SportsmanResultSnapshotSerializer().to_old_snapshot(instance)
+        new_snapshot: dict = SportsmanResultSnapshotSerializer().to_new_snapshot(validated_data)
+
+        user_request, message, success = UserRequestService.create_request(
+            sender=sender,
+            receivers=User.objects.filter(id=trainer.id),
+            request_type=enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value,
+            old_data=old_snapshot,
+            new_data=new_snapshot,
+            file=file,
             message_from_sender=message_from_sender
         )
         if not success:
@@ -1627,6 +1818,11 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "min_age": instance.age_group.age_group.min_age,
             "max_age": instance.age_group.age_group.max_age,
         } if instance.age_group else None
+        data["sport_type"] = {
+            "id": instance.sport_type.id,
+            "name": instance.sport_type.name,
+        } if instance.sport_type else None
+        data["file"] = get_file_full_url(instance.file.url) if instance.file else None
         return data
 
 

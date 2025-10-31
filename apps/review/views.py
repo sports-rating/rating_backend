@@ -30,14 +30,14 @@ from apps.review.models import Comment
 from apps.review.serializers import (
     CommentSerializer
 )
+from apps.review.filters import CommentFilter
 
 
 class CommentListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
     permission_classes = [permissions.AllowAny,]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    # filterset_fields = ['user', 'rating']
-    filterset_class = None
+    filterset_class = CommentFilter
     search_fields = ['user__first_name', 'user__last_name', 'text']
     ordering_fields = ['created_time', 'rating']
     pagination_class = CustomPagination

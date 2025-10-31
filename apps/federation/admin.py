@@ -23,7 +23,7 @@ class FederationAdmin(admin.ModelAdmin):
             format_html(
                 '<a href="{}">{}</a>',
                 reverse("admin:federation_federationagegroup_change", args=[age_group.id]),
-                str(age_group.age_group.name)
+                f"{age_group.age_group.name} - {age_group.age_group.gender}"
             )
             for age_group in obj.age_group_links.all()
         ]
@@ -71,5 +71,5 @@ class FederationAgeGroupAdmin(admin.ModelAdmin):
 @admin.register(AgeGroup)
 class AgeGroupAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "sport", "min_age", "max_age"]
-    search_fields = ["name", "sport__name"]
+    search_fields = ["name", "sport__name", "sport_type__name"]
     list_filter = ["sport"]

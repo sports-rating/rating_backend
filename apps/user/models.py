@@ -1,6 +1,7 @@
 import random
 import string
 import os
+import magic
 import mimetypes
 import io
 import typing as t
@@ -24,6 +25,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.shared.models import BaseModel, BaseMedia
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
+from apps.shared.utils.logging import logger
+from apps.shared.utils.general import compress_image
 
 from apps.sport.models import (
     Sport,
@@ -256,8 +259,9 @@ class UserMedia(BaseMedia):
 
     def save(self, *args, **kwargs):
         if self.is_profile_photo:
-            # Ensure only one profile photo per user
-            UserMedia.objects.filter(user=self.user, is_profile_photo=True).update(is_profile_photo=False)
+            previous_profile_photo = UserMedia.objects.filter(user=self.user, is_profile_photo=True).first()
+            if previous_profile_photo and previous_profile_photo != self:
+                previous_profile_photo.delete()
         super().save(*args, **kwargs)
 
 
@@ -299,6 +303,13 @@ class UserRequest(BaseModel):
     old_data = models.JSONField(null=True, blank=True, help_text="Snapshot of user's data before changes")
     new_data = models.JSONField(null=True, blank=True, help_text="Snapshot of user's data after changes")
 
+    file = models.FileField(
+        upload_to=CorrectPath("media"),
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True,
+        help_text="Optional file attachment for the request"
+    )
     metadata = models.JSONField(null=True, blank=True, help_text="Additional context or request-specific data")
 
     objects = models.Manager()
@@ -316,6 +327,29 @@ class UserRequest(BaseModel):
         ordering = ['-created_time']
 
     repr_fields = ("sender", "request_type", "status")
+
+    def save(self, *args, **kwargs):
+        if self.file and hasattr(self.file, 'file'):
+            try:
+                mime = magic.from_buffer(self.file.read(2048), mime=True)
+                self.file.seek(0) # Reset file pointer after reading
+
+                if mime.startswith("image/"):
+                    compressed_image = compress_image(self.file)
+                    self.file = compressed_image
+
+                elif mime.startswith("application/pdf"):
+                    pass # No compression for PDF files
+            except Exception as e:
+                logger.warning(f"Skipping compression: {e}")
+
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # Deletes the file from storage when the UserRequest instance is deleted
+        if self.file and os.path.isfile(self.file.path):
+            os.remove(self.file.path)
+        super().delete(*args, **kwargs)
 
 
 class UserNotification(BaseModel):
@@ -337,3 +371,28 @@ class UserNotification(BaseModel):
         verbose_name_plural = "User Notifications"
 
     repr_fields = ("user", "title", "is_read")
+
+
+class TemporaryFile(BaseModel):
+    file = models.FileField(
+        upload_to="temporary/files/",
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
+        null=True,
+        blank=True
+    )
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='temporary_files', null=True, blank=True)
+    reason = models.CharField(max_length=100, choices=enums.TemporaryFileReason.choices(), default=enums.TemporaryFileReason.SPORTSMAN_RESULT_VERIFICATION.value)
+
+    class Meta:
+        db_table = "temporary_file"
+        ordering = ["-created_time"]
+        verbose_name = "Temporary File"
+        verbose_name_plural = "Temporary Files"
+
+    repr_fields = ("uploaded_by",)
+
+    def delete(self, *args, **kwargs):
+        # Deletes the file from storage when the TemporaryFile instance is deleted
+        if self.file and os.path.isfile(self.file.path):
+            os.remove(self.file.path)
+        super().delete(*args, **kwargs)

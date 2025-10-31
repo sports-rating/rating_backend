@@ -13,6 +13,7 @@ urlpatterns = [
     path("<uuid:pk>/requests/", views.FederationUserRequestListAPIView.as_view(), name='federation-request-list'),
     path("<uuid:pk>/tournaments/", views.FederationTournamentListAPIView.as_view(), name='federation-tournament-list'),
     path("<uuid:pk>/age-groups/", views.FederationAgeGroupListCreateAPIView.as_view(), name='federation-age-group-list-create'),
+    path("<uuid:pk>/sport-types/", views.FederationSportTypeListAPIView.as_view(), name='federation-sport-type-list'),
 
     path("age-groups/<uuid:pk>/", views.AgeGroupRetrieveUpdateDeleteAPIView.as_view(), name='age-group-retrieve-update-delete'),
 ]

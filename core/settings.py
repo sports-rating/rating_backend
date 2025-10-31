@@ -82,9 +82,10 @@ INSTALLED_APPS = PACKAGES + BACKEND_APPS + INTERNAL_APPS
 
 MIDDLEWARE = [
     'core.middleware.AdminBasicAuthMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    'corsheaders.middleware.CorsMiddleware',
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -245,7 +246,9 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Tashkent"
 USE_I18N = True
 USE_TZ = True
-LOCALE_PATHS = ["locale"]
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale')
+]
 
 LANGUAGES = [
     ("en", _("English")),

@@ -1,5 +1,6 @@
 import typing as t
 import os
+from uuid import UUID
 from datetime import datetime
 from pathlib import Path
 
@@ -32,7 +33,8 @@ from apps.sport.models import (
     Team,
     ScoringPolicy,
     SportInstitutionRequest,
-    SportInstitutionMedia
+    SportInstitutionMedia,
+    SportType
 )
 from apps.federation.models import (
     Federation,
@@ -53,26 +55,88 @@ from apps.shared.utils import enums
 from apps.shared.serializers import BaseMediaSerializer
 
 
+class SportTypeSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+
+    class Meta:
+        model = SportType
+        fields = (
+            "id",
+            "name",
+            "created_time"
+        )
+        read_only_fields = ("created_time",)
+        validators = []
+
+
 class SportSerializer(serializers.ModelSerializer):
+    types = SportTypeSerializer(many=True, required=False)
+
     class Meta:
         model = Sport
         fields = (
             "id",
             "name",
             "logo",
+            "types",
             "created_time"
         )
         read_only_fields = ("id", "created_time")
         extra_kwargs = {"logo": {"required": False}}
 
-    def validate(self, attrs):
-        sport_name = attrs.get("name")
-        if Sport.objects.filter(name=sport_name).exists():
-            raise_validation_error(message=_(f"{sport_name} - sport is already created"))
+    def validate(self, attrs: dict) -> dict:
+        instance: Sport = self.instance
+        check_uniqueness("name", attrs, Sport, instance)
         return attrs
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
+    @transaction.atomic
+    def create(self, validated_data: dict) -> Sport:
+        sport_types: list[dict] | None = validated_data.pop("types", None)
+
+        sport: Sport = Sport.objects.create(**validated_data)
+
+        # Create sport types if provided
+        if sport_types:
+            for sport_type in sport_types:
+                SportType.objects.create(sport=sport, **sport_type)
+
+        return sport
+
+    @transaction.atomic
+    def update(self, instance: Sport, validated_data: dict) -> Sport:
+        sport_types: list[dict] | None = validated_data.pop("types", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # CUD(Create, Update, Delete) pattern is being used here
+        if sport_types:
+            left_sport_types_id = []
+
+            for sport_type in sport_types:
+                sport_type_id: UUID | None = sport_type.get("id", None)
+                name: str = sport_type.get("name")
+                if sport_type_id:  # if id exists, update the existing sport type
+                    SportType.objects.filter(id=sport_type_id).update(**sport_type)
+                    left_sport_types_id.append(sport_type_id)
+                else:  # if id does not exist, create a new sport type
+                    # Check if the same sport/type already exists
+                    existing: SportType | None = SportType.objects.filter(
+                        sport=instance,
+                        name=sport_type.get("name")
+                    ).first()
+                    if existing:
+                        raise_validation_error(message=_(f"Sport Type with name '{name}' already exists for this sport."))
+                    new_sport_type = SportType.objects.create(sport=instance, **sport_type)
+                    left_sport_types_id.append(new_sport_type.id)
+
+            # Delete sport types that are no longer present
+            SportType.objects.filter(sport=instance).exclude(id__in=left_sport_types_id).delete()
+        return instance
+
+    def to_representation(self, instance: Sport) -> dict:
+        data: dict = super().to_representation(instance)
         data["logo"] = get_file_full_url(instance.logo.url) if instance.logo else None
         return data
 
@@ -435,8 +499,7 @@ class SportInstitutionRequestSerializer(RequestContextMixin, serializers.ModelSe
 
     def validate(self, attrs: dict) -> dict:
         phone_number: str = attrs.get("manager_phone_number")
-        status: str = attrs.get("status")
-        if User.objects.filter(phone_number=phone_number).exists() and status == enums.SportInstitutionRequestStatus.APPROVED.value:
+        if User.objects.filter(phone_number=phone_number).exists():
             logger.error(f"Sport Institution Request: creation | User with phone number {phone_number} already exists.")
             raise_validation_error(message=_(f"User with phone number {phone_number} already exists."))
 

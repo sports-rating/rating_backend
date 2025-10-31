@@ -26,6 +26,8 @@ from apps.shared.utils.utils import (
     success_response,
     error_response
 )
+from apps.shared.utils import enums
+from apps.shared.utils.logging import logger
 
 from apps.federation.models import (
     FederationAgeGroup,
@@ -40,12 +42,13 @@ from apps.user.models import (
     Trainer,
     UserRequest
 )
-from apps.sport.models import Tournament
+from apps.sport.models import Tournament, SportType
 from apps.federation.filters import (
     FederationFilter,
     FederationUserRequestFilter,
     FederationUsersFilter,
-    FederationAgeGroupFilter
+    FederationAgeGroupFilter,
+    FederationSportTypeFilter
 )
 
 from apps.shared.utils.types import *
@@ -383,7 +386,7 @@ class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
                 "federation"
             ).filter(
                 federation_id=federation_id
-            ).select_related('age_group__sport')
+            )
         if user.user_role in ['sportsman', 'trainer']:
             return queryset.filter(age_group__gender=user.gender)
         return queryset
@@ -393,6 +396,64 @@ class FederationAgeGroupListCreateAPIView(generics.ListAPIView):
         return success_response(
             data=response.data,
             message=_("Federation Age Group list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class FederationSportTypeListAPIView(generics.ListAPIView):
+    permission_classes = (
+        permissions.IsAuthenticated,
+    )
+    serializer_class = serializer.FederationSportTypeSerializer
+    queryset = SportType.objects.all()
+    filter_backends = [OrderingFilter, DjangoFilterBackend, SearchFilter]
+    filterset_class = None
+
+    def get_queryset(self) -> QuerySet[SportType]:
+        user: User = self.request.user  # type: ignore
+        federation_id: UUID = self.kwargs.get('pk')
+        sport_type_ids = FederationAgeGroup.objects.filter(
+            federation_id=federation_id,
+            # age_group__sport_type__isnull=False
+        ).values_list('age_group__sport_type_id', flat=True).distinct()
+
+        queryset = SportType.objects.filter(
+            id__in=sport_type_ids
+        ).select_related(
+            "sport"
+        )
+
+        if user.is_authenticated:
+            if user.user_role == enums.UserRoles.SPORTSMAN.value:
+                queryset = queryset.filter(sport=user.sportsman_profile.sport)
+            elif user.user_role == enums.UserRoles.TRAINER.value:
+                queryset = queryset.filter(sport=user.trainer_profile.sport)
+
+        # ✅ Prefetch only relevant age groups for this federation
+        relevant_federation_age_groups = FederationAgeGroup.objects.filter(
+            federation_id=federation_id
+        ).select_related("age_group__sport", "age_group__sport_type").distinct()
+
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                "sport_type_age_groups__federation_links",
+                queryset=relevant_federation_age_groups,
+                to_attr="federation_age_groups"
+            )
+        )
+
+        if user.user_role in ['sportsman', 'trainer']:
+            queryset = queryset.filter(
+                sport_type_age_groups__gender=user.gender
+            ).distinct()
+
+        return queryset
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response: Response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Federation Sport Type list retrieved successfully"),
             code=status.HTTP_200_OK
         )
 

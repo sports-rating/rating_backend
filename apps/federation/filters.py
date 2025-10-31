@@ -10,6 +10,7 @@ from apps.user.models import (
     UserRequest,
     User
 )
+from apps.sport.models import SportType
 from apps.shared.utils.enums import (
     UserRequestStatus,
     UserRequestTypes,
@@ -84,4 +85,14 @@ class FederationAgeGroupFilter(BaseFilterSet):
         fields = [
             "sport",
             "is_active"
+        ]
+
+
+class FederationSportTypeFilter(BaseFilterSet):
+    sport = filters.CharFilter(field_name="sport__id")
+
+    class Meta:
+        model = SportType
+        fields = [
+            "sport",
         ]
