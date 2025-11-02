@@ -329,7 +329,7 @@ class UserRequest(BaseModel):
     repr_fields = ("sender", "request_type", "status")
 
     def save(self, *args, **kwargs):
-        if self.file and hasattr(self.file, 'file'):
+        if self._state.adding and self.file and hasattr(self.file, 'file'):
             try:
                 mime = magic.from_buffer(self.file.read(2048), mime=True)
                 self.file.seek(0) # Reset file pointer after reading

@@ -17,7 +17,7 @@ from apps.shared.utils.types import *
 from apps.shared.utils.notifications import send_notification_to_user
 from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.logging import logger
-from apps.shared.utils.utils import finalize_result_file
+from apps.shared.utils.utils import finalize_result_file, archive_old_file
 from apps.shared.utils.general import get_file_full_url
 import apps.shared.utils.enums as enums
 from apps.shared.services.scoring_service import ScoringService
@@ -77,10 +77,14 @@ class UserRequestService:
             message_from_sender=message_from_sender
         )
         user_request.receivers.set(receivers)
-        user_request.save()
-        if file:
-            user_request.new_data['file_url'] = get_file_full_url(user_request.file.url)
-            user_request.save()
+
+        user_request.refresh_from_db(fields=['file'])
+
+        full_file_url = get_file_full_url(user_request.file.url) if user_request.file else None
+
+        if user_request.file:
+            user_request.new_data['file_url'] = full_file_url
+            user_request.save(update_fields=['new_data'])
 
         # Notify all receivers
         for receiver in receivers:
@@ -393,7 +397,8 @@ class UserRequestService:
                 if result.file:
                     # result.file.delete(save=False)
                     # Add archive method later
-                    pass
+                    new_archived_path = archive_old_file(result.file)
+                    user_request.old_data["file_url"] = get_file_full_url(new_archived_path)
                 result.file.name = new_path
                 result.is_verified = True
                 result.save()
@@ -412,6 +417,7 @@ class UserRequestService:
                 result.file.name = new_path
                 result.save()
 
+            user_request.save()
             if requested_rating:
                 ScoringService.update_points(
                     sportsman=sender,

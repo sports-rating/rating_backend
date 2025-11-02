@@ -163,3 +163,45 @@ def finalize_result_file(result, temp_file) -> str:
 
     shutil.copy2(temp_file.path, new_full_path)
     return new_relative_path
+
+
+def archive_old_file(file_field: t.Optional[t.Any]) -> str:
+    """
+    Moves the old file to an archive directory:
+        media/archive/YYYY/MM/DD/<filename>
+    Adds suffix if a file with the same name exists.
+    Args:
+        file_field (t.Optional[t.Any]): The FileField or ImageField to archive.
+
+    Returns:
+        None
+    """
+    if not file_field or not getattr(file_field, "name", None):
+        return
+
+    old_path = getattr(file_field, "path", None)
+    if not old_path or not os.path.exists(old_path):
+        return
+
+    # Create daily archive directory
+    date_str = datetime.now().strftime("%Y/%m/%d")
+    archive_dir = os.path.join(settings.MEDIA_ROOT, "archive", date_str)
+    os.makedirs(archive_dir, exist_ok=True)
+
+    # Build destination path
+    base_name = os.path.basename(old_path)
+    name, ext = os.path.splitext(base_name)
+    new_path = os.path.join(archive_dir, base_name)
+
+    # If file exists, add suffix
+    counter = 1
+    while os.path.exists(new_path):
+        new_name = f"{name}_v{counter}{ext}"
+        new_path = os.path.join(archive_dir, new_name)
+        counter += 1
+
+    # Move file
+    shutil.move(old_path, new_path)
+    logger.info(f"📦 Archived old file from {old_path} → {new_path}")
+
+    return new_path
