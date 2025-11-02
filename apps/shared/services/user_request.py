@@ -393,12 +393,14 @@ class UserRequestService:
                 result.requests.add(user_request)
 
                 new_path = finalize_result_file(result, user_request.file)
-                # Remove old file if exists
                 if result.file:
-                    # result.file.delete(save=False)
-                    # Add archive method later
                     new_archived_path = archive_old_file(result.file)
-                    user_request.old_data["file_url"] = get_file_full_url(new_archived_path)
+                    if new_archived_path:
+                        user_request.old_data["file_url"] = get_file_full_url(new_archived_path)
+                    else:
+                        raise_validation_error(message=_("Error while handling user request."))
+                    result.file = None
+
                 result.file.name = new_path
                 result.is_verified = True
                 result.save()
