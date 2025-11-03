@@ -379,6 +379,7 @@ class PaymentStatsSerializer(serializers.Serializer):
             }
             for item in data["yearly_revenue"]
         ]
+        data["daily_revenue_last_30_days"] = data.get("daily_revenue_last_30_days", [])
         return data
 
 

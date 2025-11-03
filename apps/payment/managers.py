@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.db import models
 from django.db.models import Count, Q, Sum, Value, Model, QuerySet, Case, When, F
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models.functions import Coalesce, TruncMonth, TruncDay
 from django.conf import settings
 from django.utils import timezone
 
@@ -97,9 +97,13 @@ class TransactionManager(models.Manager):
 
         now = timezone.now()
 
+        # Base queryset for successful transactions
+        base_qs = Transaction.objects.filter(
+            status=enums.TransactionStatus.COMMITTED.value
+        )
+
         # Overall summary
-        summary = Transaction.objects.filter(
-            status=enums.TransactionStatus.COMMITTED.value,  # or payme_state=Transaction.SUCCESSFULLY
+        summary = base_qs.filter(
             performed_time__year=now.year,
         ).aggregate(
             total_revenue=Coalesce(
@@ -132,12 +136,31 @@ class TransactionManager(models.Manager):
             "yearly_revenue": self.get_yearly_revenue(),
         }
 
+        # Daily revenue (last 30 days)
+        one_month_ago = now - timedelta(days=30)
+        daily_revenue = (
+            base_qs.filter(performed_time__gte=one_month_ago)
+            .annotate(day=TruncDay("performed_time"))
+            .values("day")
+            .annotate(
+                total_revenue=Coalesce(Sum("amount"), Value(0, output_field=models.DecimalField())),
+                total_transactions=Count("id"),
+            )
+            .order_by("day")
+        )
+
+        data["daily_revenue_last_30_days"] = [
+            {
+                "day": d["day"].strftime("%Y-%m-%d"),
+                "total_revenue": float(d["total_revenue"]),
+                "total_transactions": d["total_transactions"],
+            }
+            for d in daily_revenue
+        ]
+
         # Breakdown by user role
         role_stats = (
-            Transaction.objects.filter(
-                status=enums.TransactionStatus.COMMITTED.value,
-                performed_time__year=now.year,
-            ).values('user__user_role').annotate(
+            base_qs.filter(performed_time__year=now.year).values('user__user_role').annotate(
                 revenue=Coalesce(
                     Sum("amount"),
                     Value(0, output_field=models.DecimalField()),
@@ -164,15 +187,10 @@ class TransactionManager(models.Manager):
         data["by_user_role"] = role_stats_dict
 
         # Breakdown by payment method
-        base_qs = Transaction.objects.filter(
-            status=enums.TransactionStatus.COMMITTED.value,
-            performed_time__year=now.year,
-        )
-
-        total_transactions = base_qs.count() or 1  # prevent division by zero
+        total_transactions = base_qs.filter(performed_time__year=now.year).count() or 1  # prevent division by zero
 
         payment_methods_stats = (
-            base_qs.values("payment_method")
+            base_qs.filter(performed_time__year=now.year).values("payment_method")
             .annotate(
                 revenue=Coalesce(
                     Sum("amount"),
