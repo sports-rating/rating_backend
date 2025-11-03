@@ -143,7 +143,7 @@ def send_sms_message(phone_number: str, text: str) -> int:
         json=create_sms_payload(phone_number, text),
         auth=(settings.PLAY_MOBILE_LOGIN, settings.PLAY_MOBILE_PASSWORD),
     )
-
+    logger.info(f"SMS send to {phone_number}, response: {response.status_code} - {response.text}")  # LOGGING
     if response.status_code != 200:
         logger.error(f"Error on send_sms: {response.status_code=} {response.text=}")
 

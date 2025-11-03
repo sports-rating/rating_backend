@@ -406,6 +406,25 @@ class RequestStatsSerializer(serializers.Serializer):
         }
 
 
+class UserStatsSerializer(serializers.Serializer):
+    users = UsersCountSerializer()
+    last_6_months_growth = serializers.ListField()
+    yearly_growth = serializers.ListField()
+    daily_registrations = serializers.ListField()
+    average_daily_registration = serializers.FloatField()
+
+    def to_representation(self, instance) -> dict:
+        data = User.stats.get_detailed_statistics()
+        data = {
+            "users": UsersCountSerializer(instance={}).data,
+            "last_6_months_growth": data["last_6_months_growth"],
+            "yearly_growth": data["yearly_growth"],
+            "daily_registrations": data["daily_registrations_last_month"],
+            "average_daily_registration": data["average_daily_registration"]
+        }
+        return data
+
+
 class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
     class Meta:
         model = UserRequest

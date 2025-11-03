@@ -323,6 +323,20 @@ class RequestStatsAPIView(APIView):
         )
 
 
+class UserStatsAPIView(APIView):
+    serializer_class = serializers.UserStatsSerializer
+    permission_classes = [IsAdminOrSuperAdmin,]
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        serializer = serializers.UserStatsSerializer(instance={})
+
+        return success_response(
+            data=serializer.data,
+            message=_("Dashboard user statistics retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
 class UserRequestListAPIView(generics.ListAPIView):
     queryset = UserRequest.objects.all()
     permission_classes = [IsAdminOrSuperAdmin,]
