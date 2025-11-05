@@ -23,4 +23,5 @@ urlpatterns = [
 
     path("requests/", views.UserRequestListAPIView.as_view(), name="user-requests-list"),
     path("requests/<uuid:pk>/", views.UserRequestDetailAPIView.as_view(), name="user-requests-detail"),
+
 ]

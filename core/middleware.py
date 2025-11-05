@@ -1,6 +1,13 @@
 import base64
+import hashlib
+from datetime import date
+
 from django.http import HttpResponse
 from django.contrib.auth import authenticate
+from django.utils.deprecation import MiddlewareMixin
+
+from apps.shared.utils.redis_utils import redis_connection
+from apps.shared.utils.logging import logger
 
 
 class AdminBasicAuthMiddleware:
@@ -24,3 +31,36 @@ class AdminBasicAuthMiddleware:
             response['WWW-Authenticate'] = 'Basic realm="Admin Access"'
             return response
         return self.get_response(request)
+
+
+class UniqueVisitorMiddleware(MiddlewareMixin):
+    """
+    Middleware to track unique visitors using Redis HyperLogLog.
+    - Authenticated users: user_id + user_agent
+    - Anonymous users: IP address + user_agent
+    """
+    def process_request(self, request):
+        user_agent = request.META.get('HTTP_USER_AGENT', 'unknown')
+        ip = request.META.get('REMOTE_ADDR', 'unknown')
+
+        today_str = date.today().strftime('%Y-%m-%d')
+        logger.info(f"Processing unique visitor for {today_str}")
+
+        # --- 1️⃣ Track unique visitors (all users) ---
+        visitor_base = f"{ip}:{user_agent}"
+        visitor_hash = hashlib.sha256(visitor_base.encode('utf-8')).hexdigest()
+        visitor_hll_key = f"unique_visitors:{today_str}"
+        try:
+            redis_connection.pfadd(visitor_hll_key, visitor_hash)
+        except Exception as e:
+            logger.error(f"Unique Visitor Middleware | Redis error (visitor HLL): {e}")
+
+        # --- 2️⃣ Track unique authenticated users ---
+        if request.user.is_authenticated:
+            auth_base = f"user:{request.user.id}:{user_agent}"
+            auth_hash = hashlib.sha256(auth_base.encode('utf-8')).hexdigest()
+            auth_hll_key = f"unique_auth_users:{today_str}"
+            try:
+                redis_connection.pfadd(auth_hll_key, auth_hash)
+            except Exception as e:
+                logger.error(f"Unique Visitor Middleware | Redis error (auth user HLL): {e}")
