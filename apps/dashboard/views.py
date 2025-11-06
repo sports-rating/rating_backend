@@ -402,3 +402,19 @@ class UserRequestDetailAPIView(generics.RetrieveAPIView):
             message=_("User request detail retrieved successfully"),
             code=status.HTTP_200_OK
         )
+
+
+class DailyVisitorsRedisAPIView(APIView):
+    permission_classes = [IsAdminOrSuperAdmin,]
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        date = request.data.get("date")
+
+        serializer = serializers.DailyVisitorsRedisSerializer(data={"date": date})
+        serializer.is_valid(raise_exception=True)
+
+        return success_response(
+            data=serializer.data,
+            message=_("Daily visitors statistics retrieved successfully"),
+            code=status.HTTP_200_OK
+        )

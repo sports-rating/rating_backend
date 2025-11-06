@@ -23,6 +23,7 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
 from apps.shared.utils.mixins import RequestContextMixin
+from apps.shared.utils.redis_utils import redis_connection
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -490,4 +491,34 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
             } if instance.processed_by else None
         data["processed_time"] = instance.processed_time
         data.pop("receivers")
+        return data
+
+
+class DailyVisitorsRedisSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    unique_visitors = serializers.IntegerField(read_only=True)
+    unique_authenticated_users = serializers.IntegerField(read_only=True)
+
+    def to_representation(self, validated_data) -> dict:
+        date_str = validated_data.get("date").strftime("%Y-%m-%d")
+        unique_visitors_key = f"unique_visitors:{date_str}"
+        unique_auth_users_key = f"unique_auth_users:{date_str}"
+
+        try:
+            unique_visitors = redis_connection.pfcount(unique_visitors_key)
+        except Exception as e:
+            logger.error(f"Daily Visitors Serializer | Redis error (unique visitors): {e}")
+            unique_visitors = 0
+
+        try:
+            unique_authenticated_users = redis_connection.pfcount(unique_auth_users_key)
+        except Exception as e:
+            logger.error(f"Daily Visitors Serializer | Redis error (unique authenticated users): {e}")
+            unique_authenticated_users = 0
+
+        data = {
+            "date": validated_data.get("date"),
+            "unique_visitors": unique_visitors,
+            "unique_authenticated_users": unique_authenticated_users,
+        }
         return data
