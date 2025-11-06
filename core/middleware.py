@@ -39,7 +39,7 @@ class AdminBasicAuthMiddleware:
         return self.get_response(request)
 
 
-class UniqueVisitorMiddleware(MiddlewareMixin):
+class VisitorCounterMiddleware(MiddlewareMixin):
     """
     Middleware to track unique visitors using Redis HyperLogLog.
     - Authenticated users: user_id + user_agent
