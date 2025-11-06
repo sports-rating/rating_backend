@@ -323,6 +323,20 @@ class RequestStatsAPIView(APIView):
         )
 
 
+class UserStatsAPIView(APIView):
+    serializer_class = serializers.UserStatsSerializer
+    permission_classes = [IsAdminOrSuperAdmin,]
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        serializer = serializers.UserStatsSerializer(instance={})
+
+        return success_response(
+            data=serializer.data,
+            message=_("Dashboard user statistics retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
 class UserRequestListAPIView(generics.ListAPIView):
     queryset = UserRequest.objects.all()
     permission_classes = [IsAdminOrSuperAdmin,]
@@ -386,5 +400,19 @@ class UserRequestDetailAPIView(generics.RetrieveAPIView):
         return success_response(
             data=serializer.data,
             message=_("User request detail retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
+class DailyVisitorsRedisAPIView(APIView):
+    permission_classes = [IsAdminOrSuperAdmin,]
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        date = request.query_params.get("date")
+        serializer = serializers.DailyVisitorsRedisSerializer(data={"date": date})
+        serializer.is_valid(raise_exception=True)
+        return success_response(
+            data=serializer.data,
+            message=_("Daily visitors statistics retrieved successfully"),
             code=status.HTTP_200_OK
         )

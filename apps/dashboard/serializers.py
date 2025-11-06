@@ -23,6 +23,10 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
 from apps.shared.utils.mixins import RequestContextMixin
+from apps.shared.utils.redis_utils import redis_connection, get_redis_connection
+
+
+redis_connection = get_redis_connection()
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -379,6 +383,7 @@ class PaymentStatsSerializer(serializers.Serializer):
             }
             for item in data["yearly_revenue"]
         ]
+        data["daily_revenue_last_30_days"] = data.get("daily_revenue_last_30_days", [])
         return data
 
 
@@ -404,6 +409,25 @@ class RequestStatsSerializer(serializers.Serializer):
             "result_verification_request": data.get(enums.UserRequestTypes.SPORTSMAN_RESULT_VERIFICATION_REQUEST.value, {}),
             "workplace_verification_request": data.get(enums.UserRequestTypes.TRAINER_WORKPLACE_VERIFICATION_REQUEST.value, {}),
         }
+
+
+class UserStatsSerializer(serializers.Serializer):
+    users = UsersCountSerializer()
+    last_6_months_growth = serializers.ListField()
+    yearly_growth = serializers.ListField()
+    daily_registrations = serializers.ListField()
+    average_daily_registration = serializers.FloatField()
+
+    def to_representation(self, instance) -> dict:
+        data = User.stats.get_detailed_statistics()
+        data = {
+            "users": UsersCountSerializer(instance={}).data,
+            "last_6_months_growth": data["last_6_months_growth"],
+            "yearly_growth": data["yearly_growth"],
+            "daily_registrations": data["daily_registrations_last_month"],
+            "average_daily_registration": data["average_daily_registration"]
+        }
+        return data
 
 
 class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
@@ -462,7 +486,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                 "full_name": receiver.full_name,
                 "user_role": receiver.user_role,
                 "phone_number": receiver.phone_number,
-            }
+            } if receiver else None
             data["processed_by"] = {
                 "id": instance.processed_by.id,
                 "full_name": instance.processed_by.full_name,
@@ -470,4 +494,34 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
             } if instance.processed_by else None
         data["processed_time"] = instance.processed_time
         data.pop("receivers")
+        return data
+
+
+class DailyVisitorsRedisSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    unique_visitors = serializers.IntegerField(read_only=True)
+    unique_authenticated_users = serializers.IntegerField(read_only=True)
+
+    def to_representation(self, validated_data) -> dict:
+        date_str = validated_data.get("date").strftime("%Y-%m-%d")
+        unique_visitors_key = f"unique_visitors:{date_str}"
+        unique_auth_users_key = f"unique_auth_users:{date_str}"
+
+        try:
+            unique_visitors = redis_connection.pfcount(unique_visitors_key)
+        except Exception as e:
+            logger.error(f"Daily Visitors Serializer | Redis error (unique visitors): {e}")
+            unique_visitors = 0
+
+        try:
+            unique_authenticated_users = redis_connection.pfcount(unique_auth_users_key)
+        except Exception as e:
+            logger.error(f"Daily Visitors Serializer | Redis error (unique authenticated users): {e}")
+            unique_authenticated_users = 0
+
+        data = {
+            "date": validated_data.get("date"),
+            "unique_visitors": unique_visitors,
+            "unique_authenticated_users": unique_authenticated_users,
+        }
         return data

@@ -1,12 +1,15 @@
 import typing as t
+import math
 
 from django.contrib.auth.models import BaseUserManager
 from django.db import models
 from django.db.models import Count, Q, Sum, Value, Model, QuerySet
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models.functions import Coalesce, TruncMonth, TruncDay
 from django.conf import settings
 from django.utils import timezone
+
 from datetime import timedelta
+from collections import defaultdict
 
 
 if t.TYPE_CHECKING:
@@ -202,6 +205,56 @@ class UserStatisticsManager(models.Manager):
             },
             "total_statistics": total_statistics,
         }
+
+    def get_detailed_statistics(self) -> dict[str, t.Any]:
+        """
+        Get detailed statistics for users.
+        Includes:
+        - Last 6 months growth
+        - Yearly growth
+        - Daily registrations (last 30 days)
+        - Average daily registrations
+        """
+        from apps.user.models import User
+
+        data = defaultdict(dict)
+
+        # Last 6 months growth
+        data["last_6_months_growth"] = self.get_last_6_months_user_growth()
+
+        # Yearly growth
+        data["yearly_growth"] = self.get_yearly_user_growth()
+
+        # Daily registrations in the last 30 days
+        now = timezone.now()
+        one_month_ago = now - timedelta(days=30)
+
+        daily_registrations = (
+            User.objects.filter(created_time__gte=one_month_ago)
+            .annotate(day=TruncDay("created_time"))
+            .values("day")
+            .annotate(total_users=Count("id"))
+            .order_by("day")
+        )
+
+        # Convert to list of {day, total_users}
+        daily_data = [
+            {
+                "day": day_data["day"].strftime("%Y-%m-%d"),
+                "total_users": day_data["total_users"],
+            }
+            for day_data in daily_registrations
+        ]
+        data["daily_registrations_last_month"] = daily_data
+
+        # Calculate average daily registration (for last 30 days)
+        total_registered = sum(d["total_users"] for d in daily_data)
+        active_days = len(daily_data) if daily_data else 1  # prevent division by zero
+        average_daily = math.floor(total_registered / active_days)
+
+        data["average_daily_registration"] = average_daily
+
+        return data
 
 
 class UserRequestStatisticsManager(models.Manager):
