@@ -6,8 +6,11 @@ from django.http import HttpResponse
 from django.contrib.auth import authenticate
 from django.utils.deprecation import MiddlewareMixin
 
-from apps.shared.utils.redis_utils import redis_connection
+from apps.shared.utils.redis_utils import redis_connection, get_redis_connection
 from apps.shared.utils.logging import logger
+
+
+redis_connection = get_redis_connection()
 
 
 class AdminBasicAuthMiddleware:

@@ -23,7 +23,10 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
 from apps.shared.utils.mixins import RequestContextMixin
-from apps.shared.utils.redis_utils import redis_connection
+from apps.shared.utils.redis_utils import redis_connection, get_redis_connection
+
+
+redis_connection = get_redis_connection()
 
 
 class UserListSerializer(serializers.ModelSerializer):

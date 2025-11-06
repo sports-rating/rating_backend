@@ -407,12 +407,10 @@ class UserRequestDetailAPIView(generics.RetrieveAPIView):
 class DailyVisitorsRedisAPIView(APIView):
     permission_classes = [IsAdminOrSuperAdmin,]
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        date = request.data.get("date")
-
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        date = request.query_params.get("date")
         serializer = serializers.DailyVisitorsRedisSerializer(data={"date": date})
         serializer.is_valid(raise_exception=True)
-
         return success_response(
             data=serializer.data,
             message=_("Daily visitors statistics retrieved successfully"),
