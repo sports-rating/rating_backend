@@ -160,7 +160,11 @@ def compress_image(image):
     Compress the image to reduce its size.
     """
     try:
-        img = Image.open(image)
+        # Ensure file is open for reading
+        image.open('rb')
+
+        img = Image.open(BytesIO(image.read()))
+        img.load()  # Force load to verify it's a valid image
 
         # convert to RGB
         if img.mode in ("RGBA", "LA", "P"):
@@ -182,3 +186,9 @@ def compress_image(image):
 
     except Exception as e:
         raise ValueError(f"Image compression failed: {e}")
+
+    finally:
+        try:
+            image.close()
+        except Exception:
+            pass
