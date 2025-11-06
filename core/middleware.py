@@ -1,6 +1,7 @@
 import base64
 import hashlib
 from datetime import date
+from user_agents import parse as parse_user_agent
 
 from django.http import HttpResponse
 from django.contrib.auth import authenticate
@@ -45,6 +46,9 @@ class UniqueVisitorMiddleware(MiddlewareMixin):
     def process_request(self, request):
         user_agent = request.META.get('HTTP_USER_AGENT', 'unknown')
         ip = request.META.get('REMOTE_ADDR', 'unknown')
+        user_agent_parsed = parse_user_agent(user_agent)
+        if user_agent_parsed.is_bot:
+            return  # Ignore bots
 
         today_str = date.today().strftime('%Y-%m-%d')
         logger.info(f"Processing unique visitor for {today_str}")

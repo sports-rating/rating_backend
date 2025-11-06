@@ -160,7 +160,7 @@ def compress_image(image):
     Compress the image to reduce its size.
     """
     try:
-        # Ensure file is open for reading
+        # Ensure file is open for reading in binary mode
         image.open('rb')
 
         img = Image.open(BytesIO(image.read()))
