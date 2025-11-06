@@ -63,12 +63,13 @@ class VisitorCounterMiddleware(MiddlewareMixin):
             return  # Ignores bots
 
         # Decodes JWT Token manually, because AuthenticationMiddleware only handles session-based authentication
-        jwt_auth = JWTAuthentication()
-        try:
-            user, token = jwt_auth.authenticate(request)
-            request.user = user
-        except Exception:
-            request.user = AnonymousUser()
+        if not request.user.is_authenticated:
+            jwt_auth = JWTAuthentication()
+            try:
+                user, token = jwt_auth.authenticate(request)
+                request.user = user
+            except Exception:
+                pass  # Keeps AnonymousUser if authentication fails
 
         today_str = date.today().strftime('%Y-%m-%d')
         logger.info(f"Processing unique visitor for {today_str}")
