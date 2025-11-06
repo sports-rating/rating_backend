@@ -396,3 +396,20 @@ class TemporaryFile(BaseModel):
         if self.file and os.path.isfile(self.file.path):
             os.remove(self.file.path)
         super().delete(*args, **kwargs)
+
+
+class DailyUsers(BaseModel):
+    date = models.DateField(unique=True)
+    unique_users = models.PositiveIntegerField(default=0)
+    unique_authenticated_users = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "daily_users"
+        verbose_name = "Daily Users"
+        verbose_name_plural = "Daily Users Statistics"
+
+    repr_fields = ("date", "unique_users")
+
+    @property
+    def get_name(self):
+        return f"Daily Users for {self.date}"
