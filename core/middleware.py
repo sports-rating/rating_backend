@@ -6,6 +6,8 @@ from user_agents import parse as parse_user_agent
 from django.http import HttpResponse
 from django.contrib.auth import authenticate
 from django.utils.deprecation import MiddlewareMixin
+from django.contrib.auth.models import AnonymousUser
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.shared.utils.redis_utils import redis_connection, get_redis_connection
 from apps.shared.utils.logging import logger
@@ -55,6 +57,14 @@ class UniqueVisitorMiddleware(MiddlewareMixin):
         user_agent_parsed = parse_user_agent(user_agent)
         if user_agent_parsed.is_bot:
             return  # Ignore bots
+
+        # Decode JWT Token manually, because AuthenticationMiddleware only handles session-based authentication
+        jwt_auth = JWTAuthentication()
+        try:
+            user, token = jwt_auth.authenticate(request)
+            request.user = user
+        except Exception:
+            request.user = AnonymousUser()
 
         today_str = date.today().strftime('%Y-%m-%d')
         logger.info(f"Processing unique visitor for {today_str}")
