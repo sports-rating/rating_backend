@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.contrib.auth import authenticate
 from django.utils.deprecation import MiddlewareMixin
 from django.contrib.auth.models import AnonymousUser
+from django.conf import settings
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.shared.utils.redis_utils import redis_connection, get_redis_connection
@@ -48,17 +49,20 @@ class VisitorCounterMiddleware(MiddlewareMixin):
     EXCLUDE_PATHS = ['/health-check/', '/favicon.ico']
 
     def process_request(self, request):
+        if settings.IS_LOCAL:
+            return  # Skips in local environment
+
         path = request.path
         if any(path.startswith(p) for p in self.EXCLUDE_PATHS):
-            return  # Skip excluded paths
+            return  # Skips excluded paths
 
         user_agent = request.META.get('HTTP_USER_AGENT', 'unknown')
         ip = request.META.get('REMOTE_ADDR', 'unknown')
         user_agent_parsed = parse_user_agent(user_agent)
         if user_agent_parsed.is_bot:
-            return  # Ignore bots
+            return  # Ignores bots
 
-        # Decode JWT Token manually, because AuthenticationMiddleware only handles session-based authentication
+        # Decodes JWT Token manually, because AuthenticationMiddleware only handles session-based authentication
         jwt_auth = JWTAuthentication()
         try:
             user, token = jwt_auth.authenticate(request)
@@ -69,7 +73,7 @@ class VisitorCounterMiddleware(MiddlewareMixin):
         today_str = date.today().strftime('%Y-%m-%d')
         logger.info(f"Processing unique visitor for {today_str}")
 
-        # --- 1️⃣ Track unique visitors (all users) ---
+        # --- 1️⃣ Tracks unique visitors (all users) ---
         visitor_base = f"{ip}:{user_agent}"
         visitor_hash = hashlib.sha256(visitor_base.encode('utf-8')).hexdigest()
         visitor_hll_key = f"unique_visitors:{today_str}"
@@ -78,7 +82,7 @@ class VisitorCounterMiddleware(MiddlewareMixin):
         except Exception as e:
             logger.error(f"Unique Visitor Middleware | Redis error (visitor HLL): {e}")
 
-        # --- 2️⃣ Track unique authenticated users ---
+        # --- 2️⃣ Tracks unique authenticated users ---
         if request.user.is_authenticated:
             auth_base = f"user:{request.user.id}:{user_agent}"
             auth_hash = hashlib.sha256(auth_base.encode('utf-8')).hexdigest()

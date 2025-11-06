@@ -268,6 +268,32 @@ class FederationSerializer(RequestContextMixin, serializers.ModelSerializer):
         return data
 
 
+class FederationShortInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Federation
+        fields = [
+            "id",
+            "name",
+            "is_national",
+            "parent_federation",
+            "region",
+            "sports",
+            "phone_number",
+            "email",
+            "logo"
+        ]
+        read_only_fields = ("id",)
+
+    def to_representation(self, instance: Federation) -> dict:
+        data = super().to_representation(instance)
+        data['logo'] = get_file_full_url(instance.logo.url) if instance.logo else None
+        data['region'] = {
+            "id": instance.region.id,
+            "name": instance.region.name
+        } if instance.region else None
+        return data
+
+
 class FederationUserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
     class Meta:
         model = UserRequest
