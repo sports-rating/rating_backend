@@ -43,7 +43,13 @@ class UniqueVisitorMiddleware(MiddlewareMixin):
     - Authenticated users: user_id + user_agent
     - Anonymous users: IP address + user_agent
     """
+    EXCLUDE_PATHS = ['/health-check/', '/favicon.ico']
+
     def process_request(self, request):
+        path = request.path
+        if any(path.startswith(p) for p in self.EXCLUDE_PATHS):
+            return  # Skip excluded paths
+
         user_agent = request.META.get('HTTP_USER_AGENT', 'unknown')
         ip = request.META.get('REMOTE_ADDR', 'unknown')
         user_agent_parsed = parse_user_agent(user_agent)
@@ -59,6 +65,7 @@ class UniqueVisitorMiddleware(MiddlewareMixin):
         visitor_hll_key = f"unique_visitors:{today_str}"
         try:
             redis_connection.pfadd(visitor_hll_key, visitor_hash)
+            logger.info(f"Counting visitor: {ip} | {user_agent} | Authenticated: {request.user.is_authenticated}")
         except Exception as e:
             logger.error(f"Unique Visitor Middleware | Redis error (visitor HLL): {e}")
 
@@ -69,5 +76,6 @@ class UniqueVisitorMiddleware(MiddlewareMixin):
             auth_hll_key = f"unique_auth_users:{today_str}"
             try:
                 redis_connection.pfadd(auth_hll_key, auth_hash)
+                logger.info(f"Counting authenticated user: {request.user.id} | {request.user.username} | {user_agent}")
             except Exception as e:
                 logger.error(f"Unique Visitor Middleware | Redis error (auth user HLL): {e}")
