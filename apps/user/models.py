@@ -406,7 +406,7 @@ class DailyUsers(BaseModel):
     class Meta:
         db_table = "daily_users"
         verbose_name = "Daily Users"
-        verbose_name_plural = "Daily Users Statistics"
+        verbose_name_plural = "Daily Users"
 
     repr_fields = ("date", "unique_users")
 

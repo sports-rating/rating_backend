@@ -45,6 +45,10 @@ class VisitorCounterMiddleware(MiddlewareMixin):
     Middleware to track unique visitors using Redis HyperLogLog.
     - Authenticated users: user_id + user_agent
     - Anonymous users: IP address + user_agent
+
+    Skips tracking for bots and specific excluded paths.
+
+    NOTE: HLL keys expire after 10 days.
     """
     EXCLUDE_PATHS = ['/health-check/', '/favicon.ico']
 
@@ -82,6 +86,8 @@ class VisitorCounterMiddleware(MiddlewareMixin):
             redis_connection.pfadd(visitor_hll_key, visitor_hash)
         except Exception as e:
             logger.error(f"Unique Visitor Middleware | Redis error (visitor HLL): {e}")
+        finally:
+            redis_connection.expire(visitor_hll_key, 60 * 60 * 24 * 10) # Expire in 10 days
 
         # --- 2️⃣ Tracks unique authenticated users ---
         if request.user.is_authenticated:
@@ -92,3 +98,5 @@ class VisitorCounterMiddleware(MiddlewareMixin):
                 redis_connection.pfadd(auth_hll_key, auth_hash)
             except Exception as e:
                 logger.error(f"Unique Visitor Middleware | Redis error (auth user HLL): {e}")
+            finally:
+                redis_connection.expire(auth_hll_key, 60 * 60 * 24 * 10)  # Expire in 10 days

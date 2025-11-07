@@ -5,8 +5,11 @@ import mimetypes
 import typing as t
 import os
 import shutil
+import base64
+import hashlib
 from uuid import UUID
 from datetime import timedelta, datetime
+from user_agents import parse as parse_user_agent
 
 import pytz
 import requests
@@ -20,6 +23,7 @@ from django.utils.deconstruct import deconstructible
 
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.request import Request
 
 from firebase_admin import messaging
 
@@ -220,3 +224,19 @@ def archive_old_file(file_field: t.Optional[t.Any]) -> t.Optional[str]:
     relative_path = os.path.relpath(new_path, settings.MEDIA_ROOT)
     logger.info(f"Relative path: {relative_path}")
     return relative_path.replace("\\", "/")  # Ensure forward slashes
+
+
+def get_user_hash(request: Request) -> t.Tuple[t.Optional[str], str]:
+    """
+    Generates a unique hash for the user based on their ID and User-Agent.
+    """
+    user_agent = request.META.get('HTTP_USER_AGENT', 'unknown')
+    ip = request.META.get('REMOTE_ADDR', 'unknown')
+    user_agent_parsed = parse_user_agent(user_agent)
+
+    if user_agent_parsed.is_bot:
+        return None, "Bot detected"  # Ignores bots
+
+    user_base = f"{ip}:{user_agent}"
+    user_hash = hashlib.sha256(user_base.encode('utf-8')).hexdigest()
+    return user_hash, "Hash generated successfully"

@@ -1,4 +1,5 @@
 import typing as t
+from datetime import date
 
 from django.utils.translation import gettext as _, get_language
 from django_filters.rest_framework import DjangoFilterBackend
@@ -40,6 +41,7 @@ from apps.sport.models import (
     SportInstitutionMedia,
 )
 from apps.shared.models import (
+    BaseMedia,
     Region,
     District,
     Neighborhood
@@ -56,6 +58,7 @@ from apps.shared.utils.verification import (
 from apps.shared.utils.utils import (
     success_response,
     error_response,
+    get_user_hash,
 )
 from apps.shared.tasks import (
     compress_video_async,
@@ -1174,3 +1177,56 @@ class RecalculatePointsAPIView(generics.GenericAPIView):
             message=_("Points recalculation has been initiated."),
             code=status.HTTP_200_OK
         )
+
+
+class MediaTrackAPIView(generics.GenericAPIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Track media views using Redis HyperLogLog for unique visitor counting.
+
+        media_id: str = The ID of the media to track views for.
+
+        NOTE: HLL keys expire after 7 days.
+        """
+        media_id = request.query_params.get("media_id")
+        if not media_id:
+            return error_response(
+                message=_("media_id query parameter is required."),
+                code=status.HTTP_400_BAD_REQUEST
+            )
+        media = self._get_media_instance(media_id=media_id)
+        if not media:
+            return error_response(
+                message=_("Media not found."),
+                code=status.HTTP_404_NOT_FOUND
+            )
+
+        # View Count with Redis HyperLogLog
+        today_str = date.today().strftime("%Y-%m-%d")
+        visitor_hash, message = get_user_hash(request)
+        if visitor_hash is None:
+            logger.info(f"Media View Tracking | Error: {message} | Media ID: {media_id}")
+        hll_key = f"video_views:{media_id}:{today_str}"
+        try:
+            redis_connection.pfadd(hll_key, visitor_hash)
+        except Exception as e:
+            logger.error(f"Media View Tracking | Error updating Redis HyperLogLog for media ID {media_id}: {e}")
+        finally:
+            redis_connection.expire(hll_key, 60 * 60 * 24 * 7)  # Expire in 7 days
+
+        return success_response(
+            message=_("Media view tracked successfully."),
+            code=status.HTTP_200_OK
+        )
+
+    def _get_media_instance(self, media_id: str) -> t.Union[UserMedia, SportInstitutionMedia, None]:
+        try:
+            media = UserMedia.objects.filter(id=media_id).first()
+            if not media:
+                media = SportInstitutionMedia.objects.filter(id=media_id).first()
+            return media
+        except Exception as e:
+            logger.error(f"Error retrieving media with ID {media_id}: {e}")
+            return None

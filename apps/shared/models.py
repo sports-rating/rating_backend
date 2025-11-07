@@ -68,6 +68,7 @@ class BaseMedia(BaseModel):
     file = models.FileField(upload_to=CorrectPath('media'), null=True)
     size = models.PositiveIntegerField(null=True, blank=True)
     extension = models.CharField(max_length=10, blank=True)
+    view_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         abstract=True
@@ -102,6 +103,22 @@ class BaseMedia(BaseModel):
             if os.path.isfile(self.file.path):
                 os.remove(self.file.path)
         super().delete(*args, **kwargs)
+
+
+# class MediaViewStats(BaseModel):
+#     media = models.ForeignKey(
+#         BaseMedia,
+#         on_delete=models.CASCADE,
+#         related_name="view_stats"
+#     )
+#     view_count = models.PositiveIntegerField(default=0)
+
+#     class Meta:
+#         db_table = "media_view_stats"
+#         verbose_name = "Media View Stat"
+#         verbose_name_plural = "Media View Stats"
+
+#     repr_fields = ("media", "view_count")
 
 
 class Country(BaseModel):
