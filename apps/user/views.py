@@ -1215,13 +1215,14 @@ class MediaTrackAPIView(generics.GenericAPIView):
         visitor_hash, message = get_user_hash(request)
         if visitor_hash is None:
             logger.info(f"Media View Tracking | Error: {message} | Media ID: {media_id}")
-        hll_key = f"media_views:{media_id}:{today_str}"
-        try:
-            redis_connection.pfadd(hll_key, visitor_hash)
-        except Exception as e:
-            logger.error(f"Media View Tracking | Error updating Redis HyperLogLog for media ID {media_id}: {e}")
-        finally:
-            redis_connection.expire(hll_key, 60 * 60 * 24 * 7)  # Expire in 7 days
+        else:
+            hll_key = f"media_views:{media_id}:{today_str}"
+            try:
+                redis_connection.pfadd(hll_key, visitor_hash)
+            except Exception as e:
+                logger.error(f"Media View Tracking | Error updating Redis HyperLogLog for media ID {media_id}: {e}")
+            finally:
+                redis_connection.expire(hll_key, 60 * 60 * 24 * 7)  # Expire in 7 days
 
         return success_response(
             message=_("Media view tracked successfully."),
