@@ -25,7 +25,6 @@ class BaseModel(models.Model):
     repr_fields: t.ClassVar[tuple[str, ...] | None] = None
 
     def __repr__(self) -> str:
-        print(self.to_string())
         return self.to_string()
 
     def __str__(self) -> str:

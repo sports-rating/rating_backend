@@ -69,7 +69,7 @@ from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
 from apps.shared.utils import enums
 from apps.shared.utils.permissions import IsAdminOrSuperAdmin, IsSuperAdmin
-from apps.user.tasks import recalculate_user_points_task
+from apps.user.tasks import recalculate_user_points_task, increment_media_view_count_task
 from apps.shared.services.scoring_service import ScoringService
 
 
@@ -1203,12 +1203,19 @@ class MediaTrackAPIView(generics.GenericAPIView):
                 code=status.HTTP_404_NOT_FOUND
             )
 
-        # View Count with Redis HyperLogLog
+        # Keep track of which media will be updated(redis->DB) later
+        # We store media IDs + database name in a Redis set with today's date
+        # This can be used in a periodic task to update actual view counts in DB
         today_str = date.today().strftime("%Y-%m-%d")
+        key = f"media_to_update:{today_str}"
+        redis_connection.sadd(key, f"{media_id}:{media.__class__.__name__}")
+        redis_connection.expire(key, 60 * 60 * 24 * 3)  # Expire in 3 days
+
+        # View Count with Redis HyperLogLog
         visitor_hash, message = get_user_hash(request)
         if visitor_hash is None:
             logger.info(f"Media View Tracking | Error: {message} | Media ID: {media_id}")
-        hll_key = f"video_views:{media_id}:{today_str}"
+        hll_key = f"media_views:{media_id}:{today_str}"
         try:
             redis_connection.pfadd(hll_key, visitor_hash)
         except Exception as e:
