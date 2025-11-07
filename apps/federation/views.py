@@ -325,7 +325,6 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
         "receivers__first_name",
         "receivers__last_name",
         "request_type",
-        "message",
     ]
 
     def get_serializer_context(self) -> dict[str, t.Any]:
