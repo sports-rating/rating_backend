@@ -51,10 +51,7 @@ from apps.shared.services.user_request import UserRequestService
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import BaseMediaSerializer
 from apps.shared.utils.mixins import RequestContextMixin
-from apps.shared.utils.payloads import (
-    TRAINER_APPROVAL_REQUIRED_FIELDS,
-    SPORTSMAN_RESULT_APPROVAL_REQUIRED_FIELDS
-)
+from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
     SportsmanSnapshotSerializer,
@@ -70,6 +67,9 @@ SEND_VERIFICATION_ACTION = (
     ("change_phone_number", "change_phone_number"),
     ("sport_institution_verify", "sport_institution_verify"),
 )
+
+
+redis_connection = get_redis_connection()
 
 
 class SendVerificationCodeSerializer(serializers.Serializer): # noqa
@@ -159,6 +159,7 @@ class UserMediaSerializer(BaseMediaSerializer):
             "extension",
             "file",
             "is_profile_photo",
+            "view_count",
             "created_time",
         )
         read_only_fields = ("id", "user", "media_type", "size", "extension", "created_time")
@@ -177,6 +178,24 @@ class UserMediaSerializer(BaseMediaSerializer):
                 raise_validation_error(message=_("Profile photo must be an image file (jpg, jpeg, png)"))
 
         return super().validate(data)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        view_count_redis = self._get_view_count(instance)
+        total = instance.view_count + view_count_redis
+        data["view_count"] = total
+        return data
+
+    def _get_view_count(self, instance) -> int:
+        media_id = instance.id
+        today = date.today().strftime('%Y-%m-%d')
+        media_views_key = f"media_views:{media_id}:{today}"
+        try:
+            view_count = redis_connection.pfcount(media_views_key)
+        except Exception as e:
+            logger.error(f"Error fetching view count for media ID {media_id}: {e}")
+            view_count = 0
+        return view_count
 
 
 class BaseUserSerializer(serializers.ModelSerializer):
