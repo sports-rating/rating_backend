@@ -12,6 +12,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.shared.utils.redis_utils import redis_connection, get_redis_connection
 from apps.shared.utils.logging import logger
+from apps.shared.utils.utils import get_user_hash
 
 
 redis_connection = get_redis_connection()
@@ -56,15 +57,14 @@ class VisitorCounterMiddleware(MiddlewareMixin):
         if settings.IS_LOCAL:
             return  # Skips in local environment
 
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
         path = request.path
         if any(path.startswith(p) for p in self.EXCLUDE_PATHS):
             return  # Skips excluded paths
 
-        user_agent = request.META.get('HTTP_USER_AGENT', 'unknown')
-        ip = request.META.get('REMOTE_ADDR', 'unknown')
-        user_agent_parsed = parse_user_agent(user_agent)
-        if user_agent_parsed.is_bot:
-            return  # Ignores bots
+        user_hash, message = get_user_hash(request)
+        if user_hash is None:
+            return
 
         # Decodes JWT Token manually, because AuthenticationMiddleware only handles session-based authentication
         if not request.user.is_authenticated:
@@ -79,11 +79,9 @@ class VisitorCounterMiddleware(MiddlewareMixin):
         logger.info(f"Processing unique visitor for {today_str}")
 
         # --- 1️⃣ Tracks unique visitors (all users) ---
-        visitor_base = f"{ip}:{user_agent}"
-        visitor_hash = hashlib.sha256(visitor_base.encode('utf-8')).hexdigest()
         visitor_hll_key = f"unique_visitors:{today_str}"
         try:
-            redis_connection.pfadd(visitor_hll_key, visitor_hash)
+            redis_connection.pfadd(visitor_hll_key, user_hash)
         except Exception as e:
             logger.error(f"Unique Visitor Middleware | Redis error (visitor HLL): {e}")
         finally:
