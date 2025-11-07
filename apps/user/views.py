@@ -69,7 +69,7 @@ from apps.shared.utils.redis_utils import get_redis_connection
 from apps.shared.utils.logging import logger
 from apps.shared.utils import enums
 from apps.shared.utils.permissions import IsAdminOrSuperAdmin, IsSuperAdmin
-from apps.user.tasks import recalculate_user_points_task, increment_media_view_count_task
+from apps.user.tasks import recalculate_user_points_task
 from apps.shared.services.scoring_service import ScoringService
 
 

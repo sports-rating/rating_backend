@@ -67,28 +67,6 @@ def store_daily_user_counts_task():
 
 
 @app.task
-def increment_media_view_count_task(media) -> str:
-    """
-    Increments the view count for a media item(video) using Redis HyperLogLog.
-    """
-    yesterday = date.today() - timedelta(days=1)
-
-    media_views_key = f"media_views:{media.id}:{yesterday.strftime('%Y-%m-%d')}"
-    try:
-        count = redis_connection.pfcount(media_views_key)
-
-        media.view_count = count
-        media.save(update_fields=['view_count'])
-
-        logger.info(f"Celery Task | Updated media ID {media.id} view count to {count}.")
-
-    except Exception as e:
-        logger.error(f"Celery Task | Error updating view count for media ID {media.id}: {e}")
-
-    return f"Updated view count for media ID {media.id}"
-
-
-@app.task
 def update_media_view_counts_for_yesterday_task() -> str:
     """
     Updates view counts for all media items(video) for yesterday.
