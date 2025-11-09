@@ -215,7 +215,10 @@ class UserStatisticsManager(models.Manager):
         - Daily registrations (last 30 days)
         - Average daily registrations
         """
-        from apps.user.models import User
+        from apps.user.models import User, DailyUsers
+        from apps.shared.utils.redis_utils import get_redis_connection
+
+        redis_connection = get_redis_connection()
 
         data = defaultdict(dict)
 
@@ -253,6 +256,28 @@ class UserStatisticsManager(models.Manager):
         average_daily = math.floor(total_registered / active_days)
 
         data["average_daily_registration"] = average_daily
+
+        # Daily users from DailyUsers model
+        daily_users_qs = DailyUsers.objects.filter(date__gte=one_month_ago).order_by("date")
+        daily_users_data = [
+            {
+                "day": daily_user.date.strftime("%Y-%m-%d"),
+                "total_users": daily_user.unique_users,
+                "total_authenticated_users": daily_user.unique_authenticated_users,
+            }
+            for daily_user in daily_users_qs
+        ]
+        data["daily_users_last_month"] = daily_users_data
+
+        # Daily users average
+        total_daily_users = sum(d["total_users"] for d in daily_users_data)
+        average_daily_users = math.floor(total_daily_users / (len(daily_users_data) if daily_users_data else 1))
+        data["average_daily_users"] = average_daily_users
+
+        # Today's users
+        today = now.date().strftime("%Y-%m-%d")
+        today_users = redis_connection.pfcount(f"unique_visitors:{today}")
+        data["today_users"] = today_users
 
         return data
 

@@ -417,6 +417,9 @@ class UserStatsSerializer(serializers.Serializer):
     yearly_growth = serializers.ListField()
     daily_registrations = serializers.ListField()
     average_daily_registration = serializers.FloatField()
+    daily_users_last_month = serializers.ListField()
+    average_daily_users = serializers.FloatField()
+    today_users = serializers.IntegerField()
 
     def to_representation(self, instance) -> dict:
         data = User.stats.get_detailed_statistics()
@@ -425,7 +428,10 @@ class UserStatsSerializer(serializers.Serializer):
             "last_6_months_growth": data["last_6_months_growth"],
             "yearly_growth": data["yearly_growth"],
             "daily_registrations": data["daily_registrations_last_month"],
-            "average_daily_registration": data["average_daily_registration"]
+            "average_daily_registration": data["average_daily_registration"],
+            "daily_users_last_month": data["daily_users_last_month"],
+            "average_daily_users": data["average_daily_users"],
+            "today_users": data["today_users"],
         }
         return data
 
