@@ -61,6 +61,17 @@ class UserStatisticsManager(models.Manager):
             total_admins=Count('id', filter=Q(user_role='admin')),
         )
 
+    def get_today_users(self) -> int:
+        """
+        Get today's unique visitors from Redis HyperLogLog.
+        """
+        from apps.shared.utils.redis_utils import get_redis_connection
+
+        redis_connection = get_redis_connection()
+        today = timezone.now().date().strftime("%Y-%m-%d")
+        today_users = redis_connection.pfcount(f"unique_visitors:{today}")
+        return today_users
+
     def get_last_6_months_user_growth(self) -> t.List[dict[str, t.Any]]:
         """
         Get the user growth for the last 6 months.

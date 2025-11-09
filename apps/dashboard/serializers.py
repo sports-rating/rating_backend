@@ -351,12 +351,14 @@ class MainStatsSerializer(serializers.Serializer):
     general_counts = GeneralCountSerializer()
     revenue_stats = serializers.ListField()
     user_growth_stats = serializers.ListField()
+    today_users = serializers.IntegerField()
 
     def to_representation(self, instance) -> dict:
         data = {
             "general_counts": GeneralCountSerializer(instance={}).data,
             "revenue_stats": Transaction.stats.get_last_6_months_revenue(),
-            "user_growth_stats": User.stats.get_last_6_months_user_growth()
+            "user_growth_stats": User.stats.get_last_6_months_user_growth(),
+            "today_users": User.stats.get_today_users()
         }
         return data
 
