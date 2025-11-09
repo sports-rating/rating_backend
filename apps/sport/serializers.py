@@ -1,7 +1,7 @@
 import typing as t
 import os
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 
 from django.db import transaction, IntegrityError
@@ -25,6 +25,7 @@ from apps.shared.utils.general import (
     check_phone_valid,
     send_sport_institution_message
 )
+from apps.shared.utils.redis_utils import get_redis_connection
 
 from apps.sport.models import (
     Sport,
@@ -53,6 +54,9 @@ from apps.dashboard.serializers import (
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.utils import enums
 from apps.shared.serializers import BaseMediaSerializer
+
+
+redis_connection = get_redis_connection()
 
 
 class SportTypeSerializer(serializers.ModelSerializer):
@@ -151,12 +155,31 @@ class SportInstitutionMediaSerializer(BaseMediaSerializer):
             "size",
             "extension",
             "file",
+            "view_count",
             "created_time"
         ]
         read_only_fields = ["id", "size", "extension", "media_type", "created_time"]
 
     def validate(self, data) -> dict:
         return super().validate(data)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        view_count_redis = self._get_view_count(instance)
+        total = instance.view_count + view_count_redis
+        data["view_count"] = total
+        return data
+
+    def _get_view_count(self, instance) -> int:
+        media_id = instance.id
+        today = date.today().strftime('%Y-%m-%d')
+        media_views_key = f"media_views:{media_id}:{today}"
+        try:
+            view_count = redis_connection.pfcount(media_views_key)
+        except Exception as e:
+            logger.error(f"Error fetching view count for media ID {media_id}: {e}")
+            view_count = 0
+        return view_count
 
 
 class SportInstitutionSerializer(serializers.ModelSerializer):

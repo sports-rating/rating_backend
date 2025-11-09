@@ -112,6 +112,44 @@ class FederationListCreateAPIView(generics.ListCreateAPIView):
         )
 
 
+class FederationShortInfoListAPIView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = serializer.FederationShortInfoSerializer
+    queryset = Federation.objects.all()
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    filterset_class = FederationFilter
+
+    def get_queryset(self) -> QuerySet[Federation]:
+        return Federation.objects.select_related(
+            "region",
+            "parent_federation"
+        ).prefetch_related(
+            Prefetch(
+                'age_group_links__age_group',
+                queryset=AgeGroup.objects.select_related('sport')
+            ),
+            Prefetch(
+                'documents',
+                queryset=FederationDocument.objects.all()
+            ),
+            "users",
+            "sports"
+        )
+
+    def get_serializer_context(self) -> dict[str, t.Any]:
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        response = super().list(request, *args, **kwargs)
+        return success_response(
+            data=response.data,
+            message=_("Federation short info list retrieved successfully"),
+            code=status.HTTP_200_OK
+        )
+
+
 class FederationRetrieveUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     serializer_class = serializer.FederationSerializer
@@ -287,7 +325,6 @@ class FederationUserRequestListAPIView(generics.ListAPIView):
         "receivers__first_name",
         "receivers__last_name",
         "request_type",
-        "message",
     ]
 
     def get_serializer_context(self) -> dict[str, t.Any]:

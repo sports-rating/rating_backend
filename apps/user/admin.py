@@ -10,6 +10,7 @@ from apps.user.models import (
     ArchivedTrainer,
     UserRequest,
     UserNotification,
+    DailyUsers
 )
 from apps.shared.models import (
     Country,
@@ -281,3 +282,10 @@ class NeighborhoodAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "district"]
     search_fields = ["id", "name", "district__name"]
     list_filter = ["district"]
+
+
+@admin.register(DailyUsers)
+class DailyUsersAdmin(admin.ModelAdmin):
+    list_display = ["id", "date", "unique_users", "unique_authenticated_users"]
+    search_fields = ["date"]
+    ordering = ['-date']

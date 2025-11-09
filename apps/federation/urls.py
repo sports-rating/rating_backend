@@ -6,6 +6,7 @@ app_name = "federation"
 
 urlpatterns = [
     path("", views.FederationListCreateAPIView.as_view(), name='federation-create-list'),
+    path("short-info/", views.FederationShortInfoListAPIView.as_view(), name='federation-short-info-list'),
     path("<uuid:pk>/", views.FederationRetrieveUpdateDeleteAPIView.as_view(), name='federation-retrieve-update-delete'),
     path("<uuid:pk>/users/", views.FederationUserListAPIView.as_view(), name='user-list'),
     path("<uuid:pk>/regional-federations/", views.RegionalFederationListCreateAPIView.as_view(), name='regional-federation-list-create'),

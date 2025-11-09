@@ -34,6 +34,7 @@ urlpatterns = [
 
     path("media-upload/", views.MediaUploadView.as_view(), name='media-upload'),
     path("media/<uuid:pk>/", views.MediaDeleteView.as_view(), name='media-delete'),
+    path("media/track-view/", views.MediaTrackAPIView.as_view(), name='media-track-view'),
 
     path("notifications/", views.UserNotificationsListView.as_view()),
     path("notifications/<str:notification_id>/mark-as-read/", views.UserNotificationMarkAsReadView.as_view()),
