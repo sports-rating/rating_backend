@@ -211,7 +211,7 @@ class ArchivedTrainerAdmin(admin.ModelAdmin):
 @admin.register(UserRequest)
 class UserRequestAdmin(admin.ModelAdmin):
     list_display = ["id", "sender_obj", "receivers_obj", "request_type", "status"]
-    search_fields = ['sender__first_name', 'sender__last_name']
+    search_fields = ['id', 'sender__first_name', 'sender__last_name']
     list_per_page = 10
     ordering = ['-created_time']
     readonly_fields = ["sender_obj", "receivers_obj", "processed_by_obj", "associated_result", "created_time", "updated_time"]

@@ -390,16 +390,19 @@ class SportsmanProfileSerializer(RequestContextMixin, serializers.ModelSerialize
         height = attrs.get("height", None)
         weight = attrs.get("weight", None)
         sport_rank = attrs.get("sport_rank", None)
-        if trainer and hasattr(trainer, "trainer_profile") and trainer.trainer_profile:
-            trainer_profile = trainer.trainer_profile
-            if not sport:
-                raise_validation_error(message=_("Sport is required"))
-            if trainer_profile.sport and trainer_profile.sport.id != sport.id:
-                raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
-            if not height or not weight:
-                raise_validation_error(message=_("Height and Weight are required when selecting a trainer."))
-            if not sport_rank:
-                raise_validation_error(message=_("Sport rank is required when selecting a trainer."))
+        if trainer:
+            if hasattr(trainer, "trainer_profile") and trainer.trainer_profile:
+                trainer_profile = trainer.trainer_profile
+                if not sport:
+                    raise_validation_error(message=_("Sport is required"))
+                if trainer_profile.sport and trainer_profile.sport.id != sport.id:
+                    raise_validation_error(message=_(f"Trainer's sport must be equal to sportsman's sport"))
+                if not height or not weight:
+                    raise_validation_error(message=_("Height and Weight are required when selecting a trainer."))
+                if not sport_rank:
+                    raise_validation_error(message=_("Sport rank is required when selecting a trainer."))
+        else:
+            raise_validation_error(message=_("Trainer is required"))
         return super().validate(attrs)
 
     def create(self, validated_data: dict) -> Sportsman:
@@ -723,6 +726,8 @@ class TrainerProfileSerializer(RequestContextMixin, serializers.ModelSerializer)
                 raise_validation_error(message=_("Sport must be part of the federation sports."))
             if not height or not weight:
                 raise_validation_error(message=_("Height and Weight are required when selecting a federation."))
+        else:
+            raise_validation_error(message=_("Federation is required."))
         return super().validate(attrs)
 
     def create(self, validated_data: dict) -> Trainer:
