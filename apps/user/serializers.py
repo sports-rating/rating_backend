@@ -1670,7 +1670,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
                 "full_name": receiver.full_name,
                 "user_role": receiver.user_role,
                 "phone_number": receiver.phone_number,
-            }
+            } if receiver else None
             data["processed_by"] = {
                 "id": instance.processed_by.id,
                 "full_name": instance.processed_by.full_name,
