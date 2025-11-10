@@ -48,6 +48,7 @@ class UserAdmin(admin.ModelAdmin):
                     "middle_name",
                     "last_name",
                     "gender",
+                    "birth_date",
                     "pinfl",
                     "phone_number",
                     "email",
