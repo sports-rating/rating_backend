@@ -48,6 +48,7 @@ class UserAdmin(admin.ModelAdmin):
                     "middle_name",
                     "last_name",
                     "gender",
+                    "birth_date",
                     "pinfl",
                     "phone_number",
                     "email",
@@ -214,6 +215,7 @@ class UserRequestAdmin(admin.ModelAdmin):
     search_fields = ['id', 'sender__first_name', 'sender__last_name']
     list_per_page = 10
     ordering = ['-created_time']
+    list_filter = ['request_type', 'status']
     readonly_fields = ["sender_obj", "receivers_obj", "processed_by_obj", "associated_result", "created_time", "updated_time"]
 
     @admin.display(description="Sender")

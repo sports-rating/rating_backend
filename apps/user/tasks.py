@@ -80,8 +80,7 @@ def update_media_view_counts_for_yesterday_task() -> str:
     media_to_update_key = f"media_to_update:{yesterday.strftime('%Y-%m-%d')}"
     try:
         media = redis_connection.smembers(media_to_update_key)
-        for media_bytes in media:
-            media_str = media_bytes.decode('utf-8')
+        for media_str in media:
             logger.info(f"Processing media for view count update: {media_str}")
             media_id, model_name = media_str.split(':')
             media_views_key = f"media_views:{media_id}:{yesterday.strftime('%Y-%m-%d')}"
