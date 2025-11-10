@@ -24,7 +24,7 @@ app.conf.beat_schedule = {
     },
     "update_media_view_counts_for_yesterday": {
         "task": "apps.user.tasks.update_media_view_counts_for_yesterday_task",
-        "schedule": crontab(hour=12, minute=5),  # Every day at 12:05 PM
+        "schedule": crontab(hour=12, minute=15),  # Every day at 12:15 PM
     }
 }
 app.conf.timezone = "Asia/Tashkent"
