@@ -51,7 +51,9 @@ from apps.shared.services.user_request import UserRequestService
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import BaseMediaSerializer
 from apps.shared.utils.mixins import RequestContextMixin
-from apps.shared.utils.redis_utils import get_redis_connection
+from apps.shared.utils.redis_utils import (
+    get_media_view_count,
+)
 from apps.shared.serializers import (
     SportsmanResultSnapshotSerializer,
     SportsmanSnapshotSerializer,
@@ -67,9 +69,6 @@ SEND_VERIFICATION_ACTION = (
     ("change_phone_number", "change_phone_number"),
     ("sport_institution_verify", "sport_institution_verify"),
 )
-
-
-redis_connection = get_redis_connection()
 
 
 class SendVerificationCodeSerializer(serializers.Serializer): # noqa
@@ -188,10 +187,9 @@ class UserMediaSerializer(BaseMediaSerializer):
 
     def _get_view_count(self, instance) -> int:
         media_id = instance.id
-        today = date.today().strftime('%Y-%m-%d')
-        media_views_key = f"media_views:{media_id}:{today}"
+        today_str = date.today().strftime('%Y-%m-%d')
         try:
-            view_count = redis_connection.pfcount(media_views_key)
+            view_count = get_media_view_count(media_id=str(media_id), date_str=today_str)
         except Exception as e:
             logger.error(f"Error fetching view count for media ID {media_id}: {e}")
             view_count = 0

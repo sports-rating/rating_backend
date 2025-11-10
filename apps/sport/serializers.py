@@ -25,7 +25,9 @@ from apps.shared.utils.general import (
     check_phone_valid,
     send_sport_institution_message
 )
-from apps.shared.utils.redis_utils import get_redis_connection
+from apps.shared.utils.redis_utils import (
+    get_media_view_count,
+)
 
 from apps.sport.models import (
     Sport,
@@ -54,9 +56,6 @@ from apps.dashboard.serializers import (
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.utils import enums
 from apps.shared.serializers import BaseMediaSerializer
-
-
-redis_connection = get_redis_connection()
 
 
 class SportTypeSerializer(serializers.ModelSerializer):
@@ -172,10 +171,9 @@ class SportInstitutionMediaSerializer(BaseMediaSerializer):
 
     def _get_view_count(self, instance) -> int:
         media_id = instance.id
-        today = date.today().strftime('%Y-%m-%d')
-        media_views_key = f"media_views:{media_id}:{today}"
+        today_str = date.today().strftime('%Y-%m-%d')
         try:
-            view_count = redis_connection.pfcount(media_views_key)
+            view_count = get_media_view_count(media_id=str(media_id), date_str=today_str)
         except Exception as e:
             logger.error(f"Error fetching view count for media ID {media_id}: {e}")
             view_count = 0

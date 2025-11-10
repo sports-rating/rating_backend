@@ -65,11 +65,12 @@ class UserStatisticsManager(models.Manager):
         """
         Get today's unique visitors from Redis HyperLogLog.
         """
-        from apps.shared.utils.redis_utils import get_redis_connection
+        from apps.shared.utils.redis_utils import (
+            get_unique_visitors
+        )
 
-        redis_connection = get_redis_connection()
-        today = timezone.now().date().strftime("%Y-%m-%d")
-        today_users = redis_connection.pfcount(f"unique_visitors:{today}")
+        today_str = timezone.now().date().strftime("%Y-%m-%d")
+        today_users = get_unique_visitors(today_str)
         return today_users
 
     def get_last_6_months_user_growth(self) -> t.List[dict[str, t.Any]]:
@@ -227,9 +228,10 @@ class UserStatisticsManager(models.Manager):
         - Average daily registrations
         """
         from apps.user.models import User, DailyUsers
-        from apps.shared.utils.redis_utils import get_redis_connection
-
-        redis_connection = get_redis_connection()
+        from apps.shared.utils.redis_utils import (
+            get_unique_visitors,
+            get_unique_authenticated_users,
+        )
 
         data = defaultdict(dict)
 
@@ -286,8 +288,8 @@ class UserStatisticsManager(models.Manager):
         data["average_daily_users"] = average_daily_users
 
         # Today's users
-        today = now.date().strftime("%Y-%m-%d")
-        today_users = redis_connection.pfcount(f"unique_visitors:{today}")
+        today_str = now.date().strftime("%Y-%m-%d")
+        today_users = get_unique_visitors(today_str)
         data["today_users"] = today_users
 
         return data
