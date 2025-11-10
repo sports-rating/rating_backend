@@ -22,8 +22,8 @@ app.conf.beat_schedule = {
         "task": "apps.user.tasks.store_daily_user_counts_task",
         "schedule": crontab(hour=1, minute=0),  # Every day at 1:00 AM
     },
-    "update_media_counts_for_yesterday": {
-        "task": "apps.user.tasks.update_media_counts_for_yesterday_task",
+    "update_media_view_counts_for_yesterday": {
+        "task": "apps.user.tasks.update_media_view_counts_for_yesterday_task",
         "schedule": crontab(hour=12, minute=5),  # Every day at 12:05 PM
     }
 }
