@@ -1132,15 +1132,15 @@ class NeighborhoodListView(generics.ListAPIView):
 
 
 @extend_schema(
-        parameters=[
-            OpenApiParameter(
-                name="user_id",
-                type=OpenApiTypes.UUID,
-                location=OpenApiParameter.QUERY,
-                description="Filter by user ID"
-            )
-        ]
-    )
+    parameters=[
+        OpenApiParameter(
+            name="user_id",
+            type=OpenApiTypes.UUID,
+            location=OpenApiParameter.QUERY,
+            description="Filter by user ID"
+        )
+    ]
+)
 class UserMediaListView(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
     queryset = UserMedia.objects.all()
