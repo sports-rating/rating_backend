@@ -10,11 +10,13 @@ from django.db import transaction
 from apps.shared.utils.logging import logger
 from apps.shared.services.scoring_service import ScoringService
 from apps.user.models import DailyUsers
-from apps.shared.utils.redis_utils import get_redis_connection
+from apps.shared.utils.redis_utils import (
+    get_unique_visitors,
+    get_unique_authenticated_users,
+    get_media_to_update_set,
+    get_media_view_count
+)
 from core.celery import app
-
-
-redis_connection = get_redis_connection()
 
 
 ### TODO:CoderB7 This shared task is never used!
@@ -42,13 +44,11 @@ def store_daily_user_counts_task():
     Stores daily user counts for analytics.
     """
     yesterday = date.today() - timedelta(days=1)
-
-    unique_users_key = f"unique_visitors:{yesterday.strftime('%Y-%m-%d')}"
-    unique_authenticated_users_key = f"unique_auth_users:{yesterday.strftime('%Y-%m-%d')}"
+    yesterday_str = yesterday.strftime('%Y-%m-%d')
 
     try:
-        unique_users_count = redis_connection.pfcount(unique_users_key)
-        unique_authenticated_users_count = redis_connection.pfcount(unique_authenticated_users_key)
+        unique_users_count = get_unique_visitors(yesterday_str)
+        unique_authenticated_users_count = get_unique_authenticated_users(yesterday_str)
 
         DailyUsers.objects.update_or_create(
             date=yesterday,
@@ -75,17 +75,17 @@ def update_media_view_counts_for_yesterday_task() -> str:
     from apps.sport.models import SportInstitutionMedia
 
     yesterday = date.today() - timedelta(days=1)
+    yesterday_str = yesterday.strftime('%Y-%m-%d')
 
     # Fetch media_to_update set from redis for yesterday
-    media_to_update_key = f"media_to_update:{yesterday.strftime('%Y-%m-%d')}"
     try:
-        media = redis_connection.smembers(media_to_update_key)
+        media = get_media_to_update_set(yesterday_str)
         for media_str in media:
             logger.info(f"Processing media for view count update: {media_str}")
             media_id, model_name = media_str.split(':')
-            media_views_key = f"media_views:{media_id}:{yesterday.strftime('%Y-%m-%d')}"
+
             try:
-                count = redis_connection.pfcount(media_views_key)
+                count = get_media_view_count(media_id, yesterday_str)
 
                 if count == 0:
                     continue  # no views, skip

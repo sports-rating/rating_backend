@@ -23,10 +23,10 @@ from apps.shared.utils.exceptions import raise_validation_error
 from apps.shared.utils.utils import CorrectPath
 from apps.shared.utils import enums
 from apps.shared.utils.mixins import RequestContextMixin
-from apps.shared.utils.redis_utils import redis_connection, get_redis_connection
-
-
-redis_connection = get_redis_connection()
+from apps.shared.utils.redis_utils import (
+    get_unique_visitors,
+    get_unique_authenticated_users,
+)
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -371,6 +371,7 @@ class PaymentStatsSerializer(serializers.Serializer):
     yearly_revenue = serializers.ListField()
     by_user_role = serializers.DictField()
     by_payment_method = serializers.DictField()
+    daily_revenue_last_30_days = serializers.ListField()
 
     def to_representation(self, instance) -> dict:
         data = Transaction.stats.get_detailed_statistics()
@@ -512,17 +513,15 @@ class DailyVisitorsRedisSerializer(serializers.Serializer):
 
     def to_representation(self, validated_data) -> dict:
         date_str = validated_data.get("date").strftime("%Y-%m-%d")
-        unique_visitors_key = f"unique_visitors:{date_str}"
-        unique_auth_users_key = f"unique_auth_users:{date_str}"
 
         try:
-            unique_visitors = redis_connection.pfcount(unique_visitors_key)
+            unique_visitors = get_unique_visitors(date_str)
         except Exception as e:
             logger.error(f"Daily Visitors Serializer | Redis error (unique visitors): {e}")
             unique_visitors = 0
 
         try:
-            unique_authenticated_users = redis_connection.pfcount(unique_auth_users_key)
+            unique_authenticated_users = get_unique_authenticated_users(date_str)
         except Exception as e:
             logger.error(f"Daily Visitors Serializer | Redis error (unique authenticated users): {e}")
             unique_authenticated_users = 0
