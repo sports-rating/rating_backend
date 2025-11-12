@@ -1680,7 +1680,7 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
         return data
 
 
-class SportsmanResultSerializer(RequiredFieldsMixin, RequestContextMixin, serializers.ModelSerializer):
+class SportsmanResultSerializer(RequestContextMixin, RequiredFieldsMixin, serializers.ModelSerializer):
     required_fields = [
         "tournament",
         "trainer",

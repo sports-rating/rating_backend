@@ -35,6 +35,10 @@ class RequiredFieldsMixin:
 
     def validate(self, attrs: dict[str, t.Any]) -> dict[str, t.Any]:
         # Check for missing or empty fields
+        logger.info(f"RequiredFieldsMixin.validate called")
+        logger.info(f"Required fields: {self.required_fields}")
+        logger.info(f"Available attributes: {list(attrs.keys())}")
+
         for field in getattr(self, 'required_fields', []):
             value = attrs.get(field)
 
