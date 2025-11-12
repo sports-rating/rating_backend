@@ -88,15 +88,15 @@ class BaseMediaSerializer(RequestContextMixin, serializers.ModelSerializer):
 
 # -- Sportsman Result Approval Snapshot Serializers --
 class SportsmanResultSnapshotSerializer(serializers.Serializer):
-    country = serializers.CharField(required=True, allow_null=True)
-    year = serializers.IntegerField(required=True, allow_null=True)
-    age_group = serializers.PrimaryKeyRelatedField(queryset=FederationAgeGroup.objects.all(), required=True, allow_null=True)
-    weight = serializers.CharField(required=True, allow_null=True, max_length=10)
-    rating = serializers.IntegerField(required=True, allow_null=True)
-    tournament = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), required=True)
-    score = serializers.DecimalField(required=True, allow_null=True, max_digits=5, decimal_places=2)
-    file_url = serializers.CharField(required=True, allow_null=True)
-    sport_type = serializers.PrimaryKeyRelatedField(queryset=SportType.objects.all(), required=True, allow_null=True)
+    country = serializers.CharField(required=False, allow_null=True)
+    year = serializers.IntegerField(required=False, allow_null=True)
+    age_group = serializers.PrimaryKeyRelatedField(queryset=FederationAgeGroup.objects.all(), required=False, allow_null=True)
+    weight = serializers.CharField(required=False, allow_null=True, max_length=10)
+    rating = serializers.IntegerField(required=False, allow_null=True)
+    tournament = serializers.PrimaryKeyRelatedField(queryset=Tournament.objects.all(), required=False)
+    score = serializers.DecimalField(required=False, allow_null=True, max_digits=5, decimal_places=2)
+    file_url = serializers.CharField(required=False, allow_null=True)
+    sport_type = serializers.PrimaryKeyRelatedField(queryset=SportType.objects.all(), required=False, allow_null=True)
 
     def to_internal_value(self, data: dict[str, t.Any]) -> dict[str, t.Any]:
         """
