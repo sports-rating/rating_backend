@@ -1,7 +1,9 @@
 import typing as t
 
-from apps.shared.utils.exceptions import raise_validation_error
 from rest_framework.request import Request
+
+from apps.shared.utils.exceptions import raise_validation_error
+from apps.shared.utils.logging import logger
 
 
 class RequestContextMixin:
@@ -36,6 +38,7 @@ class RequiredFieldsMixin:
         for field in getattr(self, 'required_fields', []):
             value = attrs.get(field)
 
+            logger.info(f"Validating required field '{field}': {value}")
             if value in [None, '']:
                 raise_validation_error(message=f"The field '{field}' is required and cannot be blank.")
 
