@@ -50,7 +50,7 @@ from apps.user.utils import (
 from apps.shared.services.user_request import UserRequestService
 from apps.shared.services.scoring_service import ScoringService
 from apps.shared.serializers import BaseMediaSerializer
-from apps.shared.utils.mixins import RequestContextMixin
+from apps.shared.utils.mixins import RequestContextMixin, RequiredFieldsMixin
 from apps.shared.utils.redis_utils import (
     get_media_view_count,
 )
@@ -171,7 +171,7 @@ class UserMediaSerializer(BaseMediaSerializer):
         if is_profile_photo:
             file = data.get("file", None)
             file_name = file.name.lower()
-            _, ext = os.path.splitext(file_name)
+            p, ext = os.path.splitext(file_name)
             allowed_extensions = ['.jpg', '.jpeg', '.png']
             if ext not in allowed_extensions:
                 raise_validation_error(message=_("Profile photo must be an image file (jpg, jpeg, png)"))
@@ -1680,7 +1680,19 @@ class UserRequestSerializer(RequestContextMixin, serializers.ModelSerializer):
         return data
 
 
-class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer):
+class SportsmanResultSerializer(RequiredFieldsMixin, RequestContextMixin, serializers.ModelSerializer):
+    required_fields = [
+        "tournament",
+        "trainer",
+        "sport_type",
+        "age_group",
+        "weight",
+        "rating",
+        "country",
+        "year",
+        "file",
+    ]
+
     archived_trainer_name = serializers.CharField(max_length=255, required=False, allow_null=True)
     message = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
@@ -1709,6 +1721,7 @@ class SportsmanResultSerializer(RequestContextMixin, serializers.ModelSerializer
             "bronze",
         ]
         read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status", "score"]
+        required_fields = []
 
     def validate_file(self, value):
         allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
