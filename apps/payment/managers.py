@@ -50,14 +50,14 @@ class TransactionManager(models.Manager):
             .order_by("month")
         )
 
-        # Format output for charts
-        result = [
-            {
-                "month": month_data["month"].strftime("%b"),  # e.g. "Jan", "Feb"
-                "total_revenue": float(month_data["total_revenue"] or 0)
-            }
-            for month_data in qs
-        ]
+        monthly_data = {month_data["month"].month: month_data for month_data in qs}
+
+        result = []
+        for m in range(1, 7):
+            result.append({
+                "month": timezone.datetime(now.year, m, 1).strftime("%b"),
+                "total_revenue": float(monthly_data.get(m, {"total_revenue": 0})["total_revenue"] or 0)
+            })
         return result
 
     def get_yearly_revenue(self):
