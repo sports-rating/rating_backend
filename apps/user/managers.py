@@ -121,13 +121,14 @@ class UserStatisticsManager(models.Manager):
             .order_by("month")
         )
 
-        result = [
-            {
-                "month": month_data["month"].strftime("%b"),
-                "total_users": month_data["total_users"],
-            }
-            for month_data in qs
-        ]
+        monthly_data = {q["month"].month: q["total_users"] for q in qs}
+
+        result = []
+        for month in range(1, 13):
+            result.append({
+                "month": timezone.datetime(now.year, month, 1).strftime("%b"),
+                "total_users": monthly_data.get(month, 0),
+            })
         return result
 
 
