@@ -78,13 +78,14 @@ class TransactionManager(models.Manager):
             .order_by("month")
         )
 
-        result = [
-            {
-                "month": month_data["month"].strftime("%b"),
-                "total_revenue": float(month_data["total_revenue"] or 0)
-            }
-            for month_data in qs
-        ]
+        monthly_data = {q["month"].month: q["total_revenue"] or 0 for q in qs}
+
+        result = []
+        for m in range(1, 13):
+            result.append({
+                "month": timezone.datetime(now.year, m, 1).strftime("%b"),
+                "total_revenue": float(monthly_data.get(m, 0))
+            })
         return result
 
     def get_detailed_statistics(self) -> dict[str, t.Any]:
@@ -136,9 +137,9 @@ class TransactionManager(models.Manager):
             "yearly_revenue": self.get_yearly_revenue(),
         }
 
-        # Daily revenue (last 30 days)
+        # Daily revenue (last 31 days)
         one_month_ago = now - timedelta(days=30)
-        daily_revenue = (
+        daily_revenue_qs = (
             base_qs.filter(performed_time__gte=one_month_ago)
             .annotate(day=TruncDay("performed_time"))
             .values("day")
@@ -146,16 +147,22 @@ class TransactionManager(models.Manager):
                 total_revenue=Coalesce(Sum("amount"), Value(0, output_field=models.DecimalField())),
                 total_transactions=Count("id"),
             )
-            .order_by("day")
         )
+
+        daily_revenue_dict = {
+            d["day"].date(): d for d in daily_revenue_qs
+        }
+
+        # Bulding full list of days in the last 30 days
+        days = [one_month_ago.date() + timedelta(days=i) for i in range (31)]
 
         data["daily_revenue_last_30_days"] = [
             {
-                "day": d["day"].strftime("%Y-%m-%d"),
-                "total_revenue": float(d["total_revenue"]),
-                "total_transactions": d["total_transactions"],
+                "day": day.strftime("%Y-%m-%d"),
+                "total_revenue": float(daily_revenue_dict.get(day, {}).get("total_revenue", 0)),
+                "total_transactions": daily_revenue_dict.get(day, {}).get("total_transactions", 0),
             }
-            for d in daily_revenue
+            for day in sorted(days)
         ]
 
         # Breakdown by user role

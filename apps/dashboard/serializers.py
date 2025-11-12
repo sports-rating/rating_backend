@@ -371,6 +371,7 @@ class PaymentStatsSerializer(serializers.Serializer):
     yearly_revenue = serializers.ListField()
     by_user_role = serializers.DictField()
     by_payment_method = serializers.DictField()
+    daily_revenue_last_30_days = serializers.ListField()
 
     def to_representation(self, instance) -> dict:
         data = Transaction.stats.get_detailed_statistics()
