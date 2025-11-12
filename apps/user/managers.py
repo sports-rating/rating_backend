@@ -292,14 +292,14 @@ class UserStatisticsManager(models.Manager):
             d.date: d for d in daily_users_qs
         }
 
-        daily_users_data = [
-            {
+        daily_users_data = []
+        for day in sorted(days):
+            obj = daily_users_dict.get(day)
+            daily_users_data.append({
                 "day": day.strftime("%Y-%m-%d"),
-                "total_users": daily_users_dict.get(day, {}).get("unique_users", 0),
-                "total_authenticated_users": daily_users_dict.get(day, {}).get("unique_authenticated_users", 0),
-            }
-            for day in sorted(days)
-        ]
+                "total_users": obj.unique_users if obj else 0,
+                "total_authenticated_users": obj.unique_authenticated_users if obj else 0,
+            })
         data["daily_users_last_month"] = daily_users_data
 
         # Daily users average
