@@ -47,7 +47,10 @@ class TransactionManager(models.Manager):
             )
             .annotate(month=TruncMonth("performed_time"))
             .values("month")
-            .annotate(total_revenue=Coalesce(Sum("amount"), Value(0)))
+            .annotate(total_revenue=Coalesce(
+                Sum("amount"),
+                Value(0, output_field=models.DecimalField()))
+            )
             .order_by("month")
         )
 
