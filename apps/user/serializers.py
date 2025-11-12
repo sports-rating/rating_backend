@@ -1734,6 +1734,8 @@ class SportsmanResultSerializer(RequestContextMixin, RequiredFieldsMixin, serial
         return value
 
     def validate(self, attrs: dict) -> dict:
+        attrs = RequiredFieldsMixin.validate(self, attrs)
+
         user: User = self.request.user  # type: ignore
         federation: Federation = user.sportsman_profile.trainer.federation
         tournament = attrs.get("tournament", None)
