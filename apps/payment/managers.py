@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from apps.shared.utils import enums
 
+
 if t.TYPE_CHECKING:
     from apps.user.models import User
     from apps.payment.models import Transaction

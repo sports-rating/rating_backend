@@ -8,6 +8,7 @@ from django.db.models.functions import Coalesce, TruncMonth, TruncDay
 from django.conf import settings
 from django.utils import timezone
 
+from dateutil.relativedelta import relativedelta
 from datetime import timedelta
 from collections import defaultdict
 
@@ -79,7 +80,7 @@ class UserStatisticsManager(models.Manager):
         """
         from apps.user.models import User
         now = timezone.now()
-        six_months_ago = now - timedelta(days=30 * 6)
+        six_months_ago = now - relativedelta(months=5)
 
         qs = (
             User.objects.filter(created_time__gte=six_months_ago)
@@ -89,13 +90,20 @@ class UserStatisticsManager(models.Manager):
             .order_by("month")
         )
 
-        result = [
-            {
-                "month": month_data["month"].strftime("%b"),  # e.g. Jan, Feb
-                "total_users": month_data["total_users"],
-            }
-            for month_data in qs
-        ]
+        monthly_data = {
+            (item["month"].year, item["month"].month): item["total_users"]
+            for item in qs
+        }
+
+        result = []
+        for i in range(6):
+            month_date = (now - relativedelta(months=5-i)).replace(day=1)
+            key = (month_date.year, month_date.month)
+            result.append({
+                "month": month_date.strftime("%b"),
+                "total_users": monthly_data.get(key, 0),
+            })
+
         return result
 
     def get_yearly_user_growth(self) -> t.List[dict[str, t.Any]]:
