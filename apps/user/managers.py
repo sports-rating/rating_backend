@@ -8,6 +8,7 @@ from django.db.models.functions import Coalesce, TruncMonth, TruncDay
 from django.conf import settings
 from django.utils import timezone
 
+from dateutil.relativedelta import relativedelta
 from datetime import timedelta
 from collections import defaultdict
 
@@ -79,7 +80,7 @@ class UserStatisticsManager(models.Manager):
         """
         from apps.user.models import User
         now = timezone.now()
-        six_months_ago = now - timedelta(days=30 * 6)
+        six_months_ago = now - relativedelta(months=5)
 
         qs = (
             User.objects.filter(created_time__gte=six_months_ago)
@@ -89,13 +90,20 @@ class UserStatisticsManager(models.Manager):
             .order_by("month")
         )
 
-        result = [
-            {
-                "month": month_data["month"].strftime("%b"),  # e.g. Jan, Feb
-                "total_users": month_data["total_users"],
-            }
-            for month_data in qs
-        ]
+        monthly_data = {
+            (item["month"].year, item["month"].month): item["total_users"]
+            for item in qs
+        }
+
+        result = []
+        for i in range(6):
+            month_date = (now - relativedelta(months=5-i)).replace(day=1)
+            key = (month_date.year, month_date.month)
+            result.append({
+                "month": month_date.strftime("%b"),
+                "total_users": monthly_data.get(key, 0),
+            })
+
         return result
 
     def get_yearly_user_growth(self) -> t.List[dict[str, t.Any]]:
@@ -113,13 +121,14 @@ class UserStatisticsManager(models.Manager):
             .order_by("month")
         )
 
-        result = [
-            {
-                "month": month_data["month"].strftime("%b"),
-                "total_users": month_data["total_users"],
-            }
-            for month_data in qs
-        ]
+        monthly_data = {q["month"].month: q["total_users"] for q in qs}
+
+        result = []
+        for month in range(1, 13):
+            result.append({
+                "month": timezone.datetime(now.year, month, 1).strftime("%b"),
+                "total_users": monthly_data.get(month, 0),
+            })
         return result
 
 
@@ -253,13 +262,20 @@ class UserStatisticsManager(models.Manager):
             .order_by("day")
         )
 
+        daily_registrations_dict = {
+            d["day"].date(): d for d in daily_registrations
+        }
+
+        # Building full list of days in the last 30 days
+        days = [one_month_ago.date() + timedelta(days=i) for i in range(31)]
+
         # Convert to list of {day, total_users}
         daily_data = [
             {
-                "day": day_data["day"].strftime("%Y-%m-%d"),
-                "total_users": day_data["total_users"],
+                "day": day.strftime("%Y-%m-%d"),
+                "total_users": daily_registrations_dict.get(day, {}).get("total_users", 0),
             }
-            for day_data in daily_registrations
+            for day in sorted(days)
         ]
         data["daily_registrations_last_month"] = daily_data
 
@@ -272,14 +288,19 @@ class UserStatisticsManager(models.Manager):
 
         # Daily users from DailyUsers model
         daily_users_qs = DailyUsers.objects.filter(date__gte=one_month_ago).order_by("date")
-        daily_users_data = [
-            {
-                "day": daily_user.date.strftime("%Y-%m-%d"),
-                "total_users": daily_user.unique_users,
-                "total_authenticated_users": daily_user.unique_authenticated_users,
-            }
-            for daily_user in daily_users_qs
-        ]
+
+        daily_users_dict = {
+            d.date: d for d in daily_users_qs
+        }
+
+        daily_users_data = []
+        for day in sorted(days):
+            obj = daily_users_dict.get(day)
+            daily_users_data.append({
+                "day": day.strftime("%Y-%m-%d"),
+                "total_users": obj.unique_users if obj else 0,
+                "total_authenticated_users": obj.unique_authenticated_users if obj else 0,
+            })
         data["daily_users_last_month"] = daily_users_data
 
         # Daily users average

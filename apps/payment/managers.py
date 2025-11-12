@@ -1,5 +1,6 @@
 import typing as t
 from datetime import timedelta
+from dateutil.relativedelta import relativedelta
 
 from django.db import models
 from django.db.models import Count, Q, Sum, Value, Model, QuerySet, Case, When, F
@@ -8,6 +9,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.shared.utils import enums
+
 
 if t.TYPE_CHECKING:
     from apps.user.models import User
@@ -37,27 +39,35 @@ class TransactionManager(models.Manager):
         """
         from apps.payment.models import Transaction
         now = timezone.now()
-        six_months_ago = now - timedelta(days=30 * 6)
+        six_months_ago = now - relativedelta(months=5)
 
         qs = (
             Transaction.objects.filter(
                 status=enums.TransactionStatus.COMMITTED.value,
-                performed_time__gte=six_months_ago,
+                performed_time__gte=six_months_ago.replace(day=1),
             )
             .annotate(month=TruncMonth("performed_time"))
             .values("month")
-            .annotate(total_revenue=Sum("amount"))
+            .annotate(total_revenue=Coalesce(
+                Sum("amount"),
+                Value(0, output_field=models.DecimalField()))
+            )
             .order_by("month")
         )
 
-        # Format output for charts
-        result = [
-            {
-                "month": month_data["month"].strftime("%b"),  # e.g. "Jan", "Feb"
-                "total_revenue": float(month_data["total_revenue"] or 0)
-            }
-            for month_data in qs
-        ]
+        monthly_data = {
+            (item["month"].year, item["month"].month): float(item["total_revenue"] or 0)
+            for item in qs
+        }
+
+        result = []
+        for i in range(6):
+            month_date = (now - relativedelta(months=5 - i)).replace(day=1)
+            key = (month_date.year, month_date.month)
+            result.append({
+                "month": month_date.strftime("%b"),
+                "total_revenue": monthly_data.get(key, 0.0),
+            })
         return result
 
     def get_yearly_revenue(self):
