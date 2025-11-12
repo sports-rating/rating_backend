@@ -261,13 +261,20 @@ class UserStatisticsManager(models.Manager):
             .order_by("day")
         )
 
+        daily_registrations_dict = {
+            d["day"].date(): d for d in daily_registrations
+        }
+
+        # Building full list of days in the last 30 days
+        days = [one_month_ago.date() + timedelta(days=i) for i in range(31)]
+
         # Convert to list of {day, total_users}
         daily_data = [
             {
-                "day": day_data["day"].strftime("%Y-%m-%d"),
-                "total_users": day_data["total_users"],
+                "day": day.strftime("%Y-%m-%d"),
+                "total_users": daily_registrations_dict.get(day, {}).get("total_users", 0),
             }
-            for day_data in daily_registrations
+            for day in sorted(days)
         ]
         data["daily_registrations_last_month"] = daily_data
 
@@ -280,13 +287,18 @@ class UserStatisticsManager(models.Manager):
 
         # Daily users from DailyUsers model
         daily_users_qs = DailyUsers.objects.filter(date__gte=one_month_ago).order_by("date")
+
+        daily_users_dict = {
+            d.date: d for d in daily_users_qs
+        }
+
         daily_users_data = [
             {
-                "day": daily_user.date.strftime("%Y-%m-%d"),
-                "total_users": daily_user.unique_users,
-                "total_authenticated_users": daily_user.unique_authenticated_users,
+                "day": day.strftime("%Y-%m-%d"),
+                "total_users": daily_users_dict.get(day, {}).get("unique_users", 0),
+                "total_authenticated_users": daily_users_dict.get(day, {}).get("unique_authenticated_users", 0),
             }
-            for daily_user in daily_users_qs
+            for day in sorted(days)
         ]
         data["daily_users_last_month"] = daily_users_data
 
