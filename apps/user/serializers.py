@@ -1721,7 +1721,6 @@ class SportsmanResultSerializer(RequiredFieldsMixin, RequestContextMixin, serial
             "bronze",
         ]
         read_only_fields = ["id", "is_verified", "gold", "silver", "bronze", "status", "score"]
-        required_fields = []
 
     def validate_file(self, value):
         allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
