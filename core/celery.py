@@ -11,12 +11,7 @@ app = Celery("core")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
-# app.conf.beat_schedule = {
-#     "update_tree_oxygen_production": {
-#         "task": "apps.tree.tasks.update_tree_oxygen_production",
-#         "schedule": timedelta(seconds=15),  # every 5 minutes # for testing 15s
-#     }
-# }
+
 app.conf.beat_schedule = {
     "store_daily_user_counts": {
         "task": "apps.user.tasks.store_daily_user_counts_task",
