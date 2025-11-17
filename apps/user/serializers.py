@@ -940,9 +940,9 @@ class UsersMeSerializer(serializers.ModelSerializer): # need to be updated
             data["sport_institution"] = {
                 "id": instance.sport_institution.id,
                 "name": instance.sport_institution.name,
-            }
+            } if instance.sport_institution else None
         if getattr(instance, "sportsman_profile", None) is None:
-                data.pop("sportsman_profile", None)
+            data.pop("sportsman_profile", None)
         if getattr(instance, "trainer_profile", None) is None:
             data.pop("trainer_profile", None)
         if instance.profile_photo:
