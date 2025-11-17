@@ -60,7 +60,7 @@ from apps.shared.utils import enums
 from apps.shared.services.payme import payme
 from apps.shared.services.click import click
 
-RESULT_REQUEST_AMOUNT = settings.RESULT_REQUEST_AMOUNT
+
 CLICK_RESULT_REQUEST_AMOUNT = int(1000)
 
 

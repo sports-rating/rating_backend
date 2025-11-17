@@ -564,9 +564,6 @@ CLICK_MERCHANT_ID = int(os.getenv("CLICK_MERCHANT_ID"))
 CLICK_SECRET_KEY = os.getenv("CLICK_SECRET_KEY")
 CLICK_MERCHANT_USER_ID = int(os.getenv("CLICK_MERCHANT_USER_ID"))
 
-# Payment amounts
-RESULT_REQUEST_AMOUNT = 2  # sum
-
 # URLs
 BACKEND_URL = os.environ.get("BACKEND_URL", default="http://localhost:8000")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", default="http://localhost:5173")
