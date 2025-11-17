@@ -4,6 +4,7 @@ import redis
 import sentry_sdk
 
 from pathlib import Path
+from pillow_heif import register_heif_opener
 from datetime import timedelta
 from dotenv import load_dotenv
 from decouple import config
@@ -12,6 +13,7 @@ from firebase_admin import initialize_app, credentials
 from django.utils.translation import gettext_lazy as _
 
 load_dotenv()
+register_heif_opener()
 
 IS_LOCAL: bool = os.getenv("IS_LOCAL", "true").lower() == "true"
 
@@ -563,9 +565,6 @@ CLICK_SERVICE_ID = int(os.getenv("CLICK_SERVICE_ID"))
 CLICK_MERCHANT_ID = int(os.getenv("CLICK_MERCHANT_ID"))
 CLICK_SECRET_KEY = os.getenv("CLICK_SECRET_KEY")
 CLICK_MERCHANT_USER_ID = int(os.getenv("CLICK_MERCHANT_USER_ID"))
-
-# Payment amounts
-RESULT_REQUEST_AMOUNT = 2  # sum
 
 # URLs
 BACKEND_URL = os.environ.get("BACKEND_URL", default="http://localhost:8000")
