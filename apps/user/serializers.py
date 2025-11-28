@@ -1686,7 +1686,6 @@ class SportsmanResultSerializer(RequestContextMixin, RequiredFieldsMixin, serial
         "trainer",
         "sport_type",
         "age_group",
-        "weight",
         "rating",
         "country",
         "year",
