@@ -39,24 +39,27 @@
 # RUN chmod +x deployment/start.sh
 
 # --- Stage 1: Builder ---
-# Use the official uv image which comes with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
+# Use standard Docker Hub image instead of ghcr.io
+FROM python:3.13-slim-bookworm AS builder
 
 WORKDIR /usr/src/app
 
-# Enable bytecode compilation and optimize for Docker
+# Install uv using the official standalone installer
+ADD https://astral.sh/uv/install.sh /install.sh
+RUN chmod +x /install.sh && /install.sh && rm /install.sh
+
+# Ensure uv is in the PATH for the builder stage
+ENV PATH="/root/.local/bin:$PATH"
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
-# Install system dependencies needed for building (e.g., gcc for psycopg2 if not binary)
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc libmagic-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy only dependency files first to leverage Docker layer caching
+# Copy dependency files and sync
 COPY pyproject.toml uv.lock ./
-
-# Install production dependencies (no dev tools, no root project installation)
 RUN uv sync --frozen --no-dev --no-install-project
 
 
@@ -65,24 +68,20 @@ FROM python:3.13-slim-bookworm AS final
 
 WORKDIR /app
 
-# Install runtime-only system dependencies
+# Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends libmagic1 file ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy the virtual environment from the builder
+# Copy the venv from builder
 COPY --from=builder /usr/src/app/.venv /app/.venv
 
-# Copy your application code
+# Copy your code
 COPY . /app
-
-# Ensure the start script is executable
 RUN chmod +x deployment/start.sh
 
-# Environment variables to use the venv automatically
+# Environment setup
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
 
-# Run the start script
 CMD ["deployment/start.sh"]
