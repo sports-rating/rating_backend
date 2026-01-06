@@ -44,6 +44,11 @@ FROM python:3.13-slim-bookworm AS builder
 
 WORKDIR /usr/src/app
 
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates gcc libmagic-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install uv using the official standalone installer
 ADD https://astral.sh/uv/install.sh /install.sh
 RUN chmod +x /install.sh && /install.sh && rm /install.sh
@@ -52,11 +57,6 @@ RUN chmod +x /install.sh && /install.sh && rm /install.sh
 ENV PATH="/root/.local/bin:$PATH"
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
-
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libmagic-dev && \
-    rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files and sync
 COPY pyproject.toml uv.lock ./
