@@ -38,50 +38,58 @@
 
 # RUN chmod +x deployment/start.sh
 
-# --- Stage 1: Builder ---
-# Use standard Docker Hub image instead of ghcr.io
+# --- Stage 1: Build Stage ---
 FROM python:3.13-slim-bookworm AS builder
 
-WORKDIR /usr/src/app
+# 1. Environment variables for uv
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
 
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates gcc libmagic-dev && \
-    rm -rf /var/lib/apt/lists/*
+# 2. Grab the uv binary (Faster than curl/install.sh)
+COPY --from=ghcr.io/astral-sh/uv:0.5.2 /uv /uvx /bin/
 
-# Install uv using the official standalone installer
-ADD https://astral.sh/uv/install.sh /install.sh
-RUN chmod +x /install.sh && /install.sh && rm /install.sh
+WORKDIR /app
 
-# Ensure uv is in the PATH for the builder stage
-ENV PATH="/root/.local/bin:$PATH"
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
+# 3. Install build-only system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libmagic-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files and sync
+# 4. Copy dependency files
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+
+# 5. Sync dependencies using Docker cache mount
+# This ensures that re-builds are nearly instant if only code changes
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync \
+      --frozen \
+      --no-dev \
+      --no-install-project
 
 
-# --- Stage 2: Final ---
+# --- Stage 2: Final Runtime Stage ---
 FROM python:3.13-slim-bookworm AS final
 
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libmagic1 file ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
+# 6. Install runtime-only system dependencies (ffmpeg for your bot)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    file \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the venv from builder
-COPY --from=builder /usr/src/app/.venv /app/.venv
-
-# Copy your code
+# 7. Copy the virtual environment and app code
+COPY --from=builder /app/.venv /app/.venv
 COPY . /app
-RUN chmod +x deployment/start.sh
 
-# Environment setup
-ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONUNBUFFERED=1
+# 8. Setup PATH so you can call 'python' and 'manage.py' directly
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1
+
+RUN chmod +x deployment/start.sh
 
 CMD ["deployment/start.sh"]
