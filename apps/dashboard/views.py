@@ -1,4 +1,3 @@
-from flask import request
 import pandas
 from datetime import datetime
 
